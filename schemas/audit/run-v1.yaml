@@ -1,0 +1,25 @@
+name: ope.audit.run
+version: 1
+required: [run_id, target, started_at, modules, findings, status]
+status: [RUNNING, COMPLETE, PARTIAL, FAILED]
+fields:
+  run_id: string
+  target: object
+  started_at: datetime
+  completed_at: datetime
+  modules: array
+  findings: array
+  blocked_checks: array
+  evidence_count: integer
+  status: enum
+  engine_version: string
+module_result:
+  required: [module_id, status, checks]
+  status: [PASS, FAIL, UNKNOWN, BLOCKED, NOT_APPLICABLE]
+  checks: array
+check_result:
+  required: [check_id, status]
+  status: [PASS, FAIL, UNKNOWN, BLOCKED, NOT_APPLICABLE]
+  evidence_refs: array
+  finding_refs: array
+  reason: string
