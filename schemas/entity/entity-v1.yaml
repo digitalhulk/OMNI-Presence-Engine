@@ -1,0 +1,19 @@
+name: ope.entity
+version: 1
+purpose: Canonical representation of the thing whose online presence is being engineered.
+required: [id, type, canonical_name, canonical_url]
+entity_types: [person, organization, brand, product, service, location, application, website]
+fields:
+  id: string
+  type: entity_type
+  canonical_name: string
+  canonical_url: string
+  aliases: list[string]
+  identifiers: map
+  descriptions: list[localized_text]
+  relationships: list[relationship]
+  official_sources: list[source]
+  properties: map
+localized_text: {language: string, text: string}
+relationship: {predicate: string, target_entity_id: string}
+source: {name: string, url: string, authority: primary|secondary|community}
