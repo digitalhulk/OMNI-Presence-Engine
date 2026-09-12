@@ -1,0 +1,20 @@
+name: ope.priority
+version: 1
+purpose: Prioritize remediation by business and technical impact rather than vanity metrics.
+formula: priority = clamp(100 * impact * confidence * urgency * fixability, 0, 100)
+inputs:
+  impact: 0..1
+  confidence: 0..1
+  urgency: 0..1
+  fixability: 0..1
+rules:
+  - Unknown evidence never becomes a pass.
+  - Provider estimates remain labeled as estimates.
+  - Critical security/accessibility failures may override aggregate scoring.
+  - Experience-preservation constraints are mandatory for performance work.
+  - Business-critical conversion paths receive explicit weighting.
+outputs:
+  - priority
+  - severity
+  - recommended_action
+  - validation_requirements
