@@ -1,0 +1,48 @@
+name: ope.audit.finding
+version: 1
+required:
+  - id
+  - entity
+  - module
+  - symptom
+  - evidence
+  - status
+  - priority
+  - remediation
+  - validation
+status_enum:
+  - FACT
+  - OBSERVED
+  - ESTIMATE
+  - HYPOTHESIS
+  - EXPERIMENT
+  - DEPRECATED
+severity_enum:
+  - critical
+  - high
+  - medium
+  - low
+  - info
+fields:
+  id: string
+  entity: string
+  module: string
+  subsystem: string
+  asset: string
+  symptom: string
+  root_cause: string
+  evidence: list[evidence]
+  status: status_enum
+  severity: severity_enum
+  priority: number(0..100)
+  impact: object
+  remediation: list[string]
+  validation: list[string]
+  regression_guard: list[string]
+evidence:
+  required: [source, observed_at]
+  fields:
+    source: string
+    url: string
+    observed_at: datetime
+    value: any
