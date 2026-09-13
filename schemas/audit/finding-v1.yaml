@@ -2,21 +2,27 @@ name: ope.audit.finding
 version: 1
 required:
   - id
-  - entity
   - module
   - symptom
   - evidence
-  - status
+  - evidence_status
+  - execution_status
   - priority
   - remediation
   - validation
-status_enum:
+evidence_status_enum:
   - FACT
   - OBSERVED
   - ESTIMATE
   - HYPOTHESIS
   - EXPERIMENT
   - DEPRECATED
+execution_status_enum:
+  - PASS
+  - FAIL
+  - UNKNOWN
+  - BLOCKED
+  - N/A
 severity_enum:
   - critical
   - high
@@ -32,7 +38,8 @@ fields:
   symptom: string
   root_cause: string
   evidence: list[evidence]
-  status: status_enum
+  evidence_status: evidence_status_enum
+  execution_status: execution_status_enum
   severity: severity_enum
   priority: number(0..100)
   impact: object
@@ -46,3 +53,10 @@ evidence:
     url: string
     observed_at: datetime
     value: any
+    confidence: number(0..1)
+
+rules:
+  - UNKNOWN is not PASS.
+  - Missing evidence cannot produce PASS.
+  - A hypothesis must not be presented as a fact.
+  - Provider estimates retain estimate status.
