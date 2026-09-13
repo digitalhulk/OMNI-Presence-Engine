@@ -9,6 +9,9 @@ BOUND = {
     "13-ux.mobile_usability",
     "14-accessibility.alt_text",
     "17-language.language_declaration",
+    "04-crawl.robots_access",
+    "04-crawl.bot_access",
+    "10-ai-search.agent_accessibility",
 }
 
 
@@ -24,6 +27,15 @@ def _audit_result():
             "viewport": "width=device-width",
             "images_missing_alt": 0,
             "lang": "en",
+            "robots": {
+                "url": "https://example.com/robots.txt",
+                "status": 200,
+                "error": None,
+                "rule_count": 1,
+                "ai_crawlers": {"GPTBot": "ALLOW", "OAI-SearchBot": "ALLOW"},
+                "blocked_ai_crawlers": [],
+                "allowed_ai_crawlers": ["GPTBot", "OAI-SearchBot"],
+            },
         },
         "findings": [],
     }
@@ -65,3 +77,20 @@ def test_failed_audit_observation_produces_fail():
     audit["findings"] = [{"id": "CODE-HTTP-001"}]
     result = execute_audit_checks(audit)
     assert result["checks"]["03-code.head_metadata"]["status"] == "FAIL"
+
+
+def test_blocked_ai_crawler_produces_fail_for_ai_access_checks():
+    audit = _audit_result()
+    audit["inventory"]["robots"]["ai_crawlers"]["GPTBot"] = "BLOCK"
+    audit["inventory"]["robots"]["blocked_ai_crawlers"] = ["GPTBot"]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["04-crawl.bot_access"]["status"] == "FAIL"
+    assert result["checks"]["10-ai-search.agent_accessibility"]["status"] == "FAIL"
+
+
+def test_missing_robots_observation_is_unknown():
+    audit = _audit_result()
+    del audit["inventory"]["robots"]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["04-crawl.robots_access"]["status"] == "UNKNOWN"
+    assert result["checks"]["10-ai-search.agent_accessibility"]["status"] == "UNKNOWN"
