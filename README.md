@@ -5,7 +5,7 @@
 > **One Engine. Every Platform. Real Growth.**
 >
 > **ZERO → EXIST → DISCOVER → UNDERSTAND → TRUST → RANK → ANSWER → CITE → RECOMMEND → CONVERT → RETAIN → AUTHORITY → DOMINANCE**
-
+>
 > **Koi bhi business chhota nahi. Sahi strategy, engineering aur execution ke saath har brand STAR ban sakta hai.** ⭐
 
 ---
@@ -43,6 +43,120 @@ RETENTION
 ```
 
 ### **Sadak se uthana nahi — system se STAR banana hai.** 🚀
+
+---
+
+# 🚀 ZERO → ACTIVE — ONE COMMAND SETUP
+
+OPE is designed to become easy to activate for a new project. The goal is simple: **clone once, run one setup command, answer the setup wizard, then run the engine.**
+
+> **Security rule:** API keys, OAuth tokens, cookies, passwords, private documents and payment credentials must stay in local environment variables or a secret manager. Never commit real secrets to Git.
+
+## 1. Get OPE
+
+```bash
+git clone https://github.com/digitalhulk/OMNI-Presence-Engine.git
+cd OMNI-Presence-Engine
+```
+
+## 2. Install the engine
+
+```bash
+python3 -m pip install -e .
+```
+
+The current executable audit command is:
+
+```bash
+ope-audit https://example.com
+```
+
+For JSON output:
+
+```bash
+ope-audit https://example.com --json
+```
+
+For a Markdown report:
+
+```bash
+ope-audit https://example.com --markdown
+```
+
+## 3. Project setup — what the future one-command wizard will collect
+
+The intended setup wizard should collect only the configuration required for the selected project:
+
+1. Project/entity name
+2. Canonical website URL
+3. Important URLs and document sources
+4. Country, market and language
+5. Business goals and conversion events
+6. Search Console / webmaster credentials where available
+7. Analytics credentials where available
+8. Optional live-web research provider credentials
+9. Optional SEO data provider credentials
+10. Reporting and monitoring preferences
+
+The wizard should write configuration locally and keep credentials outside Git.
+
+## 4. Minimum viable run
+
+```bash
+ope-audit https://YOUR-WEBSITE.com --markdown
+```
+
+This performs the current evidence-first web audit and returns machine-readable or Markdown output.
+
+## 5. Connect your own data
+
+| Source | Purpose | Credential policy |
+|---|---|---|
+| Website | Technical/entity discovery | URL only |
+| Google Search Console | Search performance/index evidence | Local credential |
+| Bing Webmaster | Search/AI visibility evidence | Local credential |
+| Analytics | Engagement/conversion evidence | Local credential |
+| Server/CDN logs | Request/performance evidence | Local/private |
+| Parallel | Live web research/evidence | Local API key |
+| OpenSEO/DataForSEO | SEO datasets/workflows | Local API key |
+
+OPE should treat first-party measurements as authoritative for the phenomena they directly measure and preserve provider attribution for third-party metrics.
+
+## 6. Owner-sponsored 7-day access
+
+A separate optional access flow can provide one project with owner-sponsored OPE access for 7 days.
+
+**Access contribution:** ₹69 via the owner's designated UPI VPA.
+
+**Additional agreed advance:** 1 Rajnigandha set 😄
+
+### Privacy rule
+
+The owner's mobile number must **never be displayed publicly**. The payment interface should reveal the payment destination only after the visitor explicitly accepts the access terms. The actual UPI VPA must be supplied at runtime through a private/local secret or secure deployment configuration, not stored in this repository.
+
+### Rotating QR design
+
+The payment UI may generate a fresh UPI QR/payment payload every 30 seconds while keeping the configured payee destination fixed. A rotating QR/reference is **not** proof that a payment succeeded. Automatic activation must only happen after a legitimate payment-status confirmation source verifies the transaction.
+
+```text
+ACCEPT TERMS
+     ↓
+PAYMENT SESSION
+     ↓
+LIVE QR
+     ↓
+30 SECOND ROTATION
+     ↓
+PAYMENT
+     ↓
+VERIFIED TRANSACTION
+     ↓
+7-DAY ACCESS TOKEN
+     ↓
+AUTO EXPIRY
+```
+
+Do not claim payment verification from a client-side "I Paid" button alone.
 
 ---
 
