@@ -29,8 +29,34 @@ def test_pass_check_result_requires_evidence():
     assert result["checks"]["x.check"]["status"] == "UNKNOWN"
 
 
+def test_malformed_pass_evidence_is_unknown():
+    result = ModuleRunner(
+        [CheckSpec("x.check", "01-entity", lambda _: CheckResult("x.check", "01-entity", ExecutionStatus.PASS, evidence=[{}]))]
+    ).run()
+    assert result["checks"]["x.check"]["status"] == "UNKNOWN"
+
+
+def test_invalid_confidence_makes_pass_unknown():
+    evidence = [{"source": "test", "observed_at": "2026-09-13T00:00:00Z", "confidence": 2.0}]
+    result = ModuleRunner(
+        [CheckSpec("x.check", "01-entity", lambda _: CheckResult("x.check", "01-entity", ExecutionStatus.PASS, evidence=evidence))]
+    ).run()
+    assert result["checks"]["x.check"]["status"] == "UNKNOWN"
+
+
+def test_demoting_pass_preserves_findings_and_reason():
+    finding = {"id": "F-1", "symptom": "missing title"}
+    result = ModuleRunner(
+        [CheckSpec("x.check", "01-entity", lambda _: CheckResult("x.check", "01-entity", ExecutionStatus.PASS, findings=[finding], reason="observed"))]
+    ).run()
+    check = result["checks"]["x.check"]
+    assert check["status"] == "UNKNOWN"
+    assert check["findings"] == [finding]
+    assert check["reason"] == "observed"
+
+
 def test_pass_with_evidence_is_preserved():
-    evidence = [{"source": "test", "target": "x", "value": True, "confidence": 1.0}]
+    evidence = [{"source": "test", "observed_at": "2026-09-13T00:00:00Z", "target": "x", "value": True, "confidence": 1.0}]
     runner = ModuleRunner(
         [CheckSpec("x.check", "01-entity", lambda _: CheckResult("x.check", "01-entity", ExecutionStatus.PASS, evidence=evidence))]
     )
