@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OMNI-PRESENCE ENGINE // RAW//BLOCK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../design/rawblock.css?v=2">
+<style>
+  .topbar { border-bottom: var(--rb-border-heavy); }
+  .topbar__in { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:var(--rb-sp-3); padding-top:var(--rb-sp-3); padding-bottom:var(--rb-sp-3); }
+  .hero { padding-top:var(--rb-sp-7); padding-bottom:var(--rb-sp-6); }
+  .hero h1 { font-size:clamp(40px,8vw,96px); text-transform:uppercase; }
+  .asymmetric { padding-left:var(--rb-sp-7); }
+  #report:empty { display:none; }
+  .filebox { border:var(--rb-border-heavy); padding:var(--rb-sp-4); background:var(--rb-fill); }
+  .filebox input[type=file] { font-family:var(--rb-font-mono); font-size:13px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="rb-shell topbar__in">
+    <strong style="font-family:var(--rb-font-headline);font-size:18px;">OPE // OMNI-PRESENCE ENGINE</strong>
+    <span class="rb-mono rb-tiny rb-uppercase">EVIDENCE-FIRST · RAW//BLOCK UI</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="rb-btn rb-btn--sm rb-btn--secondary" href="../design/showcase.html">COMPONENTS</a>
+      <a class="rb-btn rb-btn--sm rb-btn--ghost" href="https://github.com/digitalhulk/OMNI-Presence-Engine">GITHUB</a>
+      <button id="themeToggle" class="rb-btn rb-btn--sm rb-btn--primary" type="button">INVERT</button>
+    </span>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="rb-shell hero">
+  <p class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:var(--rb-sp-4);">
+    ONE ENGINE. EVERY PLATFORM. REAL GROWTH.
+  </p>
+  <h1>SADAK SE UTHA KR<br><span style="background:var(--rb-ink);color:var(--rb-fill);padding:0 12px;">STAR BNA DUNGA</span></h1>
+  <div class="asymmetric" style="margin-top:var(--rb-sp-5);">
+    <p style="max-width:640px;">
+      Infrastructure, code, semantics, crawl, AI search, authority, UX, accessibility, performance,
+      security and conversion — one dependency-aware, evidence-driven system.
+      The interface follows the <a href="https://designmd.ai/chef/rawblock">RawBlock</a> design language:
+      thick borders, sharp edges, no shadows, no polish.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:var(--rb-sp-3);">
+      <a class="rb-btn rb-btn--primary rb-btn--lg" href="#console">RUN AUDIT</a>
+      <a class="rb-btn rb-btn--secondary rb-btn--lg" href="../design/showcase.html">VIEW COMPONENTS</a>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--rb-sp-4);">
+      <span class="rb-chip rb-chip--status rb-chip--success">ENGINE ACTIVE</span>
+      <span class="rb-chip rb-chip--status">20 LAYERS</span>
+      <span class="rb-chip rb-chip--status rb-chip--info">EVIDENCE CONTRACT V1</span>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE STRIP -->
+<section class="rb-shell" style="padding-bottom:var(--rb-sp-6);">
+  <div class="rb-strip">
+    <div class="rb-strip__cell">ZERO</div>
+    <div class="rb-strip__cell">EXIST</div>
+    <div class="rb-strip__cell">DISCOVER</div>
+    <div class="rb-strip__cell">UNDERSTAND</div>
+    <div class="rb-strip__cell">TRUST</div>
+    <div class="rb-strip__cell">RANK</div>
+    <div class="rb-strip__cell">ANSWER</div>
+    <div class="rb-strip__cell">CITE</div>
+    <div class="rb-strip__cell">CONVERT</div>
+    <div class="rb-strip__cell">RETAIN</div>
+    <div class="rb-strip__cell">AUTHORITY</div>
+    <div class="rb-strip__cell">DOMINANCE</div>
+  </div>
+</section>
+
+<!-- AUDIT CONSOLE -->
+<section id="console" class="rb-shell" style="padding-bottom:var(--rb-sp-6);">
+  <div class="rb-grid" style="grid-template-columns:1fr;">
+    <div>
+      <h2>AUDIT CONSOLE</h2>
+      <div class="filebox rb-stack">
+        <p class="rb-label">Load an OPE report (JSON)</p>
+        <p class="rb-small" style="margin:0;">
+          Generate one from the CLI — no secrets ever leave your machine:
+        </p>
+        <pre>ope setup
+ope audit https://example.com --json &gt; reports/audit.report.json
+ope audit https://example.com --html reports/audit.report.html</pre>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <input class="rb-input" id="fileInput" type="file" accept="application/json,.json"
+                 style="width:auto;flex:1 1 320px;">
+          <button class="rb-btn rb-btn--primary" id="sampleBtn" type="button">LOAD SAMPLE REPORT</button>
+        </div>
+        <p class="rb-help" id="loadHelp">Reports render entirely in your browser using the RawBlock component system.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RENDERED REPORT MOUNT -->
+<section class="rb-shell" style="padding-bottom:var(--rb-sp-7);">
+  <div id="report"></div>
+</section>
+
+<!-- DOS / DONT'S -->
+<section class="rb-shell" style="padding-bottom:var(--rb-sp-7);">
+  <h2>DESIGN RULES</h2>
+  <div class="rb-grid rb-grid-2">
+    <div class="rb-card">
+      <h3 class="rb-card__title rb-txt-success">DO</h3>
+      <ul class="rb-stack" style="padding-left:var(--rb-sp-4);">
+        <li>Use thick 3–5px borders as the primary visual organizer.</li>
+        <li>Use full inversions for hover and active states.</li>
+        <li>Use Archivo Black at 48–64px for maximum impact.</li>
+        <li>Use uppercase + tracking for buttons and labels.</li>
+      </ul>
+    </div>
+    <div class="rb-card rb-card--elevated">
+      <h3 class="rb-card__title rb-txt-error">DON'T</h3>
+      <ul class="rb-stack" style="padding-left:var(--rb-sp-4);">
+        <li>Round any corners — sharp edges are non-negotiable.</li>
+        <li>Use opacity for disabled states; grey fills only.</li>
+        <li>Use #0000FF for anything except hyperlinks.</li>
+        <li>Add shadows, decorative icons, or polish.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer style="border-top:var(--rb-border-heavy);">
+  <div class="rb-shell rb-inverted" style="border:0;padding-top:var(--rb-sp-4);padding-bottom:var(--rb-sp-4);">
+    <p class="rb-mono rb-tiny" style="margin:0;">
+      OMNI-PRESENCE ENGINE · <a href="../design/DESIGN.md" style="color:#fff;">DESIGN.MD</a> ·
+      <a href="../design/rawblock.css" style="color:#fff;">RAWBLOCK.CSS</a> ·
+      <a href="../design/showcase.html" style="color:#fff;">SHOWCASE</a> · SHARP EDGES ONLY
+    </p>
+  </div>
+</footer>
+
+<script src="sample-report.js"></script>
+<script>
+(function () {
+  var SEV_CHIP = { critical: "rb-chip--error", high: "rb-chip--error", medium: "rb-chip--warning", low: "", info: "rb-chip--info" };
+  var STATUS_CHIP = { PASS: "rb-chip--success", FAIL: "rb-chip--error", OBSERVED: "rb-chip--error", HYPOTHESIS: "rb-chip--warning", UNKNOWN: "" };
+
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function chip(label, variant) {
+    return '<span class="rb-chip rb-chip--status ' + (variant || "") + '">' + esc(label) + "</span>";
+  }
+  function el(html) {
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+
+  function summaryCards(r) {
+    var s = r.summary || {};
+    var items = [["finding_count", "TOTAL"], ["critical", "CRITICAL"], ["high", "HIGH"],
+                 ["medium", "MEDIUM"], ["low", "LOW"], ["info", "INFO"]];
+    return '<div class="rb-grid rb-grid-3" style="margin-bottom:var(--rb-sp-5);">' + items.map(function (it) {
+      var v = s[it[0]] || 0, extra = "", elevated = "";
+      if ((it[0] === "critical" || it[0] === "high") && v) { elevated = " rb-card--elevated"; extra = " rb-txt-error"; }
+      if (it[0] === "medium" && v) { extra = " rb-txt-warning"; }
+      return '<div class="rb-card' + elevated + '" style="text-align:center;padding:var(--rb-sp-3);">' +
+        '<div class="rb-mono rb-tiny rb-uppercase">' + it[1] + '</div>' +
+        '<div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;"' + extra + '>' + v + '</div></div>';
+    }).join("") + "</div>";
+  }
+
+  function moduleGrid(r) {
+    var keys = Object.keys(r.modules || {}).sort();
+    return '<h2>MODULES</h2><div class="rb-grid rb-grid-4 rb-grid-6" style="margin-bottom:var(--rb-sp-5);">' +
+      keys.map(function (k) {
+        var m = r.modules[k], n = (m.findings || []).length;
+        return '<div style="border:var(--rb-border-thick);padding:8px;">' +
+          '<div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE ' + esc(k) + '</div>' +
+          chip(m.status, STATUS_CHIP[m.status] || "") +
+          ' <span class="rb-mono rb-tiny">' + n + ' FINDING' + (n === 1 ? "" : "S") + '</span></div>';
+      }).join("") + "</div>";
+  }
+
+  function inventoryTable(r) {
+    var rows = Object.keys(r.inventory || {}).map(function (k) {
+      return "<tr><th>" + esc(k.replace(/_/g, " ")) + '</th><td>' + esc(r.inventory[k]) + "</td></tr>";
+    }).join("");
+    return '<h2>INVENTORY</h2><table class="rb-table" style="margin-bottom:var(--rb-sp-5);">' + rows + "</table>";
+  }
+
+  function findingCard(f) {
+    var rem = (f.remediation || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+    var val = (f.validation || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+    var root = f.root_cause
+      ? '<p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>' + esc(f.root_cause) + "</p>" : "";
+    var evidence = f.evidence && f.evidence.length
+      ? "<details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary>" +
+        '<pre style="margin-top:var(--rb-sp-2);">' + esc(JSON.stringify(f.evidence, null, 2)) + "</pre></details>" : "";
+    return '<article class="rb-card rb-card--elevated rb-finding" data-severity="' + esc((f.severity || "info").toLowerCase()) +
+      '" style="margin-bottom:var(--rb-sp-3);">' +
+      '<div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);">' +
+      '<span class="rb-mono rb-small">' + esc(f.id) + "</span>" +
+      chip(f.severity, SEV_CHIP[(f.severity || "").toLowerCase()] || "") +
+      chip("PRIORITY " + f.priority) +
+      '<span style="flex:1 1 auto;"></span>' +
+      '<span class="rb-mono rb-tiny">MODULE ' + esc(f.module) + "</span>" +
+      chip(f.status, STATUS_CHIP[f.status] || "") + "</div>" +
+      '<h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">' + esc(f.symptom) + "</h3>" +
+      root +
+      '<div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul>' + (rem || "<li>—</li>") + "</ul></div>" +
+      '<div><p class="rb-label">Validation</p><ul>' + (val || "<li>—</li>") + "</ul></div></div>" +
+      evidence + "</article>";
+  }
+
+  function render(r, scroll) {
+    var mount = document.getElementById("report");
+    mount.innerHTML =
+      '<hr class="rb-rule"><h2>REPORT // ' + esc(r.run_id || "") + "</h2>" +
+      '<div class="rb-card rb-card--inverted" style="margin-bottom:var(--rb-sp-5);">' +
+      '<p class="rb-mono rb-tiny" style="margin:0;">TARGET</p><h3 style="margin:0;word-break:break-all;">' + esc(r.target) + "</h3></div>" +
+      summaryCards(r) + moduleGrid(r) + inventoryTable(r) +
+      "<h2>FINDINGS</h2><hr class='rb-rule'>" +
+      ((r.findings || []).slice().sort(function (a, b) { return b.priority - a.priority; }).map(findingCard).join("") || "<p>No findings.</p>");
+    if (scroll) mount.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var root = document.documentElement;
+    root.setAttribute("data-theme", root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+  document.getElementById("sampleBtn").addEventListener("click", function () {
+    render(window.OPE_SAMPLE_REPORT, true);
+  });
+  // Show the RawBlock report design in action on first paint — no click needed.
+  render(window.OPE_SAMPLE_REPORT, false);
+  document.getElementById("fileInput").addEventListener("change", function (ev) {
+    var file = ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try { render(JSON.parse(reader.result)); }
+      catch (e) {
+        var help = document.getElementById("loadHelp");
+        help.textContent = "Invalid OPE JSON report: " + e.message;
+        help.classList.add("is-error");
+      }
+    };
+    reader.readAsText(file);
+  });
+})();
+</script>
+</body>
+</html>

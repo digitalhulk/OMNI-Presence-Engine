@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPE // RAW AUDIT — https://starbrand.example.com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   RAWBLOCK DESIGN SYSTEM — brutalism as a design language
+   Source: https://designmd.ai/chef/rawblock (MIT, @chef)
+   Implemented for OMNI-PRESENCE ENGINE.
+
+   Rules: 0 border-radius everywhere (radio = sole exception),
+   0 shadows, 1/3/5px borders do all the hierarchy work, full inversion
+   on hover/active, #0000FF reserved for hyperlinks only.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. TOKENS
+   --------------------------------------------------------------------------- */
+:root {
+  /* Color palette */
+  --rb-black: #000000;
+  --rb-white: #ffffff;
+  --rb-link: #0000ff;
+  --rb-success: #008000;
+  --rb-warning: #ffa500;
+  --rb-error: #ff0000;
+  --rb-info: #0000ff;
+
+  /* Semantic surfaces (light = base) */
+  --rb-surface: #ffffff;            /* app background            */
+  --rb-surface-inverted: #000000;   /* inverted sections         */
+  --rb-sunken: #f0f0f0;             /* input fill                */
+  --rb-sunken-hover: #e8e8e8;       /* input hover fill          */
+  --rb-disabled-fill: #f5f5f5;      /* disabled fill (no opacity)*/
+  --rb-disabled-border: #cccccc;
+  --rb-text-tertiary: #808080;
+
+  /* Ink / fill pair — components invert by swapping these */
+  --rb-ink: #000000;
+  --rb-fill: #ffffff;
+
+  /* Typography families */
+  --rb-font-headline: "Archivo Black", "Arial Black", system-ui, sans-serif;
+  --rb-font-body: "Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rb-font-mono: "Space Mono", "Courier New", ui-monospace, monospace;
+
+  /* Type scale */
+  --rb-text-h1: 64px;
+  --rb-text-h2: 48px;
+  --rb-text-h3: 32px;
+  --rb-text-h4: 22px;
+  --rb-text-body: 16px;
+  --rb-text-small: 14px;
+  --rb-text-tiny: 12px;
+  --rb-text-mono: 15px;
+
+  /* Spacing scale (base 8px, intentionally irregular usage) */
+  --rb-sp-1: 4px;
+  --rb-sp-2: 8px;
+  --rb-sp-3: 16px;
+  --rb-sp-4: 24px;
+  --rb-sp-5: 40px;
+  --rb-sp-6: 64px;
+  --rb-sp-7: 80px;
+  --rb-sp-8: 120px;
+
+  /* Borders replace shadows entirely */
+  --rb-border-thin: 1px solid var(--rb-ink);
+  --rb-border-thick: 3px solid var(--rb-ink);
+  --rb-border-heavy: 5px solid var(--rb-ink);
+
+  /* Radius: none. No exceptions (radio buttons use their own circle). */
+  --rb-radius: 0px;
+
+  --rb-max-width: 1280px;
+}
+
+/* Dark == full inversion of the base surface */
+[data-theme="dark"] {
+  --rb-surface: #000000;
+  --rb-surface-inverted: #ffffff;
+  --rb-sunken: #0d0d0d;
+  --rb-sunken-hover: #1c1c1c;
+  --rb-disabled-fill: #161616;
+  --rb-disabled-border: #404040;
+  --rb-text-tertiary: #8a8a8a;
+  --rb-ink: #ffffff;
+  --rb-fill: #000000;
+}
+
+/* ---------------------------------------------------------------------------
+   2. BASE / RESET
+   --------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-radius: var(--rb-radius) !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--rb-surface);
+  color: var(--rb-ink);
+  font-family: var(--rb-font-body);
+  font-size: var(--rb-text-body);
+  line-height: 1.6;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+}
+
+/* Sharp edges, no shadows, no smoothing — even on media */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  display: block;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+   3. TYPOGRAPHY
+   --------------------------------------------------------------------------- */
+h1, h2, h3 {
+  font-family: var(--rb-font-headline);
+  font-weight: 400;
+  margin: 0 0 var(--rb-sp-3);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--rb-text-h1);
+  line-height: 1;
+}
+h2 {
+  font-size: var(--rb-text-h2);
+  line-height: 1.05;
+}
+h3 {
+  font-size: var(--rb-text-h3);
+  line-height: 1.1;
+}
+
+h4 {
+  font-family: var(--rb-font-body);
+  font-size: var(--rb-text-h4);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 var(--rb-sp-3);
+}
+
+p {
+  margin: 0 0 var(--rb-sp-3);
+}
+
+small,
+.rb-small {
+  font-size: var(--rb-text-small);
+  line-height: 1.5;
+}
+
+.rb-tiny {
+  font-size: var(--rb-text-tiny);
+  line-height: 1.4;
+}
+
+code,
+kbd,
+samp,
+pre,
+.rb-mono {
+  font-family: var(--rb-font-mono);
+  font-size: var(--rb-text-mono);
+  line-height: 1.5;
+}
+
+pre {
+  margin: 0;
+  padding: var(--rb-sp-3);
+  background: var(--rb-sunken);
+  border: var(--rb-border-thick);
+  overflow: auto;
+  white-space: pre;
+}
+
+/* #0000FF is reserved for hyperlinks and nothing else */
+a {
+  color: var(--rb-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+a:hover {
+  color: var(--rb-ink);
+}
+
+/* ---------------------------------------------------------------------------
+   4. BUTTONS
+   Primary / Secondary / Ghost / Destructive · sm/md/lg · disabled
+   --------------------------------------------------------------------------- */
+.rb-btn,
+button.rb-btn,
+input.rb-btn[type="button"],
+input.rb-btn[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rb-sp-2);
+  height: 44px;
+  padding: 10px 24px;
+  font-family: var(--rb-font-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--rb-fill);
+  color: var(--rb-ink);
+  border: var(--rb-border-thick);
+  border-radius: 0;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: none;
+}
+
+/* Primary — black fill, white text; hover = full inversion */
+.rb-btn--primary {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+}
+.rb-btn--primary:hover {
+  background: var(--rb-fill);
+  color: var(--rb-ink);
+}
+.rb-btn--primary:active {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+  border-width: 5px;
+}
+
+/* Secondary — white fill, black text; hover = full inversion */
+.rb-btn--secondary:hover {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+}
+.rb-btn--secondary:active {
+  border-width: 5px;
+}
+
+/* Ghost — transparent, underlined, borderless; hover blue */
+.rb-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding-left: var(--rb-sp-2);
+  padding-right: var(--rb-sp-2);
+}
+.rb-btn--ghost:hover {
+  color: var(--rb-link);
+  background: transparent;
+}
+.rb-btn--ghost:active {
+  border-width: 0;
+}
+
+/* Destructive — red fill, white text, 3px black border; hover black/red */
+.rb-btn--destructive {
+  background: var(--rb-error);
+  color: var(--rb-white);
+  border-color: var(--rb-black);
+}
+.rb-btn--destructive:hover {
+  background: var(--rb-black);
+  color: var(--rb-error);
+}
+.rb-btn--destructive:active {
+  border-width: 5px;
+}
+
+/* Sizes: (padding, font-size, height) */
+.rb-btn--sm {
+  height: 32px;
+  padding: 6px 16px;
+  font-size: 12px;
+}
+.rb-btn--lg {
+  height: 56px;
+  padding: 16px 40px;
+  font-size: 18px;
+}
+
+/* Disabled — grey fill + grey border, never opacity */
+.rb-btn:disabled,
+.rb-btn[disabled],
+.rb-btn.is-disabled {
+  background: var(--rb-disabled-fill);
+  color: var(--rb-text-tertiary);
+  border-color: var(--rb-disabled-border);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.rb-btn:disabled:hover,
+.rb-btn[disabled]:hover {
+  background: var(--rb-disabled-fill);
+  color: var(--rb-text-tertiary);
+}
+
+/* ---------------------------------------------------------------------------
+   5. CARDS — borders instead of elevation
+   --------------------------------------------------------------------------- */
+.rb-card {
+  background: var(--rb-fill);
+  color: var(--rb-ink);
+  border: var(--rb-border-thick);
+  padding: var(--rb-sp-4);
+}
+.rb-card--elevated {
+  border: var(--rb-border-heavy); /* heavier border = more importance */
+}
+.rb-card__title {
+  font-family: var(--rb-font-headline);
+  font-weight: 400;
+  font-size: var(--rb-text-h3);
+  line-height: 1.1;
+  margin: 0 0 var(--rb-sp-2);
+}
+/* Inverted section/card */
+.rb-card--inverted,
+.rb-inverted {
+  background: var(--rb-surface-inverted);
+  color: var(--rb-surface);
+  border-color: var(--rb-surface-inverted);
+}
+
+/* ---------------------------------------------------------------------------
+   6. INPUTS — sunken fill, Space Mono, thick borders
+   --------------------------------------------------------------------------- */
+.rb-field {
+  margin-bottom: var(--rb-sp-3);
+}
+
+.rb-label {
+  display: block;
+  font-family: var(--rb-font-headline);
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: var(--rb-ink);
+}
+
+.rb-input,
+.rb-textarea,
+.rb-select,
+input.rb-input,
+textarea.rb-textarea,
+select.rb-select {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--rb-sunken);
+  color: var(--rb-ink);
+  border: var(--rb-border-thick);
+  border-radius: 0;
+  font-family: var(--rb-font-mono);
+  font-size: var(--rb-text-mono);
+  line-height: 1.5;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.rb-input::placeholder,
+.rb-textarea::placeholder {
+  color: var(--rb-text-tertiary);
+}
+.rb-input:hover,
+.rb-textarea:hover,
+.rb-select:hover {
+  background: var(--rb-sunken-hover);
+}
+.rb-input:focus,
+.rb-textarea:focus,
+.rb-select:focus {
+  border-width: 5px;
+  padding: 8px 10px; /* hold the box steady when the border thickens */
+  background: var(--rb-sunken);
+}
+.rb-input.is-error,
+.rb-textarea.is-error {
+  border-color: var(--rb-error);
+}
+.rb-input:disabled,
+.rb-textarea:disabled,
+.rb-select:disabled {
+  background: var(--rb-disabled-fill);
+  border-color: var(--rb-disabled-border);
+  color: var(--rb-text-tertiary);
+  cursor: not-allowed;
+}
+/* Native select needs a raw indicator — a text-only caret */
+.rb-select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--rb-ink) 50%),
+    linear-gradient(135deg, var(--rb-ink) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.rb-help {
+  font-family: var(--rb-font-body);
+  font-size: var(--rb-text-tiny);
+  line-height: 1.4;
+  margin-top: 4px;
+  color: var(--rb-ink);
+}
+.rb-help.is-error {
+  color: var(--rb-error);
+}
+
+/* ---------------------------------------------------------------------------
+   7. CHIPS — filter chips + status chips
+   --------------------------------------------------------------------------- */
+.rb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--rb-fill);
+  color: var(--rb-ink);
+  border: 2px solid var(--rb-ink);
+  border-radius: 0;
+  font-family: var(--rb-font-body);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+button.rb-chip,
+input.rb-chip {
+  cursor: pointer;
+}
+/* Active filter chip = inversion */
+button.rb-chip:hover {
+  text-decoration: underline;
+}
+.rb-chip.is-active,
+.rb-chip[aria-pressed="true"] {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+}
+
+/* Status chips — 2px respective-color border, 11px semibold */
+.rb-chip--status {
+  padding: 2px 10px;
+  font-size: 11px;
+}
+.rb-chip--success {
+  background: var(--rb-white);
+  color: var(--rb-success);
+  border-color: var(--rb-success);
+}
+.rb-chip--warning {
+  background: var(--rb-white);
+  color: var(--rb-warning);
+  border-color: var(--rb-warning);
+}
+.rb-chip--error {
+  background: var(--rb-white);
+  color: var(--rb-error);
+  border-color: var(--rb-error);
+}
+.rb-chip--info {
+  background: var(--rb-white);
+  color: var(--rb-info);
+  border-color: var(--rb-info);
+}
+[data-theme="dark"] .rb-chip--success,
+[data-theme="dark"] .rb-chip--warning,
+[data-theme="dark"] .rb-chip--error,
+[data-theme="dark"] .rb-chip--info {
+  background: var(--rb-black);
+}
+
+/* ---------------------------------------------------------------------------
+   8. LISTS — 3px dividers, underline hover, full-width inverted active
+   --------------------------------------------------------------------------- */
+.rb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--rb-sp-3);
+  font-size: var(--rb-text-body);
+}
+.rb-list__item {
+  padding: 12px 0;
+  border-bottom: var(--rb-border-thick);
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rb-sp-3);
+}
+.rb-list__item:first-child {
+  border-top: var(--rb-border-thick);
+}
+.rb-list__item:hover {
+  text-decoration: underline;
+}
+.rb-list__item.is-active {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+  padding-left: var(--rb-sp-3);
+  padding-right: var(--rb-sp-3);
+  margin-left: calc(-1 * var(--rb-sp-3));
+  margin-right: calc(-1 * var(--rb-sp-3));
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------------------
+   9. CHECKBOXES + RADIOS — 20px, 3px border, square (radio = circle)
+   --------------------------------------------------------------------------- */
+.rb-checkrow {
+  display: flex;
+  align-items: center;
+  gap: var(--rb-sp-2);
+  margin-bottom: var(--rb-sp-2);
+  cursor: pointer;
+  font-size: var(--rb-text-body);
+}
+.rb-check,
+.rb-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  background: var(--rb-fill);
+  border: var(--rb-border-thick);
+  border-radius: 0;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  outline: none;
+}
+.rb-radio {
+  border-radius: 50% !important; /* the one documented exception */
+}
+.rb-check:focus-visible,
+.rb-radio:focus-visible {
+  border-width: 5px;
+}
+/* Checked checkbox: black fill, white 3px-stroke tick */
+.rb-check:checked {
+  background: var(--rb-ink);
+}
+.rb-check:checked::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 3px solid var(--rb-fill);
+  border-bottom: 3px solid var(--rb-fill);
+  transform: translateY(-1px) rotate(-45deg);
+}
+/* Selected radio: 10px black inner dot */
+.rb-radio:checked {
+  background: var(--rb-fill);
+}
+.rb-radio:checked::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--rb-ink);
+  border-radius: 50% !important;
+}
+.rb-check:disabled,
+.rb-radio:disabled {
+  background: var(--rb-disabled-fill);
+  border-color: var(--rb-disabled-border);
+  cursor: not-allowed;
+}
+.rb-checkrow:has(> :disabled) {
+  color: var(--rb-text-tertiary);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   10. TOOLTIPS — inverted block, Space Mono, adjacent, no arrow, no shadow
+   --------------------------------------------------------------------------- */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0px); /* directly adjacent, no arrow/gap */
+  display: none;
+  max-width: 260px;
+  padding: 8px 12px;
+  background: var(--rb-black);
+  color: var(--rb-white);
+  border: 0;
+  font-family: var(--rb-font-mono);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+  text-align: left;
+  z-index: 80;
+  pointer-events: none;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   11. TABLES (system extension — thick borders, no shading tricks)
+   --------------------------------------------------------------------------- */
+.rb-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--rb-border-thick);
+  background: var(--rb-fill);
+  color: var(--rb-ink);
+  font-size: var(--rb-text-body);
+}
+.rb-table th,
+.rb-table td {
+  border: var(--rb-border-thick);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.rb-table th {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+  font-family: var(--rb-font-headline);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.rb-table td {
+  font-family: var(--rb-font-mono);
+  font-size: var(--rb-text-mono);
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   12. LAYOUT UTILITIES (spacing irregularity encouraged)
+   --------------------------------------------------------------------------- */
+.rb-shell {
+  max-width: var(--rb-max-width);
+  margin: 0 auto;
+  padding-left: var(--rb-sp-4);
+  padding-right: var(--rb-sp-4);
+}
+.rb-stack > * + * {
+  margin-top: var(--rb-sp-3);
+}
+.rb-stack-lg > * + * {
+  margin-top: var(--rb-sp-5);
+}
+.rb-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--rb-sp-3);
+}
+.rb-grid > * {
+  grid-column: span 12;
+}
+@media (min-width: 720px) {
+  .rb-grid-2 > * { grid-column: span 6; }
+  .rb-grid-3 > * { grid-column: span 4; }
+  .rb-grid-4 > * { grid-column: span 3; }
+  .rb-grid-6 > * { grid-column: span 2; }
+}
+.rb-rule {
+  border: 0;
+  border-top: var(--rb-border-heavy);
+  margin: var(--rb-sp-5) 0;
+}
+.rb-uppercase {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.rb-tracking {
+  letter-spacing: 1px;
+}
+.rb-txt-success { color: var(--rb-success); }
+.rb-txt-warning { color: var(--rb-warning); }
+.rb-txt-error { color: var(--rb-error); }
+.rb-txt-info { color: var(--rb-info); }
+
+/* Raw marquee pipeline strip */
+.rb-strip {
+  display: flex;
+  flex-wrap: wrap;
+  border: var(--rb-border-heavy);
+}
+.rb-strip__cell {
+  padding: 10px 16px;
+  border-right: var(--rb-border-thick);
+  border-bottom: var(--rb-border-thick);
+  font-family: var(--rb-font-headline);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+.rb-strip__cell:nth-child(even) {
+  background: var(--rb-ink);
+  color: var(--rb-fill);
+}
+.rb-strip__cell:last-child {
+  border-right: 0;
+}
+
+.report-header { border-bottom: var(--rb-border-heavy); }
+.meta-bar { display:flex; flex-wrap:wrap; gap:var(--rb-sp-3); align-items:center; }
+</style>
+</head>
+<body>
+
+<header class="report-header rb-inverted">
+  <div class="rb-shell" style="padding-top:var(--rb-sp-4);padding-bottom:var(--rb-sp-4);">
+    <p class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:var(--rb-sp-2);">
+      OMNI-PRESENCE ENGINE · EVIDENCE-FIRST AUDIT · RAW//BLOCK REPORT
+    </p>
+    <h1 style="font-size:clamp(32px,6vw,64px);margin:0;">https://starbrand.example.com</h1>
+    <div class="meta-bar" style="margin-top:var(--rb-sp-3);">
+      <span class="rb-chip rb-chip--status rb-chip--success">HTTP 200</span>
+      <span class="rb-chip rb-chip--status">RUN ope-1726190400</span>
+      <span class="rb-mono rb-tiny">2024-09-13 01:20 UTC</span>
+    </div>
+  </div>
+</header>
+
+<main class="rb-shell" style="padding-top:var(--rb-sp-5);padding-bottom:var(--rb-sp-7);">
+
+  <h2>SUMMARY</h2>
+  <div class="rb-grid rb-grid-3" style="margin-bottom:var(--rb-sp-5);"><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">TOTAL</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;">7</div></div><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">CRITICAL</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;">0</div></div><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">HIGH</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;">0</div></div><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">MEDIUM</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;" rb-txt-warning>4</div></div><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">LOW</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;">2</div></div><div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);"><div class="rb-mono rb-tiny rb-uppercase">INFO</div><div style="font-family:var(--rb-font-headline);font-size:48px;line-height:1.1;">1</div></div></div>
+
+  <h2>MODULES (20-LAYER DEPENDENCY GRAPH)</h2>
+  <div class="rb-grid rb-grid-4 rb-grid-6" style="margin-bottom:var(--rb-sp-5);"><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 01</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 02</div><span class="rb-chip rb-chip--status rb-chip--success">PASS</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 03</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">1 FINDING</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 04</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 05</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">1 FINDING</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 06</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">1 FINDING</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 07</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 08</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 09</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 10</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 11</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 12</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 13</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">1 FINDING</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 14</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">1 FINDING</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 15</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 16</div><span class="rb-chip rb-chip--status rb-chip--error">FAIL</span> <span class="rb-mono rb-tiny">2 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 17</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 18</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 19</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div><div style="border:var(--rb-border-thick);padding:8px;"><div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE 20</div><span class="rb-chip rb-chip--status">UNKNOWN</span> <span class="rb-mono rb-tiny">0 FINDINGS</span></div></div>
+
+  <h2>INVENTORY</h2>
+  <div style="margin-bottom:var(--rb-sp-5);"><table class="rb-table"><tr><th>status</th><td>200</td></tr><tr><th>bytes</th><td>48213</td></tr><tr><th>title</th><td>StarBrand — Digital Presence</td></tr><tr><th>description</th><td></td></tr><tr><th>lang</th><td>en</td></tr><tr><th>viewport</th><td></td></tr><tr><th>canonical</th><td></td></tr><tr><th>headings</th><td>11</td></tr><tr><th>h1</th><td>1</td></tr><tr><th>links</th><td>47</td></tr><tr><th>images</th><td>8</td></tr><tr><th>images missing alt</th><td>3</td></tr><tr><th>forms</th><td>2</td></tr><tr><th>json ld blocks</th><td>0</td></tr></table></div>
+
+  <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--rb-sp-3);">
+    <h2 style="margin:0;">FINDINGS</h2>
+    <span style="flex:1 1 auto;"></span>
+    <span class="row rb-stack" style="display:flex;gap:8px;flex-wrap:wrap;"><button class="rb-chip rb-filter is-active" type="button" data-filter="all" aria-pressed="true">ALL</button><button class="rb-chip rb-filter" type="button" data-filter="critical" aria-pressed="false">CRITICAL</button><button class="rb-chip rb-filter" type="button" data-filter="high" aria-pressed="false">HIGH</button><button class="rb-chip rb-filter" type="button" data-filter="medium" aria-pressed="false">MEDIUM</button><button class="rb-chip rb-filter" type="button" data-filter="low" aria-pressed="false">LOW</button><button class="rb-chip rb-filter" type="button" data-filter="info" aria-pressed="false">INFO</button></span>
+  </div>
+  <hr class="rb-rule">
+  <div id="findings"><article class="rb-card rb-card--elevated rb-finding" data-severity="medium" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">03-CODE-META-001</span><span class="rb-chip rb-chip--status rb-chip--warning">MEDIUM</span><span class="rb-chip rb-chip--status">PRIORITY 49</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 03-code</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">Document has no title</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>The application template does not render a &lt;title&gt; element for the route.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Add a unique, descriptive title aligned to page intent.</li><li>Wire titles into the shared layout template, not per-page hacks.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Re-audit title presence and uniqueness across routes.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;html-parser&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;title&quot;: &quot;&quot;
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="medium" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">13-UX-MOBILE-001</span><span class="rb-chip rb-chip--status rb-chip--warning">MEDIUM</span><span class="rb-chip rb-chip--status">PRIORITY 42</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 13-ux</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">Viewport metadata is missing</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>The shared HTML head partial dropped the viewport declaration during a redesign.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Add &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt; to the shared head.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Validate mobile rendering across representative devices.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;html-parser&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;viewport&quot;: &quot;&quot;
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="medium" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">05-INDEX-CAN-001</span><span class="rb-chip rb-chip--status rb-chip--warning">MEDIUM</span><span class="rb-chip rb-chip--status">PRIORITY 35</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 05-index</span> <span class="rb-chip rb-chip--status rb-chip--warning">HYPOTHESIS</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">No canonical link was detected</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>Not yet established; additional evidence or dependency analysis is required.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Define canonicalization deliberately for indexable URLs.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Confirm canonical points to the intended URL and is crawlable.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;html-parser&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;canonical&quot;: &quot;&quot;
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="medium" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">14-A11Y-IMG-001</span><span class="rb-chip rb-chip--status rb-chip--warning">MEDIUM</span><span class="rb-chip rb-chip--status">PRIORITY 28.8</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 14-accessibility</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">3 of 8 images lack useful alt text</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>Marketing images are injected from a CMS field that does not require alt text.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Require alt text in the CMS schema for informative images.</li><li>Use empty alt for purely decorative images.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Re-run accessibility checks and inspect representative images.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;html-parser&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;images&quot;: 8,
+      &quot;missing_alt&quot;: 3
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="low" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">16-SEC-CSP</span><span class="rb-chip rb-chip--status">LOW</span><span class="rb-chip rb-chip--status">PRIORITY 11.2</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 16-security</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">Recommended security header not observed: content-security-policy</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>The edge layer was never configured to emit a Content-Security-Policy header.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Review and configure content-security-policy against the application threat model.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Re-fetch response headers and verify content-security-policy.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;http-headers&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;content-security-policy&quot;: null
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="low" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">16-SEC-HSTS</span><span class="rb-chip rb-chip--status">LOW</span><span class="rb-chip rb-chip--status">PRIORITY 11.2</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 16-security</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">Recommended security header not observed: strict-transport-security</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>HSTS was not enabled when TLS was terminated at the CDN.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Enable strict-transport-security with an appropriate max-age.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Re-fetch response headers and verify strict-transport-security.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;http-headers&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;strict-transport-security&quot;: null
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article><article class="rb-card rb-card--elevated rb-finding" data-severity="info" style="margin-bottom:var(--rb-sp-3);"><div style="display:flex;flex-wrap:wrap;gap:var(--rb-sp-2);align-items:center;border-bottom:var(--rb-border-thick);padding-bottom:var(--rb-sp-2);margin-bottom:var(--rb-sp-2);"><span class="rb-mono rb-small">06-SEM-JSONLD-001</span><span class="rb-chip rb-chip--status rb-chip--info">INFO</span><span class="rb-chip rb-chip--status">PRIORITY 3.6</span><span style="flex:1 1 auto;"></span><span class="rb-mono rb-tiny">MODULE 06-semantics</span> <span class="rb-chip rb-chip--status rb-chip--error">OBSERVED</span> <span class="rb-mono rb-tiny">CONFIDENCE 1</span></div><h3 style="font-size:22px;font-family:var(--rb-font-body);font-weight:600;">No JSON-LD structured data was detected</h3><p class="rb-small"><strong class="rb-uppercase">Root cause — </strong>Entity schema was planned but never shipped to the template layer.</p><div class="rb-grid rb-grid-2"><div><p class="rb-label">Remediation</p><ul><li>Add schema.org structured data that accurately represents visible content.</li></ul></div><div><p class="rb-label">Validation</p><ul><li>Validate structured data and compare it with visible content.</li></ul></div></div><details style='margin-top:var(--rb-sp-3);'><summary class='rb-btn rb-btn--sm rb-btn--secondary' style='display:inline-flex;'>EVIDENCE (DIRECT)</summary><pre style='margin-top:var(--rb-sp-2);'>[
+  {
+    &quot;source&quot;: &quot;html-parser&quot;,
+    &quot;target&quot;: &quot;https://starbrand.example.com/&quot;,
+    &quot;value&quot;: {
+      &quot;json_ld_blocks&quot;: 0
+    },
+    &quot;confidence&quot;: 1
+  }
+]</pre></details></article></div>
+
+</main>
+
+<footer style="border-top:var(--rb-border-heavy);">
+  <div class="rb-shell rb-inverted" style="border:0;padding-top:var(--rb-sp-4);padding-bottom:var(--rb-sp-4);">
+    <p class="rb-mono rb-tiny" style="margin:0;">
+      GENERATED BY OPE 0.1.0 · CONTRACT evidence-root-cause-v1 ·
+      EVIDENCE IS DIRECT · SHARP EDGES ONLY · RAW//BLOCK DESIGN SYSTEM
+    </p>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.rb-filter').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.rb-filter').forEach(function (b) {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-pressed', 'true');
+      var want = btn.getAttribute('data-filter');
+      document.querySelectorAll('.rb-finding').forEach(function (card) {
+        card.style.display = (want === 'all' || card.getAttribute('data-severity') === want) ? '' : 'none';
+      });
+    });
+  });
+</script>
+</body>
+</html>

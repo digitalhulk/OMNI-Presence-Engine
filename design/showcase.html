@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAW//BLOCK — OPE Component System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="rawblock.css?v=2">
+<style>
+  /* Showcase-only layout scaffolding, built from system tokens */
+  .topbar { border-bottom: var(--rb-border-heavy); }
+  .topbar__in { display: flex; align-items: center; justify-content: space-between;
+    padding-top: var(--rb-sp-3); padding-bottom: var(--rb-sp-3); gap: var(--rb-sp-3); flex-wrap: wrap; }
+  .swatch { display: flex; border: var(--rb-border-thick); }
+  .swatch__chip { width: 100%; height: 72px; }
+  .section-head { display: flex; align-items: baseline; gap: var(--rb-sp-3);
+    border-bottom: var(--rb-border-heavy); padding-bottom: var(--rb-sp-2); margin-bottom: var(--rb-sp-4); }
+  .section-head .index { font-family: var(--rb-font-headline); font-size: 32px; }
+  .spec-tag { font-family: var(--rb-font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .row { display: flex; flex-wrap: wrap; gap: var(--rb-sp-3); align-items: center; }
+  .gap-lg { gap: var(--rb-sp-5); }
+  .demo-block { margin-bottom: var(--rb-sp-5); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--rb-sp-3); }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="rb-shell topbar__in">
+    <strong style="font-family:var(--rb-font-headline);font-size:20px;">RAW//BLOCK</strong>
+    <span class="rb-mono rb-tiny rb-uppercase">brutalist component system · v1 · MIT</span>
+    <span class="row">
+      <a class="rb-btn rb-btn--sm rb-btn--ghost" href="../web/index.html">OPE DASHBOARD</a>
+      <button id="themeToggle" class="rb-btn rb-btn--sm rb-btn--secondary" type="button">INVERT / DARK</button>
+    </span>
+  </div>
+</header>
+
+<main class="rb-shell" style="padding-top:var(--rb-sp-6);padding-bottom:var(--rb-sp-7);">
+
+  <h1>RAW BLOCK.<br>NO POLISH.</h1>
+  <p style="max-width:720px;margin-top:var(--rb-sp-4);">
+    Thick 3–5px borders replace shadows. Zero rounded corners. Full black/white inversion on hover
+    and active states. <a href="https://designmd.ai/chef/rawblock">Source design kit</a>.
+  </p>
+
+  <hr class="rb-rule">
+
+  <!-- 01 COLORS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">01</span><h2 style="margin:0;">COLORS</h2>
+      <span class="spec-tag">#000 · #FFF · #0000FF(labels only)</span></div>
+    <div class="rb-grid rb-grid-4">
+      <div><div class="swatch"><div class="swatch__chip" style="background:#000;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">BLACK #000000<br>TEXT · BORDERS · FILLS</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#fff;border-bottom:var(--rb-border-thick);"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">WHITE #FFFFFF<br>BACKGROUND · INVERSE TEXT</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#0000FF;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">BLUE #0000FF<br>HYPERLINKS ONLY</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#008000;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">SUCCESS #008000</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#FFA500;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">WARNING #FFA500</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#FF0000;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">ERROR #FF0000</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#F0F0F0;border-bottom:var(--rb-border-thick);"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">SUNKEN #F0F0F0<br>INPUT FILL</p></div>
+      <div><div class="swatch"><div class="swatch__chip" style="background:#CCCCCC;"></div></div><p class="rb-mono rb-tiny" style="margin-top:8px;">DISABLED BORDER #CCCCCC</p></div>
+    </div>
+  </section>
+
+  <!-- 02 TYPOGRAPHY -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">02</span><h2 style="margin:0;">TYPOGRAPHY</h2>
+      <span class="spec-tag">Archivo Black · Work Sans · Space Mono</span></div>
+    <h1>H1 · 64PX · ARCHIVO BLACK</h1>
+    <h2>H2 · 48PX · ARCHIVO BLACK</h2>
+    <h3>H3 · 32PX · ARCHIVO BLACK</h3>
+    <h4>H4 · 22PX · WORK SANS SEMIBOLD</h4>
+    <p>Body — Work Sans 16px regular, 1.6 line height. Every letter tells a story worth reading,
+      and every typeface gives that story a new voice waiting to be heard. <a href="#">Links stay blue.</a></p>
+    <p><small>Small — Work Sans 14px regular, 1.5 line height. Every letter tells a story worth reading.</small></p>
+    <p class="rb-tiny">Tiny — Work Sans 12px regular, 1.4 line height. Every letter tells a story worth reading.</p>
+    <p class="rb-mono">Mono — Space Mono 15px regular, 1.5 line height. run_id: ope-1726190000</p>
+  </section>
+
+  <!-- 03 BUTTONS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">03</span><h2 style="margin:0;">BUTTONS</h2>
+      <span class="spec-tag">uppercase · 2px tracking · 3px border · inversion hover</span></div>
+    <div class="grid-2">
+      <div class="rb-card rb-stack">
+        <span class="rb-label">Primary · Secondary · Ghost · Destructive</span>
+        <div class="row">
+          <button class="rb-btn rb-btn--primary" type="button">RUN AUDIT</button>
+          <button class="rb-btn rb-btn--secondary" type="button">EXPORT</button>
+          <button class="rb-btn rb-btn--ghost" type="button">VIEW DOCS</button>
+          <button class="rb-btn rb-btn--destructive" type="button">PURGE CACHE</button>
+        </div>
+      </div>
+      <div class="rb-card rb-stack">
+        <span class="rb-label">Sizes · Disabled</span>
+        <div class="row">
+          <button class="rb-btn rb-btn--primary rb-btn--sm" type="button">SMALL 32</button>
+          <button class="rb-btn rb-btn--primary" type="button">MEDIUM 44</button>
+          <button class="rb-btn rb-btn--primary rb-btn--lg" type="button">LARGE 56</button>
+          <button class="rb-btn rb-btn--primary" type="button" disabled>DISABLED</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 CARDS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">04</span><h2 style="margin:0;">CARDS</h2>
+      <span class="spec-tag">3px default · 5px elevated · no shadow</span></div>
+    <div class="grid-2">
+      <div class="rb-card">
+        <h3 class="rb-card__title">CARD TITLE</h3>
+        <p>Sample body text for the card component. White fill, 3px black border, square, 24px
+          padding, no shadow.</p>
+        <button class="rb-btn rb-btn--sm rb-btn--secondary" type="button">ACTION</button>
+      </div>
+      <div class="rb-card rb-card--elevated">
+        <h3 class="rb-card__title">ELEVATED CARD</h3>
+        <p>A heavier 5px border marks importance. Hierarchy comes from border weight and scale —
+          never from shadows.</p>
+        <span class="rb-chip rb-chip--status rb-chip--error">FAIL · 7 FINDINGS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 INPUTS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">05</span><h2 style="margin:0;">INPUTS</h2>
+      <span class="spec-tag">#F0F0F0 fill · Space Mono 15 · 3→5px focus border</span></div>
+    <div class="grid-2">
+      <div class="rb-stack">
+        <div class="rb-field">
+          <label class="rb-label" for="email">Email</label>
+          <input class="rb-input" id="email" type="email" placeholder="brand@example.com">
+          <p class="rb-help">We never store credentials. Local env only.</p>
+        </div>
+        <div class="rb-field">
+          <label class="rb-label" for="email-err">Email (error)</label>
+          <input class="rb-input is-error" id="email-err" type="email" value="not-an-email" aria-invalid="true">
+          <p class="rb-help is-error">Please enter a valid email</p>
+        </div>
+      </div>
+      <div class="rb-stack">
+        <div class="rb-field">
+          <label class="rb-label" for="sel">Audit module</label>
+          <select class="rb-select" id="sel">
+            <option>03 — CODE</option><option>05 — INDEX</option><option>14 — ACCESSIBILITY</option><option>16 — SECURITY</option>
+          </select>
+        </div>
+        <div class="rb-field">
+          <label class="rb-label" for="dis">Disabled</label>
+          <input class="rb-input" id="dis" type="text" value="locked until setup" disabled>
+        </div>
+        <div class="rb-field">
+          <label class="rb-label" for="txt">Evidence notes</label>
+          <textarea class="rb-textarea" id="txt" rows="3" placeholder="direct-http observation..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 CHIPS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">06</span><h2 style="margin:0;">CHIPS</h2>
+      <span class="spec-tag">filter (invert on active) · status (colored 2px borders)</span></div>
+    <p class="rb-label">Filter chips</p>
+    <div class="row" style="margin-bottom:var(--rb-sp-4);">
+      <button class="rb-chip is-active" type="button" aria-pressed="true">ALL</button>
+      <button class="rb-chip" type="button" aria-pressed="false">CRITICAL</button>
+      <button class="rb-chip" type="button" aria-pressed="false">HIGH</button>
+      <button class="rb-chip" type="button" aria-pressed="false">MEDIUM</button>
+      <button class="rb-chip" type="button" aria-pressed="false">LOW</button>
+    </div>
+    <p class="rb-label">Status chips</p>
+    <div class="row">
+      <span class="rb-chip rb-chip--status rb-chip--success">PASS</span>
+      <span class="rb-chip rb-chip--status rb-chip--warning">WARNING</span>
+      <span class="rb-chip rb-chip--status rb-chip--error">FAIL</span>
+      <span class="rb-chip rb-chip--status">UNKNOWN</span>
+      <span class="rb-chip rb-chip--status rb-chip--info">INFO</span>
+    </div>
+  </section>
+
+  <!-- 07 LISTS -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">07</span><h2 style="margin:0;">LISTS</h2>
+      <span class="spec-tag">3px dividers · underline hover · inverted active</span></div>
+    <div class="grid-2">
+      <div class="rb-card">
+        <ul class="rb-list" style="padding:0;">
+          <li class="rb-list__item">03-CODE-META-001 — Document has no title <span class="rb-mono rb-tiny">P49.0</span></li>
+          <li class="rb-list__item">14-A11Y-IMG-001 — 3 of 8 images lack alt text <span class="rb-mono rb-tiny">P28.8</span></li>
+          <li class="rb-list__item is-active">16-SEC-CSP — Security header missing <span class="rb-mono rb-tiny">P11.2</span></li>
+          <li class="rb-list__item">06-SEM-JSONLD-001 — No JSON-LD detected <span class="rb-mono rb-tiny">P9.6</span></li>
+        </ul>
+      </div>
+      <div class="rb-card rb-stack">
+        <p class="rb-label">Checks + radios</p>
+        <label class="rb-checkrow"><input class="rb-check" type="checkbox" checked> Crawl + index</label>
+        <label class="rb-checkrow"><input class="rb-check" type="checkbox"> AI search grounding</label>
+        <label class="rb-checkrow"><input class="rb-check" type="checkbox" disabled> Authority graph (locked)</label>
+        <hr class="rb-rule" style="margin:var(--rb-sp-2) 0;">
+        <label class="rb-checkrow"><input class="rb-radio" type="radio" name="m" checked> Mobile-first viewport</label>
+        <label class="rb-checkrow"><input class="rb-radio" type="radio" name="m"> Desktop viewport</label>
+        <label class="rb-checkrow"><input class="rb-radio" type="radio" name="m" disabled> No viewport</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 TOOLTIP -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">08</span><h2 style="margin:0;">TOOLTIP</h2>
+      <span class="spec-tag">black block · Space Mono 13 · adjacent · no arrow</span></div>
+    <button class="rb-btn rb-btn--secondary" type="button"
+      data-tooltip="Priority = 100 × impact × confidence × urgency × fixability. Evidence-first, always.">
+      HOVER FOR PRIORITY RULE
+    </button>
+  </section>
+
+  <!-- 09 INVERTED -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">09</span><h2 style="margin:0;">INVERTED SURFACE</h2>
+      <span class="spec-tag">full inversion for emphasis sections</span></div>
+    <div class="rb-card rb-card--inverted rb-stack-lg" style="padding:var(--rb-sp-5);">
+      <h2 style="margin:0;">ZERO → DOMINANCE.</h2>
+      <p style="max-width:680px;margin:0;">SADAK SE UTHA KR STAR BNA DUNGA. One engine. Every platform. Real growth —
+        borders, type and evidence do all the talking.</p>
+      <span class="row">
+        <a class="rb-btn rb-btn--sm" href="../web/index.html" style="background:#fff;color:#000;">OPEN OPE DASHBOARD</a>
+      </span>
+    </div>
+  </section>
+
+  <!-- 10 DO / DONT -->
+  <section class="demo-block">
+    <div class="section-head"><span class="index">10</span><h2 style="margin:0;">DO / DON'T</h2></div>
+    <div class="grid-2">
+      <div class="rb-card">
+        <h3 class="rb-card__title rb-txt-success">DO</h3>
+        <ul class="rb-stack" style="padding-left:var(--rb-sp-4);">
+          <li>Use thick 3–5px borders as the primary visual organizer.</li>
+          <li>Invert fills fully for hover and active states.</li>
+          <li>Use Archivo Black at 48–64px for maximum impact.</li>
+          <li>Embrace asymmetric, intentionally irregular layouts.</li>
+          <li>Uppercase + tracking for buttons and labels.</li>
+        </ul>
+      </div>
+      <div class="rb-card rb-card--elevated">
+        <h3 class="rb-card__title rb-txt-error">DON'T</h3>
+        <ul class="rb-stack" style="padding-left:var(--rb-sp-4);">
+          <li>Round any corners — sharp edges are non-negotiable.</li>
+          <li>Use opacity for disabled states; grey fills only.</li>
+          <li>Use #0000FF for anything except hyperlinks.</li>
+          <li>Add decorative images, icons or illustrations.</li>
+          <li>Polish, refine, or add shadows. Ever.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer style="border-top:var(--rb-border-heavy);background:var(--rb-surface-inverted);color:var(--rb-surface);">
+  <div class="rb-shell" style="padding-top:var(--rb-sp-4);padding-bottom:var(--rb-sp-4);" >
+    <p class="rb-mono rb-tiny" style="margin:0;">
+      RAW//BLOCK DESIGN SYSTEM — IMPLEMENTED FOR OMNI-PRESENCE ENGINE ·
+      <a href="DESIGN.md" style="color:#fff;">DESIGN.MD</a> ·
+      <a href="rawblock.css" style="color:#fff;">RAWBLOCK.CSS</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var root = document.documentElement;
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+  document.querySelectorAll('.rb-chip:not(.rb-chip--status)').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var on = chip.classList.toggle('is-active');
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  });
+</script>
+</body>
+</html>

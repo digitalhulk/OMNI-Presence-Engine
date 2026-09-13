@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .audit import audit, markdown_report
 from .engine import normalize_result
+from .report_html import write_html_report
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
 
@@ -49,9 +50,12 @@ def audit_command(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
+    if args.html:
+        path = write_html_report(result, args.html)
+        print(f"RawBlock HTML report written: {path}", file=sys.stderr)
     if args.markdown:
         print(markdown_report(result))
-    else:
+    elif not args.html:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
@@ -65,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("url")
     audit_parser.add_argument("--json", action="store_true", dest="as_json")
     audit_parser.add_argument("--markdown", action="store_true")
+    audit_parser.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML audit report")
     audit_parser.add_argument("--timeout", type=int, default=15)
     audit_parser.set_defaults(handler=audit_command)
     return parser
