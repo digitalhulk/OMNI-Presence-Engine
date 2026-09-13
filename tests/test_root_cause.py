@@ -4,6 +4,7 @@ from ope.root_cause import enrich_finding, enrich_result
 def test_missing_root_cause_becomes_hypothesis():
     finding = enrich_finding({"module": "performance", "evidence": []})
     assert finding["status"] == "HYPOTHESIS"
+    assert finding["evidence_status"] == "HYPOTHESIS"
     assert finding["root_cause"]
     assert 0 <= finding["confidence"] <= 1
 
@@ -19,9 +20,10 @@ def test_confidence_uses_lowest_evidence_confidence():
     )
     assert finding["confidence"] == 0.4
     assert finding["status"] == "OBSERVED"
+    assert finding["execution_status"] == "FAIL"
 
 
-def test_result_gets_engine_contract():
+def test_result_gets_canonical_engine_contract():
     result = enrich_result({"findings": [{"module": "index"}]})
-    assert result["engine_contract"] == "evidence-root-cause-v1"
+    assert result["engine_contract"] == "evidence-diagnostic-v1"
     assert result["findings"][0]["status"] == "HYPOTHESIS"

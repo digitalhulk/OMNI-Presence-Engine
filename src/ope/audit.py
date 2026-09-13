@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
+import socket
 import ssl
 import time
 import urllib.error
@@ -11,23 +13,17 @@ from dataclasses import asdict, dataclass, field
 from html.parser import HTMLParser
 from typing import Any
 
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_REDIRECTS = 5
+ALLOWED_SCHEMES = {"http", "https"}
+
 
 class PageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self.title = ""
-        self.lang = ""
-        self.headings: list[str] = []
-        self.links: list[str] = []
-        self.images = 0
-        self.images_missing_alt = 0
-        self.forms = 0
-        self.json_ld = 0
-        self.canonical = ""
-        self.viewport = ""
-        self.description = ""
-        self.h1_count = 0
-        self._in_title = False
+        self.title = ""; self.lang = ""; self.headings: list[str] = []; self.links: list[str] = []
+        self.images = 0; self.images_missing_alt = 0; self.forms = 0; self.json_ld = 0
+        self.canonical = ""; self.viewport = ""; self.description = ""; self.h1_count = 0; self._in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
@@ -40,7 +36,7 @@ class PageParser(HTMLParser):
             self.images += 1
             if not (a.get("alt") or "").strip(): self.images_missing_alt += 1
         if tag == "form": self.forms += 1
-        if tag == "link" and (a.get("rel") or "").lower() == "canonical": self.canonical = a.get("href", "") or ""
+        if tag == "link" and "canonical" in (a.get("rel") or "").lower().split(): self.canonical = a.get("href", "") or ""
         if tag == "meta":
             name = (a.get("name") or "").lower()
             if name == "viewport": self.viewport = a.get("content", "") or ""
@@ -77,12 +73,44 @@ class Finding:
     validation: list[str] = field(default_factory=list)
 
 
+def _validate_url(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ALLOWED_SCHEMES or not parsed.hostname:
+        raise ValueError("OPE accepts only absolute HTTP(S) URLs with a hostname")
+    host = parsed.hostname.rstrip(".")
+    try:
+        addresses = {ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
+    except socket.gaierror as exc:
+        raise ValueError(f"DNS resolution failed for target: {host}") from exc
+    if not addresses:
+        raise ValueError(f"No address resolved for target: {host}")
+    for addr in addresses:
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_multicast or addr.is_unspecified:
+            raise ValueError(f"Target resolves to a restricted network address: {addr}")
+    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.params, parsed.query, ""))
+
+
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        safe = _validate_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, safe)
+
+
 def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], bytes, str]:
-    req = urllib.request.Request(url, headers={"User-Agent": "OPE-Audit/0.1 (+https://github.com/digitalhulk/OMNI-Presence-Engine)"})
+    safe_url = _validate_url(url)
+    req = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+    opener = urllib.request.build_opener(_SafeRedirect())
+    opener.max_redirections = MAX_REDIRECTS
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-        body = r.read()
-        return r.geturl(), r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8"
+    with opener.open(req, timeout=max(1, min(timeout, 60)), context=ctx) as r:
+        content_type = (r.headers.get("Content-Type") or "").lower()
+        if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
+            raise ValueError(f"Unsupported target content type: {content_type}")
+        body = r.read(MAX_RESPONSE_BYTES + 1)
+        if len(body) > MAX_RESPONSE_BYTES:
+            raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
+        final_url = _validate_url(r.geturl())
+        return final_url, r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8"
 
 
 def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[Evidence], remediation: list[str], validation: list[str], impact: float = .5, urgency: float = .5, fixability: float = .8) -> Finding:
@@ -102,21 +130,21 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     findings: list[Finding] = []
 
     if status >= 400:
-        findings.append(_finding("CODE-HTTP-001", "03-code", f"Target returned HTTP {status}", "high", [evidence_base], ["Resolve server/application error before downstream optimization."], ["Re-run audit and confirm 2xx response."], .9, .9))
+        findings.append(_finding("CODE-HTTP-001", "03-code", f"Target returned HTTP {status}", "high", [evidence_base], ["Resolve the server/application error before downstream optimization."], ["Re-run audit and confirm a successful response."], .9, .9))
     if not final_url.startswith("https://"):
-        findings.append(_finding("02-INFRA-TLS-001", "02-infrastructure", "Canonical target is not HTTPS", "high", [evidence_base], ["Serve the site over HTTPS and redirect HTTP to HTTPS."], ["Confirm HTTPS 2xx and no insecure canonical."], .8, .8))
-    if not p.title.strip():
-        findings.append(_finding("03-CODE-META-001", "03-code", "Document has no title", "medium", [Evidence("html-parser", now, final_url, {"title": p.title})], ["Add a unique, descriptive title aligned to page intent."], ["Re-audit title presence and uniqueness."], .7, .7))
-    if not p.viewport:
-        findings.append(_finding("13-UX-MOBILE-001", "13-ux", "Viewport metadata is missing", "medium", [Evidence("html-parser", now, final_url, {"viewport": p.viewport})], ["Add an appropriate responsive viewport declaration."], ["Validate mobile rendering across representative devices."], .7, .6))
-    if not p.lang:
-        findings.append(_finding("17-LANG-001", "17-language", "HTML language is not declared", "low", [Evidence("html-parser", now, final_url, {"lang": p.lang})], ["Declare the primary document language on html."], ["Confirm correct language metadata and localized variants."], .5, .4))
-    if p.images_missing_alt:
-        findings.append(_finding("14-A11Y-IMG-001", "14-accessibility", f"{p.images_missing_alt} of {p.images} images lack useful alt text", "medium", [Evidence("html-parser", now, final_url, {"images": p.images, "missing_alt": p.images_missing_alt})], ["Add meaningful alt text to informative images; use empty alt for decorative images."], ["Re-run accessibility checks and inspect representative images."], .6, .6))
-    if not p.canonical:
-        findings.append(_finding("05-INDEX-CAN-001", "05-index", "No canonical link was detected", "medium", [Evidence("html-parser", now, final_url, {"canonical": p.canonical})], ["Define canonicalization deliberately for indexable URLs."], ["Confirm canonical points to the intended URL and is crawlable."], .7, .5))
-    if not p.json_ld:
-        findings.append(_finding("06-SEM-JSONLD-001", "06-semantics", "No JSON-LD structured data was detected", "info", [Evidence("html-parser", now, final_url, {"json_ld_blocks": p.json_ld})], ["Add only schema.org structured data that accurately represents visible page content and entity relationships."], ["Validate structured data and compare it with visible content."], .4, .3))
+        findings.append(_finding("02-INFRA-TLS-001", "02-infrastructure", "Canonical target is not HTTPS", "high", [evidence_base], ["Serve the site over HTTPS and redirect HTTP to HTTPS."], ["Confirm HTTPS response and secure canonicalization."], .8, .8))
+    checks = [
+        (not p.title.strip(), "03-CODE-META-001", "03-code", "Document has no title", "medium", {"title": p.title}, ["Add a unique, descriptive title aligned to page intent."], ["Re-audit title presence and uniqueness."], .7, .7),
+        (not p.viewport, "13-UX-MOBILE-001", "13-ux", "Viewport metadata is missing", "medium", {"viewport": p.viewport}, ["Add an appropriate responsive viewport declaration."], ["Validate mobile rendering across representative devices."], .7, .6),
+        (not p.lang, "17-LANG-001", "17-language", "HTML language is not declared", "low", {"lang": p.lang}, ["Declare the primary document language on html."], ["Confirm correct language metadata."], .5, .4),
+        (p.images_missing_alt > 0, "14-A11Y-IMG-001", "14-accessibility", f"{p.images_missing_alt} of {p.images} images lack useful alt text", "medium", {"images": p.images, "missing_alt": p.images_missing_alt}, ["Add meaningful alt text to informative images; use empty alt for decorative images."], ["Re-run accessibility checks and inspect representative images."], .6, .6),
+        (not p.canonical, "05-INDEX-CAN-001", "05-index", "No canonical link was detected", "medium", {"canonical": p.canonical}, ["Define canonicalization deliberately for indexable URLs."], ["Confirm canonical points to the intended URL."], .7, .5),
+        (not p.json_ld, "06-SEM-JSONLD-001", "06-semantics", "No JSON-LD structured data was detected", "info", {"json_ld_blocks": p.json_ld}, ["Add only accurate structured data supported by visible content."], ["Validate structured data against visible content."], .4, .3),
+    ]
+    for failed, fid, module, symptom, severity, value, remediation, validation, impact, urgency in checks:
+        if failed:
+            findings.append(_finding(fid, module, symptom, severity, [Evidence("html-parser", now, final_url, value)], remediation, validation, impact, urgency))
+
     security_headers = {k.lower(): v for k, v in headers.items()}
     for header in ("content-security-policy", "strict-transport-security", "x-content-type-options", "referrer-policy"):
         if header not in security_headers:
@@ -127,29 +155,12 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    for key, result in modules.items():
-        if not result["findings"]:
-            result["status"] = "PASS" if key in {"02", "03", "05", "13", "14", "16", "17"} else "UNKNOWN"
-
-    return {
-        "engine": "ope",
-        "version": "0.1.0",
-        "run_id": f"ope-{int(started)}",
-        "target": normalized,
-        "final_url": final_url,
-        "started_at": started,
-        "completed_at": time.time(),
-        "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld},
-        "headers": {k.lower(): v for k, v in headers.items()},
-        "modules": modules,
-        "findings": [asdict(f) for f in findings],
-        "summary": {"finding_count": len(findings), "critical": sum(f.severity == "critical" for f in findings), "high": sum(f.severity == "high" for f in findings), "medium": sum(f.severity == "medium" for f in findings), "low": sum(f.severity == "low" for f in findings), "info": sum(f.severity == "info" for f in findings)},
-    }
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:
     lines = [f"# OPE Audit — {result['target']}", "", f"**Run:** `{result['run_id']}`  ", f"**HTTP:** `{result['inventory']['status']}`  ", f"**Findings:** `{result['summary']['finding_count']}`", "", "## Inventory", ""]
-    for k, v in result["inventory"].items(): lines.append(f"- **{k}:** {v}")
+    lines += [f"- **{k}:** {v}" for k, v in result["inventory"].items()]
     lines += ["", "## Findings", ""]
     if not result["findings"]: lines.append("No findings were generated by the deterministic checks.")
     for f in sorted(result["findings"], key=lambda x: x["priority"], reverse=True):
