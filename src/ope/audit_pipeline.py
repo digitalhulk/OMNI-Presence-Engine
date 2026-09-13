@@ -15,19 +15,22 @@ AUDIT_BINDINGS = (
     "13-ux.mobile_usability",
     "14-accessibility.alt_text",
     "17-language.language_declaration",
+    "04-crawl.robots_access",
+    "04-crawl.bot_access",
+    "10-ai-search.agent_accessibility",
 )
 
 
-def _evidence(target: str, value: Any) -> list[dict[str, Any]]:
-    return [{"source": "ope-audit", "target": target, "value": value, "confidence": 1.0, "provenance": "direct", "observed_at": datetime.now(timezone.utc).isoformat()}]
+def _evidence(target: str, value: Any, source: str = "ope-audit") -> list[dict[str, Any]]:
+    return [{"source": source, "target": target, "value": value, "confidence": 1.0, "provenance": "direct", "observed_at": datetime.now(timezone.utc).isoformat()}]
 
 
-def _check(check_id: str, module: str, passed: bool, target: str, value: Any) -> CheckResult:
+def _check(check_id: str, module: str, passed: bool, target: str, value: Any, source: str = "ope-audit") -> CheckResult:
     return CheckResult(
         check_id=check_id,
         module=module,
         status=ExecutionStatus.PASS if passed else ExecutionStatus.FAIL,
-        evidence=_evidence(target, value),
+        evidence=_evidence(target, value, source),
         reason="Direct audit observation",
     )
 
@@ -42,6 +45,19 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if not isinstance(status, int):
             return CheckResult(check_id, "02-infrastructure", ExecutionStatus.UNKNOWN, reason="HTTP status observation is missing or invalid")
         return _check(check_id, "02-infrastructure", status < 400, target, {"status": status})
+
+    if check_id in {"04-crawl.robots_access", "04-crawl.bot_access", "10-ai-search.agent_accessibility"}:
+        robots = inventory.get("robots")
+        if not isinstance(robots, dict):
+            return CheckResult(check_id, check_id.split(".", 1)[0], ExecutionStatus.UNKNOWN, reason="robots.txt observation is missing")
+        if robots.get("error") or not isinstance(robots.get("ai_crawlers"), dict):
+            return CheckResult(check_id, check_id.split(".", 1)[0], ExecutionStatus.UNKNOWN, reason="robots.txt observation is unavailable")
+        blocked = list(robots.get("blocked_ai_crawlers", []))
+        if check_id == "04-crawl.robots_access":
+            return _check(check_id, "04-crawl", True, target, {"robots_status": robots.get("status"), "rule_count": robots.get("rule_count")})
+        if check_id == "04-crawl.bot_access":
+            return _check(check_id, "04-crawl", not blocked, target, {"blocked_ai_crawlers": blocked, "ai_crawlers": robots["ai_crawlers"]})
+        return _check(check_id, "10-ai-search", not blocked, target, {"blocked_ai_crawlers": blocked, "ai_crawlers": robots["ai_crawlers"]})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),
