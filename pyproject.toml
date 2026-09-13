@@ -15,3 +15,8 @@ ope-audit = "ope.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Ship the RawBlock design stylesheet so standalone HTML reports can inline it
+# from installed environments (report_html.py also searches the source tree).
+[tool.setuptools.data-files]
+"share/ope" = ["design/rawblock.css"]

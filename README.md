@@ -324,8 +324,48 @@ integrations/  → external evidence providers
 verticals/     → generic industry implementations
 research/      → source registry and updates
 governance/    → evidence, terminology and update rules
+design/        → RawBlock design system (DESIGN.md, rawblock.css, showcase.html)
+web/           → RawBlock-branded OPE dashboard + report viewer
+src/ope/       → engine, CLI and standalone HTML report renderer
 tests/         → executable contract coverage
 ```
+
+---
+
+# 🎨 RAW//BLOCK UI — DESIGN SYSTEM & HTML REPORTS
+
+OPE ships with the **[RawBlock](https://designmd.ai/chef/rawblock)** brutalist design system
+(MIT, by [@chef](https://designmd.ai/chef)): thick 3–5px borders instead of shadows, zero rounded
+corners, full black/white inversion on hover, Archivo Black + Work Sans + Space Mono, and
+`#0000FF` reserved strictly for hyperlinks.
+
+```text
+design/DESIGN.md       → downloaded source spec (canonical reference)
+design/rawblock.css    → implemented tokens + every component (buttons, cards,
+                         inputs, chips, lists, checkboxes, radios, tooltips, tables)
+design/showcase.html   → live component kitchen-sink + do/don't guide
+web/index.html         → OPE audit console dashboard (loads JSON reports in-browser)
+src/ope/report_html.py → self-contained HTML report renderer (CSS is inlined)
+```
+
+Generate a standalone RawBlock HTML audit report from any run:
+
+```bash
+ope audit https://example.com --html reports/audit.report.html
+```
+
+Or browse the UI locally:
+
+```bash
+python3 -m http.server 8080
+# → /web/index.html            dashboard (click "LOAD SAMPLE REPORT")
+# → /web/sample-report.html    example standalone CLI-generated report
+# → /design/showcase.html      every RawBlock component
+# → /reports/*.report.html     your own generated reports (gitignored)
+```
+
+The dashboard is fully static and renders reports client-side — audit JSON never leaves the
+machine, keeping OPE private by design.
 
 ---
 

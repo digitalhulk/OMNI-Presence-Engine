@@ -1,0 +1,77 @@
+from pathlib import Path
+
+from ope.report_html import html_report, load_rawblock_css, write_html_report
+
+
+def _result(**overrides):
+    base = {
+        "engine": "ope",
+        "version": "0.1.0",
+        "run_id": "ope-1",
+        "target": "https://example.com",
+        "started_at": 1726190400,
+        "engine_contract": "evidence-root-cause-v1",
+        "inventory": {"status": 200, "title": "Example", "images": 2, "images_missing_alt": 1},
+        "modules": {
+            "03": {"status": "FAIL", "findings": ["X-1"]},
+            "02": {"status": "PASS", "findings": []},
+            "01": {"status": "UNKNOWN", "findings": []},
+        },
+        "summary": {"finding_count": 1, "critical": 0, "high": 0, "medium": 1, "low": 0, "info": 0},
+        "findings": [
+            {
+                "id": "X-1",
+                "module": "03-code",
+                "symptom": "<script>alert(1)</script> Document has no title",
+                "status": "OBSERVED",
+                "severity": "medium",
+                "priority": 49.0,
+                "confidence": 1.0,
+                "root_cause": "Template does not render a title.",
+                "remediation": ["Add a title."],
+                "validation": ["Re-audit."],
+                "evidence": [{"source": "html-parser", "target": "https://example.com", "value": {"title": ""}}],
+            }
+        ],
+    }
+    base.update(overrides)
+    return base
+
+
+def test_css_loader_finds_design_stylesheet():
+    css = load_rawblock_css()
+    assert "--rb-black" in css
+    assert "Archivo Black" in css
+    assert "rb-btn--primary" in css
+
+
+def test_html_report_renders_rawblock_branding_and_content():
+    out = html_report(_result())
+    assert "RAW//BLOCK" in out
+    assert "https://example.com" in out
+    assert "X-1" in out
+    assert "rb-btn--primary" in out  # stylesheet inlined
+    assert "MODULE 03" in out
+    assert "Template does not render a title." in out
+    assert "49.0" in out
+
+
+def test_html_report_escapes_user_content():
+    out = html_report(_result())
+    assert "<script>alert(1)</script>" not in out
+    assert "&lt;script&gt;" in out
+
+
+def test_html_report_handles_empty_findings():
+    result = _result(findings=[], summary={"finding_count": 0})
+    out = html_report(result)
+    assert "NO FINDINGS" in out
+
+
+def test_write_html_report_persists_file(tmp_path: Path):
+    target = tmp_path / "nested" / "audit.report.html"
+    returned = write_html_report(_result(), target)
+    assert returned == target
+    text = target.read_text(encoding="utf-8")
+    assert text.startswith("<!doctype html>")
+    assert "OMNI-PRESENCE ENGINE" in text
