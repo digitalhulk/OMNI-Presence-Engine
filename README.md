@@ -48,7 +48,7 @@ RETENTION
 
 # 🚀 ZERO → ACTIVE — ONE COMMAND SETUP
 
-OPE is designed to become easy to activate for a new project. The goal is simple: **clone once, run one setup command, answer the setup wizard, then run the engine.**
+OPE is designed to become easy to activate for a new project. The goal is simple: **clone once, run one setup command, answer the setup wizard, then run the engine.** The setup wizard is now live.
 
 > **Security rule:** API keys, OAuth tokens, cookies, passwords, private documents and payment credentials must stay in local environment variables or a secret manager. Never commit real secrets to Git.
 
@@ -65,7 +65,21 @@ cd OMNI-Presence-Engine
 python3 -m pip install -e .
 ```
 
-The current executable audit command is:
+Run the setup wizard:
+
+```bash
+ope setup
+```
+
+It collects project/entity name, canonical website URL, country, market, language, business type, goals and optional data-source paths/URLs. Configuration is written locally to `~/.ope/config.json`; credentials and secrets are not written by the wizard.
+
+The executable audit command is:
+
+```bash
+ope audit https://example.com
+```
+
+The legacy command remains supported:
 
 ```bash
 ope-audit https://example.com
@@ -74,41 +88,25 @@ ope-audit https://example.com
 For JSON output:
 
 ```bash
-ope-audit https://example.com --json
+ope audit https://example.com --json
 ```
 
 For a Markdown report:
 
 ```bash
-ope-audit https://example.com --markdown
+ope audit https://example.com --markdown
 ```
 
-## 3. Project setup — what the future one-command wizard will collect
-
-The intended setup wizard should collect only the configuration required for the selected project:
-
-1. Project/entity name
-2. Canonical website URL
-3. Important URLs and document sources
-4. Country, market and language
-5. Business goals and conversion events
-6. Search Console / webmaster credentials where available
-7. Analytics credentials where available
-8. Optional live-web research provider credentials
-9. Optional SEO data provider credentials
-10. Reporting and monitoring preferences
-
-The wizard should write configuration locally and keep credentials outside Git.
-
-## 4. Minimum viable run
+## 3. Minimum viable run
 
 ```bash
-ope-audit https://YOUR-WEBSITE.com --markdown
+ope setup
+ope audit https://YOUR-WEBSITE.com --markdown
 ```
 
-This performs the current evidence-first web audit and returns machine-readable or Markdown output.
+The active audit path now passes results through OPE's root-cause normalization contract before output.
 
-## 5. Connect your own data
+## 4. Connect your own data
 
 | Source | Purpose | Credential policy |
 |---|---|---|
@@ -122,7 +120,7 @@ This performs the current evidence-first web audit and returns machine-readable 
 
 OPE should treat first-party measurements as authoritative for the phenomena they directly measure and preserve provider attribution for third-party metrics.
 
-## 6. Owner-sponsored 7-day access
+## 5. Owner-sponsored 7-day access
 
 A separate optional access flow can provide one project with owner-sponsored OPE access for 7 days.
 
@@ -213,7 +211,7 @@ REGRESSION GUARD
 
 > **UNKNOWN ≠ PASS**
 
-Every material observation should retain source, timestamp, target, value, confidence and provenance.
+Every material observation should retain source, timestamp, target, value, confidence and provenance. The active CLI applies the `evidence-root-cause-v1` normalization contract to audit findings.
 
 ---
 
@@ -326,6 +324,7 @@ integrations/  → external evidence providers
 verticals/     → generic industry implementations
 research/      → source registry and updates
 governance/    → evidence, terminology and update rules
+tests/         → executable contract coverage
 ```
 
 ---
