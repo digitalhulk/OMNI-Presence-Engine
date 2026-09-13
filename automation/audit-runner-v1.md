@@ -8,10 +8,10 @@ Turn the module registry into a deterministic, evidence-first audit execution pl
 2. Resolve targets, markets, languages and devices.
 3. Load the 20-module registry.
 4. Resolve module dependencies in order.
-5. Execute checks only when their prerequisites are available.
+5. Execute checks only when prerequisites are available.
 6. Collect raw observations with source, timestamp, target and provider metadata.
 7. Normalize observations into `ope.audit.finding` records.
-8. Classify each result as FACT, OBSERVED, ESTIMATE, HYPOTHESIS or EXPERIMENT.
+8. Keep evidence lifecycle (`FACT`, `OBSERVED`, `ESTIMATE`, `HYPOTHESIS`, `EXPERIMENT`, `DEPRECATED`) separate from execution state (`PASS`, `FAIL`, `UNKNOWN`, `BLOCKED`, `N/A`).
 9. Trace symptom to dependency and root cause.
 10. Calculate priority using `ope.priority`.
 11. Produce remediation, validation and regression requirements.
@@ -21,7 +21,7 @@ Turn the module registry into a deterministic, evidence-first audit execution pl
 ## Dependency gates
 Entity -> Infrastructure -> Code -> Crawl -> Index -> Semantics -> Content/Media -> Search/AI -> Authority/Local -> UX/Accessibility/Performance/Security/Language -> Analytics -> Conversion -> Continuous Optimization.
 
-A downstream check must not convert missing upstream evidence into a PASS. It must return BLOCKED, UNKNOWN or NOT_APPLICABLE with a reason.
+A downstream check must not convert missing upstream evidence into a PASS. It must return BLOCKED or UNKNOWN with a reason. A module with no executed checks is UNKNOWN, not PASS.
 
 ## Evidence contract
 Every observation should carry:
@@ -31,8 +31,10 @@ Every observation should carry:
 - raw value or measurement
 - method/tool where applicable
 - confidence
-- freshness
+- freshness where applicable
 - provider attribution
+
+Evidence must be attributable and reproducible where the provider permits it. Never manufacture evidence to fill gaps.
 
 ## Execution classes
 - deterministic: headers, status, robots, sitemap, canonical, HTML metadata
@@ -46,7 +48,10 @@ Every observation should carry:
 - Destructive changes require explicit approval.
 - Third-party provider estimates remain estimates.
 - Preserve approved visual and functional behavior during optimization.
-- Never manufacture evidence to fill gaps.
+- Validate every redirect target before following it.
+- Reject localhost, loopback, private, link-local and otherwise reserved network targets in fetchers.
+- Apply bounded timeouts, redirect limits and response-size limits.
+- Treat client-side claims as unverified until backed by trusted evidence.
 
 ## Output
 A run returns:
@@ -61,6 +66,3 @@ A run returns:
 9. regression guards
 10. monitoring plan
 11. run metadata and changelog entry
-
-## ABC Taxis 247 first implementation
-Prioritize: entity identity, local presence, airport/service queries, booking path, mobile performance, analytics/attribution, AI search visibility, trust/reviews, and conversion completion. Transaction fields should be modeled as structured data where applicable: pickup, destination, date, time, vehicle, passengers, luggage, airport, route, fare, driver, booking and support.
