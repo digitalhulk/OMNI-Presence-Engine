@@ -1,146 +1,91 @@
 # 🛣️ SADAK SE UTHA KR ⭐ STAR BNA DUNGA
 
-## OMNI-PRESENCE ENGINE
+# OMNI-PRESENCE ENGINE
 
 > **One Engine. Every Platform. Real Growth.**
 >
 > **ZERO → EXIST → DISCOVER → UNDERSTAND → TRUST → RANK → ANSWER → CITE → RECOMMEND → CONVERT → RETAIN → AUTHORITY → DOMINANCE**
->
-> **Koi bhi business chhota nahi. Sahi strategy, engineering aur execution ke saath har brand STAR ban sakta hai.** ⭐
+
+OPE is an evidence-driven **digital presence engineering system** for legitimate people, brands, businesses, products, services, websites, applications and digital properties.
+
+It connects infrastructure, code, crawlability, indexability, semantics, content, media, search, AI search, authority, local presence, UX, accessibility, performance, security, language, analytics and conversion into one dependency-aware architecture.
+
+> **Sadak se uthana nahi — system se STAR banana hai.** 🚀
 
 ---
 
-## ⚡ THE PROMISE
-
-OPE is an evidence-driven **digital presence engineering system** for people, brands, businesses, products, services, websites, applications and digital properties.
-
-It connects infrastructure, code, crawlability, indexability, semantics, content, media, search, AI search, authority, local presence, UX, accessibility, performance, security, language, analytics and conversion into one dependency-aware system.
-
-```text
-IDEA
- ↓
-INFRASTRUCTURE
- ↓
-CODE + CONTENT + MEDIA
- ↓
-ENTITY + SEMANTICS
- ↓
-CRAWL + INDEX
- ↓
-SEARCH + AI SEARCH
- ↓
-AUTHORITY + LOCAL TRUST
- ↓
-UX + ACCESSIBILITY + PERFORMANCE + SECURITY
- ↓
-ANALYTICS
- ↓
-CONVERSION
- ↓
-RETENTION
- ↓
-⭐ STAR / MARKET AUTHORITY
-```
-
-### **Sadak se uthana nahi — system se STAR banana hai.** 🚀
-
----
-
-# 🚀 ZERO → ACTIVE — ONE COMMAND SETUP
-
-OPE is designed to become easy to activate for a new project: **clone once, install once, run setup, then audit.** The setup wizard is live.
-
-> **Security rule:** API keys, OAuth tokens, cookies, passwords, private documents and payment credentials must stay in local environment variables or a secret manager. Never commit real secrets to Git.
-
-## 1. Get OPE
+## 🚀 QUICK START
 
 ```bash
 git clone https://github.com/digitalhulk/OMNI-Presence-Engine.git
 cd OMNI-Presence-Engine
-```
-
-## 2. Install the engine
-
-```bash
 python3 -m pip install -e .
-```
-
-Run the setup wizard:
-
-```bash
-ope setup
-```
-
-The wizard collects project/entity name, canonical website URL, country, market, language, business type, goals and optional data-source paths/URLs. Configuration is written locally to `~/.ope/config.json`.
-
-The executable audit command is:
-
-```bash
-ope audit https://example.com
-```
-
-Legacy command remains supported:
-
-```bash
-ope-audit https://example.com
-```
-
-Output modes:
-
-```bash
-ope audit https://example.com --json
-nope audit https://example.com --markdown
-nope audit https://example.com --html reports/audit.report.html
-```
-
-## 3. Minimum viable run
-
-```bash
 ope setup
 ope audit https://YOUR-WEBSITE.com --markdown
 ```
 
-The active audit path passes results through OPE's canonical **`evidence-diagnostic-v1`** normalization contract before output.
+Setup stores project configuration locally at `~/.ope/config.json`.
+
+Available output modes:
+
+```bash
+ope audit https://example.com --json
+ope audit https://example.com --markdown
+ope audit https://example.com --html reports/audit.report.html
+```
+
+Legacy `ope-audit` remains supported.
+
+**Security:** API keys, OAuth tokens, cookies, passwords, private documents, production credentials and payment credentials must remain local or in a secret manager. Never commit real secrets.
 
 ---
 
-# 🧠 ENGINE STATUS — FOUNDATION LAYER
+# 🧠 ENGINE STATUS — VERIFIED FOUNDATION
 
-OPE is no longer only a documentation architecture. The executable foundation now contains:
+The current `main` branch contains the following **verified executable foundation**:
 
 ```text
 PROJECT CONFIG
      ↓
-EVIDENCE PROVIDERS
+EVIDENCE PROVIDER REGISTRY
      ↓
-CHECK REGISTRY
+AUDIT / OBSERVATION INPUTS
      ↓
-DEPENDENCY-AWARE MODULE RUNNER
+EVIDENCE NORMALIZATION
      ↓
-EVIDENCE / FINDING NORMALIZATION
+ROOT-CAUSE NORMALIZATION
      ↓
-ROOT-CAUSE + PRIORITY LAYERS
+PRIORITY / SCORING PRIMITIVES
      ↓
-REPORTING / VALIDATION
+JSON / MARKDOWN / RAWBLOCK HTML REPORTING
 ```
 
-### Current engine primitives
+### Implemented on `main`
 
 - **EvidenceRecord** — source, target, value, timestamp, confidence and provenance.
-- **Evidence normalization** — provider observations are converted into a stable machine-readable representation.
-- **RootCauseFinding** — symptom → layer → dependency → evidence → root cause → impact → remediation → validation → regression guard.
+- **Evidence normalization** — bounded confidence and stable machine-readable records.
+- **RootCauseFinding** — structured symptom, evidence, layer, dependency, root cause, impact, remediation, validation and regression-guard fields.
 - **Canonical engine contract** — `evidence-diagnostic-v1`.
-- **ModuleRunner** — deterministic dependency-aware execution of checks.
-- **CheckSpec / CheckResult** — typed execution contracts for individual checks.
-- **Dependency graph** — missing dependencies and cycles are rejected before execution.
-- **Blocking semantics** — failed, blocked or unknown dependencies can prevent unsafe downstream execution.
-- **Explicit execution states** — `PASS`, `FAIL`, `UNKNOWN`, `BLOCKED`, `N/A`.
-- **Evidence-aware confidence** — missing evidence never silently becomes success.
-- **Module aggregation** — module status is derived from executed checks rather than invented scores.
-- **Provider layer** — external/first-party evidence sources can be registered without coupling them to the core engine.
-- **CI contract tests** — executable tests protect the evidence, dependency and scoring semantics.
+- **Root-cause normalizer** — missing root causes remain explicit hypotheses.
+- **Priority primitive** — bounded remediation priority, not a fake ranking score.
+- **Module scoring semantics** — `UNKNOWN`, `BLOCKED` and unexecuted states do not receive fabricated scores.
+- **EvidenceProviderRegistry / Observation** — provider-backed evidence can be registered without coupling providers to the core engine.
+- **Setup + audit CLI** — project configuration and executable website audits.
+- **JSON / Markdown / RawBlock HTML reporting**.
+- **Machine-readable audit/finding schemas**.
+- **CI test foundation** and executable contract tests.
 
-> **Important:** foundation primitives are implemented; the 20-module check surface is being expanded progressively. An unimplemented or unavailable check must remain `UNKNOWN`/`BLOCKED`, not be fabricated as `PASS`.
+### Not yet claimed as implemented
+
+The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
+
+- full machine-executable 20-module check registry
+- dependency-aware `ModuleRunner` execution surface
+- complete provider adapters for every external data source
+- complete 20-module evidence/check coverage
+- continuous monitoring/orchestration across all modules
+
+This distinction is intentional: **documentation must never claim code that is not actually present.**
 
 ---
 
@@ -155,9 +100,9 @@ OBSERVATION
       ↓
 EVIDENCE RECORD
       ↓
-CHECK
+CHECK / AUDIT
       ↓
-EXECUTION STATUS
+EXECUTION STATE
       ↓
 FINDING
       ↓
@@ -168,9 +113,11 @@ PRIORITY
 REMEDIATION
       ↓
 VALIDATION
+      ↓
+REGRESSION GUARD
 ```
 
-Every material observation should retain:
+Material observations should retain:
 
 - source
 - target
@@ -179,36 +126,9 @@ Every material observation should retain:
 - confidence
 - provenance
 
-OPE distinguishes evidence states such as `FACT`, `OBSERVED`, `ESTIMATE`, `HYPOTHESIS`, `EXPERIMENT` and `DEPRECATED` from execution states such as `PASS`, `FAIL`, `UNKNOWN`, `BLOCKED` and `N/A`.
+OPE separates evidence states such as `FACT`, `OBSERVED`, `ESTIMATE`, `HYPOTHESIS`, `EXPERIMENT` and `DEPRECATED` from execution states such as `PASS`, `FAIL`, `UNKNOWN`, `BLOCKED` and `N/A`.
 
-This distinction prevents a provider estimate, missing measurement or unproven hypothesis from being presented as a verified fact.
-
----
-
-# 🧩 DEPENDENCY-AWARE CHECK ENGINE
-
-Checks are registered as executable units rather than being treated as a flat checklist.
-
-```text
-CHECK A
-  ↓
-CHECK B ─────→ CHECK C
-  ↓              ↓
-CHECK D ←────────┘
-```
-
-The runner:
-
-1. validates check IDs
-2. validates dependency references
-3. rejects dependency cycles
-4. computes deterministic topological execution order
-5. executes checks only when dependencies permit
-6. blocks downstream checks when required dependencies fail or remain unresolved
-7. captures execution duration
-8. aggregates results by module
-
-This makes OPE suitable for progressively adding real evidence providers without creating hidden false positives.
+**UNKNOWN ≠ PASS.** Missing evidence must never silently become success.
 
 ---
 
@@ -236,31 +156,23 @@ VALIDATION
 REGRESSION GUARD
 ```
 
-> **UNKNOWN ≠ PASS**
-
-A missing root cause is explicitly treated as a **hypothesis**, not silently promoted to fact.
-
-The canonical engine normalizer adds stable diagnostic fields while preserving the original audit evidence and semantics.
+If evidence does not establish a root cause, OPE labels the result as a **hypothesis** rather than presenting an assumption as fact.
 
 ---
 
 # 📊 PRIORITY ≠ RANKING SCORE
 
-OPE does **not** pretend to calculate a universal search-engine ranking score.
+OPE does **not** pretend to calculate a universal Google/Bing/AI ranking score.
 
 ```text
 PRIORITY = IMPACT × CONFIDENCE × URGENCY × FIXABILITY
 ```
 
-Normalized to `0–100`.
-
-Priority is a **remediation decision signal**, not a claim about Google's, Bing's or any AI system's ranking algorithm.
-
-Unknown, blocked or unexecuted modules do not receive fabricated scores.
+The result is bounded to `0–100` and is a **remediation decision signal**, not a claim about any search engine's ranking algorithm.
 
 ---
 
-# 🧠 20-MODULE ENGINE
+# 🧠 20-MODULE TARGET ARCHITECTURE
 
 | # | Module | Engineering Scope |
 |---:|---|---|
@@ -285,7 +197,7 @@ Unknown, blocked or unexecuted modules do not receive fabricated scores.
 | 19 | **Conversion** | CTA, leads, sales, funnel, revenue |
 | 20 | **Continuous Optimization** | Observe → Diagnose → Fix → Validate → Monitor |
 
-The module registry is machine-readable and defines module weights, check namespaces and expected evidence families.
+**Important:** this is the target system architecture. A module being listed here does not imply that every check inside it is currently executable.
 
 ---
 
@@ -315,10 +227,10 @@ RECOMMENDATION
 HUMAN ACTION
 ```
 
-The engine is designed to reason across:
+The architecture covers:
 
-- Google and Bing search ecosystems
-- traditional SEO
+- search ecosystems
+- SEO
 - AEO
 - GEO
 - LLMO
@@ -328,97 +240,47 @@ The engine is designed to reason across:
 - browser/agent accessibility
 - authority and third-party references
 
-OPE does not depend on a single ranking trick, prompt hack or AI-specific shortcut.
+OPE is designed around durable evidence and entity understanding—not ranking tricks or prompt hacks.
 
 ---
 
-# 🤖 INTELLIGENCE STACK
+# 🧪 EXECUTION VISION
 
-```text
-                 ┌──────────────────────┐
-                 │    OPE ORCHESTRATOR  │
-                 └──────────┬───────────┘
-                            │
-          ┌─────────────────┼─────────────────┐
-          ▼                 ▼                 ▼
-     ┌──────────┐      ┌──────────┐     ┌─────────────┐
-     │ External │      │ Search / │     │ First Party │
-     │ Evidence │      │ SEO Data │     │ + Logs      │
-     └────┬─────┘      └────┬─────┘     └──────┬──────┘
-          └──────────────────┼──────────────────┘
-                             ▼
-                  ┌──────────────────────┐
-                  │ EVIDENCE NORMALIZER  │
-                  └──────────┬───────────┘
-                             ▼
-                  ┌──────────────────────┐
-                  │ ROOT-CAUSE ENGINE    │
-                  └──────────┬───────────┘
-                             ▼
-                  ┌──────────────────────┐
-                  │ SCORE + ACTION PLAN  │
-                  └──────────┬───────────┘
-                             ▼
-                  ┌──────────────────────┐
-                  │ VALIDATE + MONITOR   │
-                  └──────────────────────┘
-```
-
-OPE is the orchestration and reasoning layer. Provider-specific measurements remain attributed to their source.
-
----
-
-# 🧪 EXECUTION PIPELINE
+The long-term control loop is:
 
 ```text
 DISCOVER → INVENTORY → AUDIT → EVIDENCE → NORMALIZE
-→ DIAGNOSE → SCORE → PLAN → IMPLEMENT → VALIDATE → MONITOR → ↺
+→ DIAGNOSE → PRIORITIZE → PLAN → IMPLEMENT → VALIDATE → MONITOR → ↺
 ```
 
-The target output of a complete OPE run is:
+The complete system is intended to produce:
 
 - entity and technical inventory
 - evidence set
-- 20-module execution state
-- `PASS / FAIL / UNKNOWN / BLOCKED / N/A` states
+- module execution states
 - root-cause findings
 - confidence and provenance
-- priority signals
-- remediation plans
+- remediation priorities
+- implementation plans
 - validation criteria
 - regression guards
 - monitoring requirements
 - historical comparisons
 
----
-
-# 🔗 DATA SOURCES
-
-| Source | Purpose | Credential policy |
-|---|---|---|
-| Website | Technical/entity discovery | URL only |
-| Google Search Console | Search performance/index evidence | Local credential |
-| Bing Webmaster | Search visibility evidence | Local credential |
-| Analytics | Engagement/conversion evidence | Local credential |
-| Server/CDN logs | Request/performance evidence | Local/private |
-| External research providers | Live web intelligence/evidence | Local API key |
-| SEO data providers | SEO datasets/workflows | Local API key |
-
-OPE should treat first-party measurements as authoritative for the phenomena they directly measure and preserve provider attribution for third-party metrics.
+Only capabilities actually backed by executable code should be reported as implemented.
 
 ---
 
-# 🎨 RAW//BLOCK UI — DESIGN SYSTEM & HTML REPORTS
+# 🎨 RAW//BLOCK UI
 
-OPE ships with the **RawBlock** brutalist design system: thick borders, zero rounded corners, strong black/white contrast and deliberately structural UI primitives.
+OPE uses the **RawBlock** brutalist design language: structural layouts, thick borders, zero rounded corners, high-contrast primitives and explicit information hierarchy.
 
 ```text
 design/DESIGN.md       → canonical UI specification
-design/rawblock.css    → implemented design tokens + components
-design/showcase.html   → component kitchen-sink + guidance
-web/index.html         → OPE audit console dashboard
-src/ope/report_html.py → self-contained HTML report renderer
+design/rawblock.css    → design tokens + components
+design/showcase.html   → component showcase
 tests/                 → executable contract coverage
+src/ope/               → executable engine + CLI
 ```
 
 Generate a standalone HTML report:
@@ -427,13 +289,7 @@ Generate a standalone HTML report:
 ope audit https://example.com --html reports/audit.report.html
 ```
 
-Browse the UI locally:
-
-```bash
-python3 web/serve.py 8080
-```
-
-Generated reports are gitignored. The dashboard is designed to render audit data locally rather than requiring audit JSON to be sent to a hosted reporting service.
+Generated reports are gitignored.
 
 ---
 
@@ -443,13 +299,13 @@ Generated reports are gitignored. The dashboard is designed to render audit data
 schemas/       → machine-readable contracts
 frameworks/    → SEO/AEO/GEO/LLMO/SXO/CRO views
 docs/          → module and system specifications
-automation/    → execution, adapters, monitoring
+automation/    → execution, adapters, monitoring targets
 integrations/  → external evidence providers
 verticals/     → generic industry implementations
 research/      → source registry and updates
 governance/    → evidence, terminology and update rules
 design/        → RawBlock design system
-web/           → RawBlock dashboard + report viewer
+web/           → dashboard + report viewer
 src/ope/       → executable engine and CLI
 tests/         → executable contract coverage
 ```
@@ -463,7 +319,6 @@ tests/         → executable contract coverage
 - **UNKNOWN is never silently converted to PASS.**
 - **Provider estimates remain estimates.**
 - **Hypotheses are explicitly labeled.**
-- **Dependency failures can block unsafe downstream checks.**
 - **Human experience over vanity scores.**
 - **Machine readability without sacrificing humans.**
 - **Preserve approved visual/function experience during performance optimization.**
@@ -475,14 +330,6 @@ tests/         → executable contract coverage
 
 ---
 
-# 🌍 WHO CAN USE OPE?
-
-**Local businesses · Service businesses · E-commerce · SaaS · Startups · Agencies · Personal brands · Enterprises · Products · Platforms · Any legitimate digital property.**
-
-OPE is **vertical-agnostic** and supports industry-specific implementations without coupling the core engine to one client or business.
-
----
-
 # 🔐 PRIVATE BY DESIGN
 
 This repository is **PRIVATE**.
@@ -490,6 +337,8 @@ This repository is **PRIVATE**.
 Never commit API keys, OAuth tokens, cookies, session credentials, customer secrets, private analytics exports or production credentials.
 
 Use environment variables or a deployment secret manager.
+
+Client-specific implementations, credentials and private business data must remain outside the core repository unless explicitly intended as generic, sanitized examples.
 
 ---
 
@@ -514,20 +363,20 @@ Use environment variables or a deployment secret manager.
 
 # 🎯 MISSION
 
-**Make every legitimate business visible, valuable and victorious in the digital world through evidence, engineering and continuous optimization.**
+Build a durable engineering system that turns digital properties from **unknown → discoverable → understandable → trusted → retrievable → recommendable → convertible**, using evidence instead of assumptions.
 
-# 🔭 VISION
+## VISION
 
-**A world where great businesses do not go unnoticed because their digital presence is engineered for humans, search engines, AI systems and agents.**
+> **One engine. Every layer. Every legitimate digital property.**
+>
+> **No patch fixes. No fake scores. No fake certainty. Build the system. Prove the result.**
 
 ---
 
-<div align="center">
+## 📌 CURRENT RELEASE
 
-### 👑 Built by **DigitalHulk**
+**Version:** `0.1.1`  
+**Stage:** Evidence-driven executable foundation  
+**Contract:** `evidence-diagnostic-v1`
 
-**IDEA → STRATEGY → ENGINEERING → GROWTH → AUTHORITY → ⭐ STAR**
-
-## **One Engine. Every Platform. Real Growth.**
-
-</div>
+The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**
