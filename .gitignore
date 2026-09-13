@@ -1,0 +1,28 @@
+# Local OPE configuration and secrets
+.env
+.env.*
+!.env.example
+.ope/
+*.local.json
+*.local.yaml
+*.local.yml
+
+# Python
+a__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated reports
+reports/
+*.report.json
+*.report.md
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
