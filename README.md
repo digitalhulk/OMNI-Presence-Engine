@@ -357,8 +357,8 @@ ope audit https://example.com --html reports/audit.report.html
 Or browse the UI locally:
 
 ```bash
-python3 -m http.server 8080
-# → /web/index.html            dashboard (click "LOAD SAMPLE REPORT")
+python3 web/serve.py 8080     # no-cache preview server (root → dashboard)
+# → /web/index.html            dashboard (sample report auto-renders)
 # → /web/sample-report.html    example standalone CLI-generated report
 # → /design/showcase.html      every RawBlock component
 # → /reports/*.report.html     your own generated reports (gitignored)

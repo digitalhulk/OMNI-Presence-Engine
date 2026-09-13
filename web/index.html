@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../design/rawblock.css">
+<link rel="stylesheet" href="../design/rawblock.css?v=2">
 <style>
   .topbar { border-bottom: var(--rb-border-heavy); }
   .topbar__in { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
@@ -218,7 +218,7 @@ ope audit https://example.com --html reports/audit.report.html</pre>
       evidence + "</article>";
   }
 
-  function render(r) {
+  function render(r, scroll) {
     var mount = document.getElementById("report");
     mount.innerHTML =
       '<hr class="rb-rule"><h2>REPORT // ' + esc(r.run_id || "") + "</h2>" +
@@ -227,7 +227,7 @@ ope audit https://example.com --html reports/audit.report.html</pre>
       summaryCards(r) + moduleGrid(r) + inventoryTable(r) +
       "<h2>FINDINGS</h2><hr class='rb-rule'>" +
       ((r.findings || []).slice().sort(function (a, b) { return b.priority - a.priority; }).map(findingCard).join("") || "<p>No findings.</p>");
-    mount.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (scroll) mount.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   document.getElementById("themeToggle").addEventListener("click", function () {
@@ -235,8 +235,10 @@ ope audit https://example.com --html reports/audit.report.html</pre>
     root.setAttribute("data-theme", root.getAttribute("data-theme") === "dark" ? "light" : "dark");
   });
   document.getElementById("sampleBtn").addEventListener("click", function () {
-    render(window.OPE_SAMPLE_REPORT);
+    render(window.OPE_SAMPLE_REPORT, true);
   });
+  // Show the RawBlock report design in action on first paint — no click needed.
+  render(window.OPE_SAMPLE_REPORT, false);
   document.getElementById("fileInput").addEventListener("change", function (ev) {
     var file = ev.target.files[0];
     if (!file) return;
