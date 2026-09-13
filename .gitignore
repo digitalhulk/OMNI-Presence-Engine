@@ -8,7 +8,7 @@
 *.local.yml
 
 # Python
-a__pycache__/
+__pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
