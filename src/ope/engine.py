@@ -4,6 +4,8 @@ from copy import deepcopy
 from typing import Any
 
 from .audit_pipeline import execute_audit_checks
+from .module_runner import ExecutionStatus
+from .registry import checks_for_module
 
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
 
@@ -29,6 +31,23 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
+def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
+    """Derive a module status without mistaking partial coverage for PASS."""
+    if existing in {ExecutionStatus.FAIL.value, ExecutionStatus.BLOCKED.value}:
+        return str(existing)
+    if not check_statuses:
+        return ExecutionStatus.UNKNOWN.value
+    if ExecutionStatus.FAIL.value in check_statuses:
+        return ExecutionStatus.FAIL.value
+    if ExecutionStatus.BLOCKED.value in check_statuses:
+        return ExecutionStatus.BLOCKED.value
+    if all(status == ExecutionStatus.NA.value for status in check_statuses):
+        return ExecutionStatus.NA.value
+    if all(status == ExecutionStatus.PASS.value for status in check_statuses):
+        return ExecutionStatus.PASS.value
+    return ExecutionStatus.UNKNOWN.value
+
+
 def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     """Attach the stable evidence/diagnostic contract to an audit result."""
     output = deepcopy(result)
@@ -38,15 +57,15 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     # Execute the deterministic registry against the evidence already collected
     # by audit.py. No new evidence is invented here.
     execution = execute_audit_checks(output)
-    for module in output.get("modules", {}).values():
-        if not module.get("findings") and module.get("status") == "PASS":
-            module["status"] = "UNKNOWN"
+    checks = execution.get("checks", {})
 
-    for check in execution.get("checks", {}).values():
-        if check.get("status") == "FAIL":
-            module = str(check.get("module", ""))
-            module_number = module.split("-", 1)[0]
-            if module_number in output.get("modules", {}):
-                output["modules"][module_number]["status"] = "FAIL"
+    # Reconcile only the existing module status field. Inventory, findings and
+    # other report keys are preserved exactly; partial registry coverage is
+    # explicitly UNKNOWN rather than a false PASS.
+    for module_number, module in output.get("modules", {}).items():
+        module_code = str(module_number)
+        check_ids = checks_for_module(next((str(value.get("module", module_code)) for value in checks.values() if str(value.get("module", "")).startswith(module_code + "-")), module_code)
+        statuses = [str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value)) for check_id in check_ids if check_id in checks]
+        module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
     return output
