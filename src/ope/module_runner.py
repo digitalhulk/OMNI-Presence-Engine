@@ -68,6 +68,7 @@ class ModuleRunner:
         by_id = {c.id: c for c in self.checks}
         state: dict[str, int] = {}
         ordered: list[CheckSpec] = []
+
         def visit(check_id: str) -> None:
             mark = state.get(check_id, 0)
             if mark == 1:
@@ -79,6 +80,7 @@ class ModuleRunner:
                 visit(dep)
             state[check_id] = 2
             ordered.append(by_id[check_id])
+
         for check in self.checks:
             visit(check.id)
         return ordered
@@ -108,16 +110,24 @@ class ModuleRunner:
         if isinstance(raw, CheckResult):
             if raw.check_id != check.id or raw.module != check.module:
                 raise ValueError("CheckResult identity does not match CheckSpec")
+            if raw.status == ExecutionStatus.PASS and not raw.evidence:
+                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="PASS result has no evidence")
             return raw
         if raw is True:
-            return CheckResult(check.id, check.module, ExecutionStatus.PASS)
+            return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned PASS without evidence")
         if raw is False:
             return CheckResult(check.id, check.module, ExecutionStatus.FAIL, reason="check returned a negative result")
         if raw is None:
             return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned no result")
         if isinstance(raw, dict):
             status = ExecutionStatus(str(raw.get("status", ExecutionStatus.UNKNOWN.value)))
-            return CheckResult(check.id, check.module, status, list(raw.get("evidence", [])), list(raw.get("findings", [])), str(raw.get("reason", "")))
+            evidence = list(raw.get("evidence", []))
+            if status == ExecutionStatus.PASS and not evidence:
+                status = ExecutionStatus.UNKNOWN
+                reason = str(raw.get("reason", "")) or "PASS result has no evidence"
+            else:
+                reason = str(raw.get("reason", ""))
+            return CheckResult(check.id, check.module, status, evidence, list(raw.get("findings", [])), reason)
         raise TypeError(f"Unsupported check result type: {type(raw).__name__}")
 
     def _build_output(self, results: dict[str, CheckResult]) -> dict[str, Any]:
