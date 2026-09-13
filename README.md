@@ -61,23 +61,9 @@ IDEA → INFRASTRUCTURE → CODE → ENTITY → CONTENT/MEDIA
 # 🔥 ROOT-CAUSE ENGINE
 
 ```text
-SYMPTOM
-  ↓
-AFFECTED LAYER
-  ↓
-DEPENDENCY
-  ↓
-EVIDENCE
-  ↓
-ROOT CAUSE
-  ↓
-IMPACT → PRIORITY
-  ↓
-REMEDIATION
-  ↓
-VALIDATION
-  ↓
-REGRESSION GUARD
+SYMPTOM → AFFECTED LAYER → DEPENDENCY → EVIDENCE
+→ ROOT CAUSE → IMPACT → PRIORITY → REMEDIATION
+→ VALIDATION → REGRESSION GUARD
 ```
 
 > **UNKNOWN ≠ PASS**
@@ -118,30 +104,38 @@ Evidence retains source, target, timestamp, value, confidence, freshness and pro
                   └─────────────────────┘
 ```
 
-**Parallel** = live web intelligence.  
-**OpenSEO** = SEO measurement/data layer.  
-**First-party sources** = authoritative measurements for their own systems.  
-**OPE** = orchestration, normalization, diagnosis and action.
+**Parallel** = live web intelligence. **OpenSEO** = SEO measurement/data layer. **First-party sources** = authoritative measurements for their own systems. **OPE** = orchestration, normalization, diagnosis and action.
 
 ---
 
 # 🧪 EXECUTABLE ENGINE
 
-The implementation begins with a dependency-aware deterministic web audit and a common evidence contract.
+The implementation now includes a dependency-aware deterministic web-audit runtime with a common evidence contract.
 
 ```bash
+git clone https://github.com/digitalhulk/OMNI-Presence-Engine.git
+cd OMNI-Presence-Engine
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+# Human-readable JSON audit
 python -m ope.cli https://example.com
+
+# JSON file
 python -m ope.cli https://example.com --json > audit.json
+
+# Markdown report
 python -m ope.cli https://example.com --markdown > audit.md
 ```
 
-The runtime foundation covers HTTP/redirect observations, headers, HTTPS/security headers, robots, sitemap, canonical, title/meta/viewport/language, headings, structured data, image/alt inventory, links, forms, HTML/page weight and evidence-backed findings.
+Current runtime foundation covers HTTP/redirect observations, headers, HTTPS/security headers, robots, sitemap discovery, canonical, title/meta/viewport/language, headings, structured data, image/alt inventory, links, forms, HTML/page weight, evidence-backed findings, module states and priority calculation.
 
-External adapters plug into the same contract; provider measurements remain attributed to their source.
+The runtime is intentionally dependency-light and uses Python's standard library for the initial deterministic layer. External provider adapters can feed the same evidence contract.
 
 ---
 
-# 📊 PRIORITY ENGINE
+# 📊 PRIORITY ≠ RANKING SCORE
 
 OPE is **not** a fake Google ranking score.
 
@@ -193,6 +187,8 @@ verticals/     → industry implementations
 frameworks/    → SEO/AEO/GEO/LLMO/SXO/CRO views
 research/      → evidence + updates
 governance/    → rules + terminology + release policy
+src/ope/       → executable Python runtime
+tests/         → runtime smoke tests
 ```
 
 ---
