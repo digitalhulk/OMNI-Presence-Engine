@@ -10,6 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from typing import Any
 
@@ -53,7 +54,7 @@ class PageParser(HTMLParser):
 @dataclass
 class Evidence:
     source: str
-    observed_at: float
+    observed_at: str
     target: str
     value: Any
     confidence: float = 1.0
@@ -99,10 +100,10 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
 def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], bytes, str]:
     safe_url = _validate_url(url)
     req = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
-    opener = urllib.request.build_opener(_SafeRedirect())
-    opener.max_redirections = MAX_REDIRECTS
     ctx = ssl.create_default_context()
-    with opener.open(req, timeout=max(1, min(timeout, 60)), context=ctx) as r:
+    opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
+    opener.max_redirections = MAX_REDIRECTS
+    with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
         content_type = (r.headers.get("Content-Type") or "").lower()
         if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
             raise ValueError(f"Unsupported target content type: {content_type}")
@@ -125,7 +126,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     final_url, status, headers, body, charset = _request(normalized, timeout)
     html = body.decode(charset, errors="replace")
     p = PageParser(); p.feed(html)
-    now = time.time()
+    now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
 
