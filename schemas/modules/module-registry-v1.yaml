@@ -1,6 +1,6 @@
 name: ope.module-registry
 version: 1
-purpose: Machine-readable registry for the 20 OPE master modules, executable checks, evidence requirements, scoring weights, and ABC Taxis 247 mappings.
+purpose: Machine-readable registry for the 20 OPE master modules, executable checks, evidence requirements, and scoring weights.
 status: FACT
 scoring:
   formula: priority = clamp(100 * impact * confidence * urgency * fixability, 0, 100)
@@ -8,121 +8,101 @@ scoring:
 modules:
   - id: 01-entity
     name: Entity
-    weight: 7
+    weight: 6
     checks: [entity.identity, entity.ownership, entity.identifiers, entity.relationships, entity.consistency]
     evidence: [official_source, canonical_url, organization_or_person_identifiers, entity_relationships]
-    abc_mapping: [brand_identity, company_identity, service_identity, location_identity]
   - id: 02-infrastructure
     name: Infrastructure
     weight: 5
     checks: [dns.resolution, tls.valid, hosting.availability, cdn.configuration, server_reachability]
     evidence: [dns_observation, tls_observation, http_response, hosting_or_cdn_observation]
-    abc_mapping: [website, booking_endpoint, hosting, cdn]
   - id: 03-code
     name: Code
-    weight: 6
+    weight: 5
     checks: [html.validity, semantic_html, head_metadata, structured_data, css_cost, js_cost, third_party_code, forms]
     evidence: [rendered_html, dom_snapshot, response_headers, structured_data_extract, performance_trace]
-    abc_mapping: [booking_flow, service_pages, tracking, forms]
   - id: 04-crawl
     name: Crawl
     weight: 4
     checks: [robots_access, sitemap_discovery, bot_access, crawl_errors, crawl_budget_risk]
     evidence: [robots_txt, sitemap, crawler_observation, server_logs]
-    abc_mapping: [website_crawl, booking_pages, location_pages]
   - id: 05-index
     name: Index
     weight: 5
     checks: [indexability, canonicalization, status_codes, duplication, rendering_indexability]
     evidence: [search_console, bing_webmaster, page_response, canonical_extract]
-    abc_mapping: [service_pages, airport_pages, location_pages]
   - id: 06-semantics
     name: Semantics
-    weight: 6
+    weight: 5
     checks: [entity_markup, topic_coverage, query_intent, relationships, taxonomy, knowledge_consistency]
     evidence: [structured_data, content_extract, query_dataset, entity_sources]
-    abc_mapping: [airport_taxi, local_taxi, airport_transfer, routes, vehicle_types]
   - id: 07-content
     name: Content
-    weight: 7
+    weight: 6
     checks: [intent_match, completeness, originality, factual_accuracy, helpfulness, freshness, internal_links, conversion_context]
     evidence: [page_content, query_data, first_party_business_data, content_comparison]
-    abc_mapping: [service_pages, airport_pages, route_pages, faq, reviews]
   - id: 08-media
     name: Media
     weight: 4
     checks: [image_quality, image_metadata, responsive_media, video_metadata, captions_transcripts, media_performance]
     evidence: [asset_inventory, image_dimensions, media_headers, rendered_media]
-    abc_mapping: [fleet_images, airport_images, social_video, brand_assets]
   - id: 09-search
     name: Search
-    weight: 7
+    weight: 6
     checks: [query_visibility, serp_eligibility, snippets, sitelinks, image_visibility, local_visibility]
     evidence: [gsc, bing, serp_observation, rank_dataset]
-    abc_mapping: [taxi_queries, airport_queries, local_queries, brand_queries]
   - id: 10-ai-search
     name: AI Search
-    weight: 7
+    weight: 6
     checks: [ai_retrievability, answer_eligibility, citation_presence, source_grounding, agent_accessibility, factual_consistency]
     evidence: [ai_search_observation, citation_observation, ai_platform_measurement, accessible_content]
-    abc_mapping: [ai_taxi_queries, airport_transfer_answers, citations, agent_booking]
   - id: 11-authority
     name: Authority
-    weight: 6
+    weight: 5
     checks: [brand_mentions, backlinks, citations, reviews, expert_signals, reputation, consistency]
     evidence: [backlink_dataset, press_mentions, reviews, official_profiles, third_party_sources]
-    abc_mapping: [local_reviews, press, directories, partnerships, backlinks]
   - id: 12-local
     name: Local
     weight: 6
     checks: [gbp_presence, maps_presence, nap_consistency, service_area, hours, local_pages, reviews]
     evidence: [business_profile, maps_listing, directory_sources, review_sources]
-    abc_mapping: [service_area, airport_presence, local_landing_pages, nap]
   - id: 13-ux
     name: UX
     weight: 5
     checks: [navigation, hierarchy, mobile_usability, interaction_clarity, booking_friction, trust_visibility]
     evidence: [rendered_page, interaction_trace, usability_review, conversion_funnel]
-    abc_mapping: [booking_flow, call_flow, quote_flow, mobile_flow]
   - id: 14-accessibility
     name: Accessibility
     weight: 4
     checks: [keyboard, focus, contrast, semantics, alt_text, forms, captions, reduced_motion]
     evidence: [accessibility_audit, dom_snapshot, keyboard_trace, media_metadata]
-    abc_mapping: [booking_form, navigation, contact_methods, media]
   - id: 15-performance
     name: Performance
     weight: 6
     checks: [dns, ttfb, fcp, lcp, inp, cls, tbt, network, render_cost, frame_cost, page_weight]
     evidence: [lighthouse, pagespeed, browser_trace, network_log, field_data]
-    abc_mapping: [homepage, booking_flow, mobile_pages, media_assets]
   - id: 16-security
     name: Security
     weight: 5
     checks: [https, tls, security_headers, csp, cookies, auth, dependencies, secrets, waf, abuse_controls]
     evidence: [headers, tls_scan, dependency_inventory, security_scan, auth_observation]
-    abc_mapping: [booking_endpoint, forms, payment_boundary, admin_boundary]
   - id: 17-language
     name: Language
     weight: 3
     checks: [language_declaration, locale, translation_quality, hreflang, unicode, regional_intent, transliteration]
     evidence: [html_lang, hreflang_extract, localized_content, query_dataset]
-    abc_mapping: [english, hindi, hinglish, regional_airport_intent]
   - id: 18-analytics
     name: Analytics
     weight: 4
     checks: [measurement_coverage, event_quality, attribution, search_data, server_logs, crm_linkage, ai_referrals]
     evidence: [ga4, gsc, bing, server_logs, crm, ad_platforms]
-    abc_mapping: [booking, calls, leads, revenue, campaign_attribution]
   - id: 19-conversion
     name: Conversion
     weight: 6
     checks: [cta_clarity, lead_capture, booking_completion, trust_to_action, funnel_dropoff, revenue_tracking]
     evidence: [funnel_data, booking_events, crm, call_tracking, revenue_data]
-    abc_mapping: [book_taxi, airport_transfer, quote, call, whatsapp]
   - id: 20-continuous-optimization
     name: Continuous Optimization
-    weight: 5
+    weight: 4
     checks: [monitoring, anomaly_detection, root_cause, prioritization, validation, regression_guards, update_pipeline]
     evidence: [historical_measurements, finding_records, deployment_records, validation_runs]
-    abc_mapping: [weekly_optimization, search_updates, ai_visibility, performance_regression]
