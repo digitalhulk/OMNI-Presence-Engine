@@ -104,20 +104,49 @@ class ModuleRunner:
         return self._build_output(results)
 
     @staticmethod
-    def _coerce(check: CheckSpec, raw: Any) -> CheckResult:
+    def _valid_evidence(evidence: Any) -> bool:
+        if not isinstance(evidence, list) or not evidence:
+            return False
+        for record in evidence:
+            if not isinstance(record, dict):
+                return False
+            if not isinstance(record.get("source"), str) or not record["source"].strip():
+                return False
+            if not isinstance(record.get("observed_at"), str) or not record["observed_at"].strip():
+                return False
+            confidence = record.get("confidence")
+            if confidence is not None:
+                try:
+                    if not 0 <= float(confidence) <= 1:
+                        return False
+                except (TypeError, ValueError):
+                    return False
+        return True
+
+    @classmethod
+    def _coerce(cls, check: CheckSpec, raw: Any) -> CheckResult:
         if isinstance(raw, CheckResult):
             if raw.check_id != check.id or raw.module != check.module:
                 raise ValueError("CheckResult identity does not match CheckSpec")
+            if raw.status == ExecutionStatus.PASS and not cls._valid_evidence(raw.evidence):
+                reason = raw.reason or "PASS result has invalid or missing evidence"
+                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, list(raw.evidence), list(raw.findings), reason)
             return raw
         if raw is True:
-            return CheckResult(check.id, check.module, ExecutionStatus.PASS)
+            return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned PASS without evidence")
         if raw is False:
             return CheckResult(check.id, check.module, ExecutionStatus.FAIL, reason="check returned a negative result")
         if raw is None:
             return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned no result")
         if isinstance(raw, dict):
             status = ExecutionStatus(str(raw.get("status", ExecutionStatus.UNKNOWN.value)))
-            return CheckResult(check.id, check.module, status, list(raw.get("evidence", [])), list(raw.get("findings", [])), str(raw.get("reason", "")))
+            evidence = list(raw.get("evidence", []))
+            findings = list(raw.get("findings", []))
+            reason = str(raw.get("reason", ""))
+            if status == ExecutionStatus.PASS and not cls._valid_evidence(evidence):
+                reason = reason or "PASS result has invalid or missing evidence"
+                status = ExecutionStatus.UNKNOWN
+            return CheckResult(check.id, check.module, status, evidence, findings, reason)
         raise TypeError(f"Unsupported check result type: {type(raw).__name__}")
 
     def _build_output(self, results: dict[str, CheckResult]) -> dict[str, Any]:
