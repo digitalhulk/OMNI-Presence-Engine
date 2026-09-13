@@ -48,7 +48,7 @@ RETENTION
 
 # 🚀 ZERO → ACTIVE — ONE COMMAND SETUP
 
-OPE is designed to become easy to activate for a new project. The goal is simple: **clone once, run one setup command, answer the setup wizard, then run the engine.** The setup wizard is now live.
+OPE is designed to become easy to activate for a new project: **clone once, install once, run setup, then audit.** The setup wizard is live.
 
 > **Security rule:** API keys, OAuth tokens, cookies, passwords, private documents and payment credentials must stay in local environment variables or a secret manager. Never commit real secrets to Git.
 
@@ -71,7 +71,7 @@ Run the setup wizard:
 ope setup
 ```
 
-It collects project/entity name, canonical website URL, country, market, language, business type, goals and optional data-source paths/URLs. Configuration is written locally to `~/.ope/config.json`; credentials and secrets are not written by the wizard.
+The wizard collects project/entity name, canonical website URL, country, market, language, business type, goals and optional data-source paths/URLs. Configuration is written locally to `~/.ope/config.json`.
 
 The executable audit command is:
 
@@ -79,22 +79,18 @@ The executable audit command is:
 ope audit https://example.com
 ```
 
-The legacy command remains supported:
+Legacy command remains supported:
 
 ```bash
 ope-audit https://example.com
 ```
 
-For JSON output:
+Output modes:
 
 ```bash
 ope audit https://example.com --json
-```
-
-For a Markdown report:
-
-```bash
-ope audit https://example.com --markdown
+nope audit https://example.com --markdown
+nope audit https://example.com --html reports/audit.report.html
 ```
 
 ## 3. Minimum viable run
@@ -104,84 +100,115 @@ ope setup
 ope audit https://YOUR-WEBSITE.com --markdown
 ```
 
-The active audit path now passes results through OPE's root-cause normalization contract before output.
-
-## 4. Connect your own data
-
-| Source | Purpose | Credential policy |
-|---|---|---|
-| Website | Technical/entity discovery | URL only |
-| Google Search Console | Search performance/index evidence | Local credential |
-| Bing Webmaster | Search/AI visibility evidence | Local credential |
-| Analytics | Engagement/conversion evidence | Local credential |
-| Server/CDN logs | Request/performance evidence | Local/private |
-| Parallel | Live web research/evidence | Local API key |
-| OpenSEO/DataForSEO | SEO datasets/workflows | Local API key |
-
-OPE should treat first-party measurements as authoritative for the phenomena they directly measure and preserve provider attribution for third-party metrics.
-
-## 5. Owner-sponsored 7-day access
-
-A separate optional access flow can provide one project with owner-sponsored OPE access for 7 days.
-
-**Access contribution:** ₹69 via the owner's designated UPI VPA.
-
-**Additional agreed advance:** 1 Rajnigandha set 😄
-
-### Privacy rule
-
-The owner's mobile number must **never be displayed publicly**. The payment interface should reveal the payment destination only after the visitor explicitly accepts the access terms. The actual UPI VPA must be supplied at runtime through a private/local secret or secure deployment configuration, not stored in this repository.
-
-### Rotating QR design
-
-The payment UI may generate a fresh UPI QR/payment payload every 30 seconds while keeping the configured payee destination fixed. A rotating QR/reference is **not** proof that a payment succeeded. Automatic activation must only happen after a legitimate payment-status confirmation source verifies the transaction.
-
-```text
-ACCEPT TERMS
-     ↓
-PAYMENT SESSION
-     ↓
-LIVE QR
-     ↓
-30 SECOND ROTATION
-     ↓
-PAYMENT
-     ↓
-VERIFIED TRANSACTION
-     ↓
-7-DAY ACCESS TOKEN
-     ↓
-AUTO EXPIRY
-```
-
-Do not claim payment verification from a client-side "I Paid" button alone.
+The active audit path passes results through OPE's canonical **`evidence-diagnostic-v1`** normalization contract before output.
 
 ---
 
-# 🧠 20-MODULE ENGINE
+# 🧠 ENGINE STATUS — FOUNDATION LAYER
 
-| # | Module | Engineering Scope |
-|---:|---|---|
-| 01 | **Entity** | Identity, ownership, identifiers, relationships |
-| 02 | **Infrastructure** | DNS, hosting, CDN, server, APIs |
-| 03 | **Code** | HTML, DOM, CSS, JS, metadata, structured data |
-| 04 | **Crawl** | Robots, sitemap, bot access, discovery |
-| 05 | **Index** | Canonical, status, duplication, indexability |
-| 06 | **Semantics** | Entities, topics, intent, taxonomy, relationships |
-| 07 | **Content** | Intent, completeness, originality, accuracy, freshness |
-| 08 | **Media** | Image, video, audio, graphics, accessibility, performance |
-| 09 | **Search** | SEO, local, image, video, news, shopping |
-| 10 | **AI Search** | AEO, GEO, LLMO, answers, citations, agents |
-| 11 | **Authority** | Backlinks, mentions, PR, reviews, expertise, reputation |
-| 12 | **Local** | Maps, GBP, NAP, service areas, local trust |
-| 13 | **UX** | Navigation, hierarchy, mobile, interaction, conversion friction |
-| 14 | **Accessibility** | WCAG, keyboard, focus, semantics, contrast, media |
-| 15 | **Performance** | Network, loading, rendering, frames, runtime, page weight |
-| 16 | **Security** | HTTPS, TLS, headers, CSP, cookies, auth, abuse controls |
-| 17 | **Language** | Locale, translation, hreflang, multilingual intent |
-| 18 | **Analytics** | GA4, search, logs, CRM, attribution, revenue |
-| 19 | **Conversion** | CTA, leads, sales, funnel, revenue |
-| 20 | **Continuous Optimization** | Observe → Diagnose → Fix → Validate → Monitor |
+OPE is no longer only a documentation architecture. The executable foundation now contains:
+
+```text
+PROJECT CONFIG
+     ↓
+EVIDENCE PROVIDERS
+     ↓
+CHECK REGISTRY
+     ↓
+DEPENDENCY-AWARE MODULE RUNNER
+     ↓
+EVIDENCE / FINDING NORMALIZATION
+     ↓
+ROOT-CAUSE + PRIORITY LAYERS
+     ↓
+REPORTING / VALIDATION
+```
+
+### Current engine primitives
+
+- **EvidenceRecord** — source, target, value, timestamp, confidence and provenance.
+- **Evidence normalization** — provider observations are converted into a stable machine-readable representation.
+- **RootCauseFinding** — symptom → layer → dependency → evidence → root cause → impact → remediation → validation → regression guard.
+- **Canonical engine contract** — `evidence-diagnostic-v1`.
+- **ModuleRunner** — deterministic dependency-aware execution of checks.
+- **CheckSpec / CheckResult** — typed execution contracts for individual checks.
+- **Dependency graph** — missing dependencies and cycles are rejected before execution.
+- **Blocking semantics** — failed, blocked or unknown dependencies can prevent unsafe downstream execution.
+- **Explicit execution states** — `PASS`, `FAIL`, `UNKNOWN`, `BLOCKED`, `N/A`.
+- **Evidence-aware confidence** — missing evidence never silently becomes success.
+- **Module aggregation** — module status is derived from executed checks rather than invented scores.
+- **Provider layer** — external/first-party evidence sources can be registered without coupling them to the core engine.
+- **CI contract tests** — executable tests protect the evidence, dependency and scoring semantics.
+
+> **Important:** foundation primitives are implemented; the 20-module check surface is being expanded progressively. An unimplemented or unavailable check must remain `UNKNOWN`/`BLOCKED`, not be fabricated as `PASS`.
+
+---
+
+# 🔌 EVIDENCE-FIRST ARCHITECTURE
+
+OPE separates **what was observed** from **what the engine concludes**.
+
+```text
+SOURCE / PROVIDER
+      ↓
+OBSERVATION
+      ↓
+EVIDENCE RECORD
+      ↓
+CHECK
+      ↓
+EXECUTION STATUS
+      ↓
+FINDING
+      ↓
+ROOT-CAUSE ANALYSIS
+      ↓
+PRIORITY
+      ↓
+REMEDIATION
+      ↓
+VALIDATION
+```
+
+Every material observation should retain:
+
+- source
+- target
+- observed timestamp
+- value
+- confidence
+- provenance
+
+OPE distinguishes evidence states such as `FACT`, `OBSERVED`, `ESTIMATE`, `HYPOTHESIS`, `EXPERIMENT` and `DEPRECATED` from execution states such as `PASS`, `FAIL`, `UNKNOWN`, `BLOCKED` and `N/A`.
+
+This distinction prevents a provider estimate, missing measurement or unproven hypothesis from being presented as a verified fact.
+
+---
+
+# 🧩 DEPENDENCY-AWARE CHECK ENGINE
+
+Checks are registered as executable units rather than being treated as a flat checklist.
+
+```text
+CHECK A
+  ↓
+CHECK B ─────→ CHECK C
+  ↓              ↓
+CHECK D ←────────┘
+```
+
+The runner:
+
+1. validates check IDs
+2. validates dependency references
+3. rejects dependency cycles
+4. computes deterministic topological execution order
+5. executes checks only when dependencies permit
+6. blocks downstream checks when required dependencies fail or remain unresolved
+7. captures execution duration
+8. aggregates results by module
+
+This makes OPE suitable for progressively adding real evidence providers without creating hidden false positives.
 
 ---
 
@@ -211,7 +238,97 @@ REGRESSION GUARD
 
 > **UNKNOWN ≠ PASS**
 
-Every material observation should retain source, timestamp, target, value, confidence and provenance. The active CLI applies the `evidence-root-cause-v1` normalization contract to audit findings.
+A missing root cause is explicitly treated as a **hypothesis**, not silently promoted to fact.
+
+The canonical engine normalizer adds stable diagnostic fields while preserving the original audit evidence and semantics.
+
+---
+
+# 📊 PRIORITY ≠ RANKING SCORE
+
+OPE does **not** pretend to calculate a universal search-engine ranking score.
+
+```text
+PRIORITY = IMPACT × CONFIDENCE × URGENCY × FIXABILITY
+```
+
+Normalized to `0–100`.
+
+Priority is a **remediation decision signal**, not a claim about Google's, Bing's or any AI system's ranking algorithm.
+
+Unknown, blocked or unexecuted modules do not receive fabricated scores.
+
+---
+
+# 🧠 20-MODULE ENGINE
+
+| # | Module | Engineering Scope |
+|---:|---|---|
+| 01 | **Entity** | Identity, ownership, identifiers, relationships |
+| 02 | **Infrastructure** | DNS, hosting, CDN, server, APIs |
+| 03 | **Code** | HTML, DOM, CSS, JS, metadata, structured data |
+| 04 | **Crawl** | Robots, sitemap, bot access, discovery |
+| 05 | **Index** | Canonical, status, duplication, indexability |
+| 06 | **Semantics** | Entities, topics, intent, taxonomy, relationships |
+| 07 | **Content** | Intent, completeness, originality, accuracy, freshness |
+| 08 | **Media** | Image, video, audio, graphics, accessibility, performance |
+| 09 | **Search** | SEO, local, image, video, news, shopping |
+| 10 | **AI Search** | AEO, GEO, LLMO, answers, citations, agents |
+| 11 | **Authority** | Backlinks, mentions, PR, reviews, expertise, reputation |
+| 12 | **Local** | Maps, GBP, NAP, service areas, local trust |
+| 13 | **UX** | Navigation, hierarchy, mobile, interaction, conversion friction |
+| 14 | **Accessibility** | WCAG, keyboard, focus, semantics, contrast, media |
+| 15 | **Performance** | Network, loading, rendering, frames, runtime, page weight |
+| 16 | **Security** | HTTPS, TLS, headers, CSP, cookies, auth, abuse controls |
+| 17 | **Language** | Locale, translation, hreflang, multilingual intent |
+| 18 | **Analytics** | GA4, search, logs, CRM, attribution, revenue |
+| 19 | **Conversion** | CTA, leads, sales, funnel, revenue |
+| 20 | **Continuous Optimization** | Observe → Diagnose → Fix → Validate → Monitor |
+
+The module registry is machine-readable and defines module weights, check namespaces and expected evidence families.
+
+---
+
+# 🌐 DISCOVERY + SEARCH + AI PRESENCE
+
+OPE treats digital presence as a connected retrieval system rather than only traditional SEO.
+
+```text
+DIGITAL ENTITY
+      ↓
+IDENTITY + SEMANTICS
+      ↓
+CONTENT + MEDIA
+      ↓
+CRAWL + INDEX
+      ↓
+SEARCH RETRIEVAL
+      ↓
+AI RETRIEVAL / GROUNDING
+      ↓
+ANSWER
+      ↓
+CITATION
+      ↓
+RECOMMENDATION
+      ↓
+HUMAN ACTION
+```
+
+The engine is designed to reason across:
+
+- Google and Bing search ecosystems
+- traditional SEO
+- AEO
+- GEO
+- LLMO
+- local discovery
+- image/video discovery
+- AI search and answer systems
+- browser/agent accessibility
+- authority and third-party references
+
+OPE does not depend on a single ranking trick, prompt hack or AI-specific shortcut.
 
 ---
 
@@ -225,8 +342,8 @@ Every material observation should retain source, timestamp, target, value, confi
           ┌─────────────────┼─────────────────┐
           ▼                 ▼                 ▼
      ┌──────────┐      ┌──────────┐     ┌─────────────┐
-     │ Parallel │      │ OpenSEO  │     │ First Party │
-     │ Web Intel│      │ SEO Data │     │ + Logs      │
+     │ External │      │ Search / │     │ First Party │
+     │ Evidence │      │ SEO Data │     │ + Logs      │
      └────┬─────┘      └────┬─────┘     └──────┬──────┘
           └──────────────────┼──────────────────┘
                              ▼
@@ -247,11 +364,7 @@ Every material observation should retain source, timestamp, target, value, confi
                   └──────────────────────┘
 ```
 
-**Parallel** = live web intelligence and evidence.  
-**OpenSEO** = SEO data/workflow layer.  
-**First-party systems** = authoritative measurement for their own phenomena.
-
-OPE is the orchestration and reasoning layer connecting them.
+OPE is the orchestration and reasoning layer. Provider-specific measurements remain attributed to their source.
 
 ---
 
@@ -262,31 +375,84 @@ DISCOVER → INVENTORY → AUDIT → EVIDENCE → NORMALIZE
 → DIAGNOSE → SCORE → PLAN → IMPLEMENT → VALIDATE → MONITOR → ↺
 ```
 
-The executable layer is designed to produce:
+The target output of a complete OPE run is:
 
-- Entity and technical inventory
-- Evidence set
-- 20-module results
-- PASS / FAIL / UNKNOWN / BLOCKED / N/A states
-- Root-cause findings
-- Priority scores
-- Remediation plans
-- Validation criteria
-- Regression guards
-- Monitoring requirements
-- Historical comparisons
+- entity and technical inventory
+- evidence set
+- 20-module execution state
+- `PASS / FAIL / UNKNOWN / BLOCKED / N/A` states
+- root-cause findings
+- confidence and provenance
+- priority signals
+- remediation plans
+- validation criteria
+- regression guards
+- monitoring requirements
+- historical comparisons
 
 ---
 
-# 📊 PRIORITY ≠ RANKING SCORE
+# 🔗 DATA SOURCES
 
-OPE does **not** pretend to calculate a universal search-engine ranking score.
+| Source | Purpose | Credential policy |
+|---|---|---|
+| Website | Technical/entity discovery | URL only |
+| Google Search Console | Search performance/index evidence | Local credential |
+| Bing Webmaster | Search visibility evidence | Local credential |
+| Analytics | Engagement/conversion evidence | Local credential |
+| Server/CDN logs | Request/performance evidence | Local/private |
+| External research providers | Live web intelligence/evidence | Local API key |
+| SEO data providers | SEO datasets/workflows | Local API key |
+
+OPE should treat first-party measurements as authoritative for the phenomena they directly measure and preserve provider attribution for third-party metrics.
+
+---
+
+# 🎨 RAW//BLOCK UI — DESIGN SYSTEM & HTML REPORTS
+
+OPE ships with the **RawBlock** brutalist design system: thick borders, zero rounded corners, strong black/white contrast and deliberately structural UI primitives.
 
 ```text
-PRIORITY = IMPACT × CONFIDENCE × URGENCY × FIXABILITY
+design/DESIGN.md       → canonical UI specification
+design/rawblock.css    → implemented design tokens + components
+design/showcase.html   → component kitchen-sink + guidance
+web/index.html         → OPE audit console dashboard
+src/ope/report_html.py → self-contained HTML report renderer
+tests/                 → executable contract coverage
 ```
 
-Normalized to `0–100`. Critical security/accessibility risks and business-critical conversion paths may override aggregate prioritization.
+Generate a standalone HTML report:
+
+```bash
+ope audit https://example.com --html reports/audit.report.html
+```
+
+Browse the UI locally:
+
+```bash
+python3 web/serve.py 8080
+```
+
+Generated reports are gitignored. The dashboard is designed to render audit data locally rather than requiring audit JSON to be sent to a hosted reporting service.
+
+---
+
+# 🏗️ REPOSITORY MAP
+
+```text
+schemas/       → machine-readable contracts
+frameworks/    → SEO/AEO/GEO/LLMO/SXO/CRO views
+docs/          → module and system specifications
+automation/    → execution, adapters, monitoring
+integrations/  → external evidence providers
+verticals/     → generic industry implementations
+research/      → source registry and updates
+governance/    → evidence, terminology and update rules
+design/        → RawBlock design system
+web/           → RawBlock dashboard + report viewer
+src/ope/       → executable engine and CLI
+tests/         → executable contract coverage
+```
 
 ---
 
@@ -294,6 +460,10 @@ Normalized to `0–100`. Critical security/accessibility risks and business-crit
 
 - **Root cause over patch fix.**
 - **Evidence over assumptions.**
+- **UNKNOWN is never silently converted to PASS.**
+- **Provider estimates remain estimates.**
+- **Hypotheses are explicitly labeled.**
+- **Dependency failures can block unsafe downstream checks.**
 - **Human experience over vanity scores.**
 - **Machine readability without sacrificing humans.**
 - **Preserve approved visual/function experience during performance optimization.**
@@ -310,62 +480,6 @@ Normalized to `0–100`. Critical security/accessibility risks and business-crit
 **Local businesses · Service businesses · E-commerce · SaaS · Startups · Agencies · Personal brands · Enterprises · Products · Platforms · Any legitimate digital property.**
 
 OPE is **vertical-agnostic** and supports industry-specific implementations without coupling the core engine to one client or business.
-
----
-
-# 🏗️ REPOSITORY MAP
-
-```text
-schemas/       → machine-readable contracts
-frameworks/    → SEO/AEO/GEO/LLMO/SXO/CRO views
-docs/          → module and system specifications
-automation/    → execution, adapters, monitoring
-integrations/  → external evidence providers
-verticals/     → generic industry implementations
-research/      → source registry and updates
-governance/    → evidence, terminology and update rules
-design/        → RawBlock design system (DESIGN.md, rawblock.css, showcase.html)
-web/           → RawBlock-branded OPE dashboard + report viewer
-src/ope/       → engine, CLI and standalone HTML report renderer
-tests/         → executable contract coverage
-```
-
----
-
-# 🎨 RAW//BLOCK UI — DESIGN SYSTEM & HTML REPORTS
-
-OPE ships with the **[RawBlock](https://designmd.ai/chef/rawblock)** brutalist design system
-(MIT, by [@chef](https://designmd.ai/chef)): thick 3–5px borders instead of shadows, zero rounded
-corners, full black/white inversion on hover, Archivo Black + Work Sans + Space Mono, and
-`#0000FF` reserved strictly for hyperlinks.
-
-```text
-design/DESIGN.md       → downloaded source spec (canonical reference)
-design/rawblock.css    → implemented tokens + every component (buttons, cards,
-                         inputs, chips, lists, checkboxes, radios, tooltips, tables)
-design/showcase.html   → live component kitchen-sink + do/don't guide
-web/index.html         → OPE audit console dashboard (loads JSON reports in-browser)
-src/ope/report_html.py → self-contained HTML report renderer (CSS is inlined)
-```
-
-Generate a standalone RawBlock HTML audit report from any run:
-
-```bash
-ope audit https://example.com --html reports/audit.report.html
-```
-
-Or browse the UI locally:
-
-```bash
-python3 web/serve.py 8080     # no-cache preview server (root → dashboard)
-# → /web/index.html            dashboard (sample report auto-renders)
-# → /web/sample-report.html    example standalone CLI-generated report
-# → /design/showcase.html      every RawBlock component
-# → /reports/*.report.html     your own generated reports (gitignored)
-```
-
-The dashboard is fully static and renders reports client-side — audit JSON never leaves the
-machine, keeping OPE private by design.
 
 ---
 
