@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .integrations.openrouter import OpenRouterClient
@@ -34,7 +35,7 @@ def reason_about_result(result: dict[str, Any], client: OpenRouterClient | None 
     response = active_client.chat_json(
         [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": __import__("json").dumps(_evidence_context(result), ensure_ascii=False, sort_keys=True)},
+            {"role": "user", "content": json.dumps(_evidence_context(result), ensure_ascii=False, sort_keys=True)},
         ],
         temperature=0.0,
     )
