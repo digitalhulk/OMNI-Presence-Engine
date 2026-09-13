@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from .module_runner import CheckResult, ExecutionStatus
@@ -18,7 +19,7 @@ AUDIT_BINDINGS = (
 
 
 def _evidence(target: str, value: Any) -> list[dict[str, Any]]:
-    return [{"source": "ope-audit", "target": target, "value": value, "confidence": 1.0, "provenance": "direct"}]
+    return [{"source": "ope-audit", "target": target, "value": value, "confidence": 1.0, "provenance": "direct", "observed_at": datetime.now(timezone.utc).isoformat()}]
 
 
 def _check(check_id: str, module: str, passed: bool, target: str, value: Any) -> CheckResult:
@@ -34,10 +35,13 @@ def _check(check_id: str, module: str, passed: bool, target: str, value: Any) ->
 def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
     inventory = audit_result.get("inventory", {})
     target = str(audit_result.get("final_url") or audit_result.get("target") or "")
-    finding_ids = {str(item.get("id")) for item in audit_result.get("findings", [])}
+    finding_ids = {str(item.get("id")) for item in audit_result.get("findings", []) if isinstance(item, dict)}
 
     if check_id == "02-infrastructure.hosting.availability":
-        return _check(check_id, "02-infrastructure", int(inventory.get("status", 0)) < 400, target, {"status": inventory.get("status")})
+        status = inventory.get("status")
+        if not isinstance(status, int):
+            return CheckResult(check_id, "02-infrastructure", ExecutionStatus.UNKNOWN, reason="HTTP status observation is missing or invalid")
+        return _check(check_id, "02-infrastructure", status < 400, target, {"status": status})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),
@@ -48,10 +52,14 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         "17-language.language_declaration": ("17-language", "17-LANG-001", "lang"),
     }
     module, finding_id, field = rules[check_id]
+    if field not in inventory:
+        return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"Audit observation '{field}' is missing")
     value = inventory.get(field)
     failed = finding_id in finding_ids
     if field == "images_missing_alt":
-        failed = int(value or 0) > 0
+        if not isinstance(value, int):
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Alt-text image count is missing or invalid")
+        failed = failed or value > 0
     else:
         failed = failed or not bool(value)
     return _check(check_id, module, not failed, target, {field: value})
