@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .audit import audit, markdown_report
-from .root_cause import enrich_result
+from .engine import normalize_result
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
 
@@ -26,19 +26,13 @@ def setup_project() -> int:
     business_type = prompt("Business type", "business")
     goals = prompt("Goals (comma-separated)", "discoverability,trust,conversion")
     sources = prompt("Data source paths/URLs (comma-separated)")
-
     if not name or not url:
         print("OPE setup requires a project name and website URL.", file=sys.stderr)
         return 2
-
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     config = {
-        "project_name": name,
-        "website_url": url,
-        "country": country,
-        "market": market,
-        "language": language,
-        "business_type": business_type,
+        "project_name": name, "website_url": url, "country": country,
+        "market": market, "language": language, "business_type": business_type,
         "goals": [x.strip() for x in goals.split(",") if x.strip()],
         "data_sources": [x.strip() for x in sources.split(",") if x.strip()],
     }
@@ -51,7 +45,7 @@ def setup_project() -> int:
 
 def audit_command(args: argparse.Namespace) -> int:
     try:
-        result = enrich_result(audit(args.url, timeout=args.timeout))
+        result = normalize_result(audit(args.url, timeout=args.timeout))
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
@@ -63,14 +57,10 @@ def audit_command(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="ope", description="OPE evidence-first digital presence engine"
-    )
+    parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
     sub = parser.add_subparsers(dest="command")
-
     setup = sub.add_parser("setup", help="create local project configuration")
     setup.set_defaults(handler=lambda _args: setup_project())
-
     audit_parser = sub.add_parser("audit", help="run an evidence-first web audit")
     audit_parser.add_argument("url")
     audit_parser.add_argument("--json", action="store_true", dest="as_json")
@@ -82,10 +72,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     argv = sys.argv[1:]
-    # Preserve the original `ope-audit URL` interface while adding the unified `ope` CLI.
     if argv and argv[0] not in {"setup", "audit", "-h", "--help"}:
         argv = ["audit", *argv]
-
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "command", None):
