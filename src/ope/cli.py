@@ -12,8 +12,7 @@ CONFIG_PATH = Path.home() / ".ope" / "config.json"
 
 def prompt(label: str, default: str = "") -> str:
     suffix = f" [{default}]" if default else ""
-    value = input(f"{label}{suffix}: ").strip()
-    return value or default
+    return input(f"{label}{suffix}: ").strip() or default
 
 
 def setup_project() -> int:
@@ -21,11 +20,11 @@ def setup_project() -> int:
     name = prompt("Project/entity name")
     url = prompt("Canonical website URL")
     country = prompt("Country", "IN")
-    market = prompt("Market", "")
+    market = prompt("Market")
     language = prompt("Primary language", "en")
     business_type = prompt("Business type", "business")
     goals = prompt("Goals (comma-separated)", "discoverability,trust,conversion")
-    sources = prompt("Data source paths/URLs (comma-separated)", "")
+    sources = prompt("Data source paths/URLs (comma-separated)")
 
     if not name or not url:
         print("OPE setup requires a project name and website URL.", file=sys.stderr)
@@ -62,8 +61,10 @@ def audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ope", description="OPE evidence-first digital presence engine"
+    )
     sub = parser.add_subparsers(dest="command")
 
     setup = sub.add_parser("setup", help="create local project configuration")
@@ -75,8 +76,17 @@ def main() -> int:
     audit_parser.add_argument("--markdown", action="store_true")
     audit_parser.add_argument("--timeout", type=int, default=15)
     audit_parser.set_defaults(handler=audit_command)
+    return parser
 
-    args = parser.parse_args()
+
+def main() -> int:
+    argv = sys.argv[1:]
+    # Preserve the original `ope-audit URL` interface while adding the unified `ope` CLI.
+    if argv and argv[0] not in {"setup", "audit", "-h", "--help"}:
+        argv = ["audit", *argv]
+
+    parser = build_parser()
+    args = parser.parse_args(argv)
     if not getattr(args, "command", None):
         parser.print_help()
         return 0
