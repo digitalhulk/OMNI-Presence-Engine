@@ -23,6 +23,7 @@ The goal is a ready-to-use OPE engine with minimal manual orchestration. Agents 
   - `started_at`
   - `completed_at`
   - `providers`
+- Added `docs/MANUFACTURING-STATUS.md` as the verified manufacturing-state contract for the live dashboard.
 - Deterministic audit output remains authoritative. Optional reasoning is advisory only and cannot change deterministic status/evidence.
 
 ## Agent-A → Agent-B
