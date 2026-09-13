@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
+ope = "ope.cli:main"
 ope-audit = "ope.cli:main"
 
 [tool.setuptools.packages.find]
