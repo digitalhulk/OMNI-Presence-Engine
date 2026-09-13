@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .audit import audit, markdown_report
+from .root_cause import enrich_result
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
 
@@ -50,7 +51,7 @@ def setup_project() -> int:
 
 def audit_command(args: argparse.Namespace) -> int:
     try:
-        result = audit(args.url, timeout=args.timeout)
+        result = enrich_result(audit(args.url, timeout=args.timeout))
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
