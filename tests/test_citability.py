@@ -1,4 +1,4 @@
-from ope.citability import analyze_blocks, score_passage
+from ope.citability import analyze_blocks, extract_content_blocks, score_passage
 
 
 def test_score_is_bounded_and_has_all_signal_groups():
@@ -22,3 +22,17 @@ def test_analyze_blocks_returns_stable_summary():
     assert result["total_blocks_analyzed"] == 1
     assert 0 <= result["average_citability_score"] <= 100
     assert sum(result["grade_distribution"].values()) == 1
+
+
+def test_extract_content_blocks_ignores_non_content_and_keeps_heading_context():
+    html = """
+    <html><head><script>ignore()</script><style>.x{}</style></head>
+    <body><nav>Ignore navigation</nav><h2>What is SEO?</h2>
+    <p>SEO is the process of improving a website so search systems can discover and understand its pages.</p>
+    <p>Short</p><script>ignore()</script></body></html>
+    """
+    blocks = extract_content_blocks(html)
+    assert blocks == [{
+        "heading": "What is SEO?",
+        "content": "SEO is the process of improving a website so search systems can discover and understand its pages.",
+    }]
