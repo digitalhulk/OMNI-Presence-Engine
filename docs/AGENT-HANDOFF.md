@@ -10,6 +10,7 @@ The goal is a ready-to-use OPE engine with minimal manual orchestration. Agents 
 
 - Added `provider_registry.py`: capability-based optional providers; credentials are runtime-only and never exposed.
 - Added `orchestrator.py`: transport-agnostic local lifecycle `QUEUED → RUNNING → COMPLETED/FAILED/CANCELLED`.
+- Orchestrator lifecycle hardened against duplicate concurrent execution and cancellation races; terminal states are immutable.
 - Orchestrator snapshot contract:
   - `run_id`
   - `target`
