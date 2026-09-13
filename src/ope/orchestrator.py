@@ -17,12 +17,7 @@ TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED"}
 
 @dataclass
 class AuditRun:
-    """State for one locally orchestrated audit.
-
-    The orchestrator is intentionally transport-agnostic: callers can expose it
-    through a CLI, desktop app, local HTTP adapter, or another trusted runner
-    without coupling the engine to a network-facing service.
-    """
+    """State for one locally orchestrated audit."""
 
     run_id: str
     target: str
@@ -38,7 +33,7 @@ class AuditRun:
 
 
 class AuditOrchestrator:
-    """Run OPE end-to-end without requiring the user to manually chain layers."""
+    """Run OPE end-to-end without requiring callers to chain layers manually."""
 
     def __init__(
         self,
@@ -50,6 +45,7 @@ class AuditOrchestrator:
         self._normalize = normalize_fn
         self._reason = reasoning_fn
         self._runs: dict[str, AuditRun] = {}
+        self._executing: set[str] = set()
         self._lock = Lock()
 
     def create_run(self, target: str) -> AuditRun:
@@ -75,6 +71,7 @@ class AuditOrchestrator:
             if run is None or run.status in TERMINAL_STATES:
                 return False
             run.status = "CANCELLED"
+            run.current_module = None
             run.completed_at = _now()
             return True
 
@@ -82,30 +79,39 @@ class AuditOrchestrator:
         run = self.get_run(run_id)
         if run is None:
             raise KeyError(run_id)
+
         with self._lock:
-            if run.status == "CANCELLED":
+            if run.status in TERMINAL_STATES:
                 return run
+            if run_id in self._executing:
+                return run
+            self._executing.add(run_id)
             run.status = "RUNNING"
-            run.started_at = _now()
+            run.started_at = run.started_at or _now()
             run.current_module = "01-entity"
 
         try:
             raw = self._audit(run.target)
-            if self._is_cancelled(run_id):
-                return self.get_run(run_id) or run
-            run.current_module = "20-continuous-optimization"
+            with self._lock:
+                if run.status == "CANCELLED":
+                    return run
+                run.current_module = "20-continuous-optimization"
+
             normalized = self._normalize(raw)
             if enable_reasoning:
                 try:
                     advisory = self._reason(normalized)
                     normalized["reasoning"] = advisory
-                except Exception as exc:  # advisory layer must never break audit truth
+                except Exception as exc:  # advisory failures must not break deterministic truth
                     normalized["reasoning"] = {
                         "provider": "unavailable",
                         "advisory": False,
                         "error": type(exc).__name__,
                     }
+
             with self._lock:
+                if run.status == "CANCELLED":
+                    return run
                 run.result = normalized
                 run.completed_modules = run.total_modules
                 run.current_module = None
@@ -114,35 +120,37 @@ class AuditOrchestrator:
             return run
         except Exception as exc:
             with self._lock:
+                if run.status == "CANCELLED":
+                    return run
                 run.status = "FAILED"
                 run.error = f"{type(exc).__name__}: {exc}"
                 run.current_module = None
                 run.completed_at = _now()
             return run
+        finally:
+            with self._lock:
+                self._executing.discard(run_id)
 
     def snapshot(self, run_id: str) -> dict[str, Any]:
         run = self.get_run(run_id)
         if run is None:
             raise KeyError(run_id)
-        return {
-            "run_id": run.run_id,
-            "target": run.target,
-            "status": run.status,
-            "progress": {
-                "completed": run.completed_modules,
-                "total": run.total_modules,
-                "current_module": run.current_module,
-            },
-            "result": run.result,
-            "error": run.error,
-            "started_at": run.started_at,
-            "completed_at": run.completed_at,
-            "providers": run.provider_inventory,
-        }
-
-    def _is_cancelled(self, run_id: str) -> bool:
-        run = self.get_run(run_id)
-        return run is not None and run.status == "CANCELLED"
+        with self._lock:
+            return {
+                "run_id": run.run_id,
+                "target": run.target,
+                "status": run.status,
+                "progress": {
+                    "completed": run.completed_modules,
+                    "total": run.total_modules,
+                    "current_module": run.current_module,
+                },
+                "result": run.result,
+                "error": run.error,
+                "started_at": run.started_at,
+                "completed_at": run.completed_at,
+                "providers": run.provider_inventory,
+            }
 
 
 def _now() -> str:
