@@ -106,12 +106,32 @@ class ModuleRunner:
         return self._build_output(results)
 
     @staticmethod
-    def _coerce(check: CheckSpec, raw: Any) -> CheckResult:
+    def _valid_evidence(evidence: Any) -> bool:
+        if not isinstance(evidence, list) or not evidence:
+            return False
+        for item in evidence:
+            if not isinstance(item, dict):
+                return False
+            if not str(item.get("source", "")).strip():
+                return False
+            if not str(item.get("observed_at", "")).strip():
+                return False
+            if "confidence" in item:
+                try:
+                    confidence = float(item["confidence"])
+                except (TypeError, ValueError):
+                    return False
+                if not 0.0 <= confidence <= 1.0:
+                    return False
+        return True
+
+    @classmethod
+    def _coerce(cls, check: CheckSpec, raw: Any) -> CheckResult:
         if isinstance(raw, CheckResult):
             if raw.check_id != check.id or raw.module != check.module:
                 raise ValueError("CheckResult identity does not match CheckSpec")
-            if raw.status == ExecutionStatus.PASS and not raw.evidence:
-                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="PASS result has no evidence")
+            if raw.status == ExecutionStatus.PASS and not cls._valid_evidence(raw.evidence):
+                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, evidence=raw.evidence, findings=raw.findings, reason=raw.reason or "PASS result has invalid or missing evidence")
             return raw
         if raw is True:
             return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned PASS without evidence")
@@ -121,13 +141,15 @@ class ModuleRunner:
             return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned no result")
         if isinstance(raw, dict):
             status = ExecutionStatus(str(raw.get("status", ExecutionStatus.UNKNOWN.value)))
-            evidence = list(raw.get("evidence", []))
-            if status == ExecutionStatus.PASS and not evidence:
+            evidence_value = raw.get("evidence", [])
+            evidence = list(evidence_value) if isinstance(evidence_value, list) else []
+            findings_value = raw.get("findings", [])
+            findings = list(findings_value) if isinstance(findings_value, list) else []
+            reason = str(raw.get("reason", ""))
+            if status == ExecutionStatus.PASS and not cls._valid_evidence(evidence):
                 status = ExecutionStatus.UNKNOWN
-                reason = str(raw.get("reason", "")) or "PASS result has no evidence"
-            else:
-                reason = str(raw.get("reason", ""))
-            return CheckResult(check.id, check.module, status, evidence, list(raw.get("findings", [])), reason)
+                reason = reason or "PASS result has invalid or missing evidence"
+            return CheckResult(check.id, check.module, status, evidence, findings, reason)
         raise TypeError(f"Unsupported check result type: {type(raw).__name__}")
 
     def _build_output(self, results: dict[str, CheckResult]) -> dict[str, Any]:
