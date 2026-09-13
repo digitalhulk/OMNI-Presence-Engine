@@ -19,7 +19,7 @@ class ProviderSpec:
     optional: bool = True
 
     def configured(self, environ: Mapping[str, str] | None = None) -> bool:
-        env = environ or os.environ
+        env = os.environ if environ is None else environ
         return bool(self.credential_env) and all(env.get(key, "").strip() for key in self.credential_env)
 
 
@@ -45,7 +45,7 @@ def configured_providers(environ: Mapping[str, str] | None = None) -> tuple[Prov
 
 def integration_inventory(environ: Mapping[str, str] | None = None) -> dict[str, object]:
     """Expose provider availability without exposing secrets or secret values."""
-    env = environ or os.environ
+    env = os.environ if environ is None else environ
     return {
         "providers": {
             provider.name: {
