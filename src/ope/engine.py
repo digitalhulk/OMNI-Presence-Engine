@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from .audit_pipeline import execute_audit_checks
+
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
 
 
@@ -32,7 +34,19 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     output = deepcopy(result)
     output["engine_contract"] = "evidence-diagnostic-v1"
     output["findings"] = [normalize_finding(f) for f in output.get("findings", [])]
+
+    # Execute the deterministic registry against the evidence already collected
+    # by audit.py. No new evidence is invented here.
+    execution = execute_audit_checks(output)
     for module in output.get("modules", {}).values():
         if not module.get("findings") and module.get("status") == "PASS":
             module["status"] = "UNKNOWN"
+
+    for check in execution.get("checks", {}).values():
+        if check.get("status") == "FAIL":
+            module = str(check.get("module", ""))
+            module_number = module.split("-", 1)[0]
+            if module_number in output.get("modules", {}):
+                output["modules"][module_number]["status"] = "FAIL"
+
     return output
