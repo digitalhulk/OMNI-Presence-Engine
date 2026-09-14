@@ -73,6 +73,7 @@ def audit_command(args: argparse.Namespace) -> int:
 
 def site_audit_command(args: argparse.Namespace) -> int:
     from .engine import normalize_site_result
+    from .report_html_site import write_site_html_report
     from .site_audit import SiteAuditConfig
     from .site_audit import site_audit as run_site_audit
 
@@ -94,9 +95,12 @@ def site_audit_command(args: argparse.Namespace) -> int:
     result = normalize_site_result(raw_dict)
     if not args.no_history:
         history.save_run(result)
+    if args.html:
+        path = write_site_html_report(result, args.html)
+        print(f"RawBlock HTML site-audit report written: {path}", file=sys.stderr)
     if args.markdown:
         print(site_audit_markdown_report(result))
-    else:
+    elif not args.html:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
@@ -136,6 +140,7 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     from .engine import normalize_performance_result
     from .performance_audit import PerformanceAuditConfig
     from .performance_audit import performance_audit as run_perf_audit
+    from .report_html_performance import write_performance_html_report
 
     profiles: list[DeviceProfile] = []
     if args.mobile_only:
@@ -157,9 +162,12 @@ def performance_audit_command(args: argparse.Namespace) -> int:
         print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
         return 2
     result = normalize_performance_result(raw.to_dict())
+    if args.html:
+        path = write_performance_html_report(result, args.html)
+        print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
     if args.markdown:
         print(performance_audit_markdown_report(result))
-    else:
+    elif not args.html:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
@@ -232,6 +240,7 @@ def build_parser() -> argparse.ArgumentParser:
     sa = sub.add_parser("site-audit", help="run a multi-page site-level audit")
     sa.add_argument("url")
     sa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
+    sa.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML site-audit report")
     sa.add_argument("--max-pages", type=int, default=200)
     sa.add_argument("--max-depth", type=int, default=10)
     sa.add_argument("--timeout", type=int, default=15)
@@ -248,6 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--mobile-only", action="store_true", help="skip desktop profile")
     pa.add_argument("--no-screenshot", action="store_true", help="skip screenshot capture")
     pa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
+    pa.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML performance-audit report")
     pa.set_defaults(handler=performance_audit_command)
     return parser
 

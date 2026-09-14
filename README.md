@@ -420,7 +420,7 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.3.0`  
+**Version:** `0.5.0`  
 **Stage:** Evidence-driven executable foundation — 136/136 checks bound  
 **Contract:** `evidence-diagnostic-v1`
 
