@@ -114,6 +114,8 @@ BOUND = {
     "18-analytics.attribution",
     "19-conversion.booking_completion",
     "19-conversion.trust_to_action",
+    "15-performance.render_cost",
+    "15-performance.frame_cost",
 }
 
 FINDING_RECORD_CHECKS = {
@@ -132,8 +134,6 @@ EXTERNAL_EVIDENCE = {
     "11-authority.backlinks",
     "11-authority.reputation",
     "14-accessibility.contrast",
-    "15-performance.render_cost",
-    "15-performance.frame_cost",
     "16-security.dependencies",
     "17-language.translation_quality",
     "17-language.transliteration",
@@ -146,11 +146,16 @@ EXTERNAL_EVIDENCE = {
 }
 
 PAGESPEED_SOURCED = {
+    "15-performance.inp",
+}
+
+BROWSER_SOURCED = {
     "15-performance.lcp",
     "15-performance.fcp",
     "15-performance.cls",
     "15-performance.tbt",
-    "15-performance.inp",
+    "15-performance.render_cost",
+    "15-performance.frame_cost",
 }
 
 
@@ -267,6 +272,12 @@ def _audit_result():
             "soft_404": False,
             "has_rate_limit_headers": True,
             "intent_aligned": True,
+            "browser_vitals": {
+                "fcp_ms": 1200.0, "lcp_ms": 2000.0, "cls": 0.05, "tbt_ms": 100.0, "ttfb_ms": 300.0,
+            },
+            "browser_render": {
+                "source_html_length": 5000, "rendered_html_length": 6000, "render_ratio": 1.2,
+            },
             "has_css": True,
             "has_motion": True,
             "respects_reduced_motion": True,
@@ -292,7 +303,12 @@ def test_bound_audit_checks_produce_schema_complete_evidence():
         check = result["checks"][check_id]
         assert check["status"] == "PASS"
         assert check["evidence"]
-        expected_source = "pagespeed-insights" if check_id in PAGESPEED_SOURCED else "ope-audit"
+        if check_id in BROWSER_SOURCED:
+            expected_source = "ope-browser"
+        elif check_id in PAGESPEED_SOURCED:
+            expected_source = "pagespeed-insights"
+        else:
+            expected_source = "ope-audit"
         for evidence in check["evidence"]:
             assert evidence["source"] == expected_source
             assert evidence["observed_at"]
@@ -433,6 +449,7 @@ def test_heavy_document_fails_page_weight_budget_without_subresource_data():
 def test_missing_pagespeed_evidence_is_unknown():
     audit = _audit_result()
     audit["inventory"]["pagespeed"] = None
+    audit["inventory"].pop("browser_vitals", None)
     result = execute_audit_checks(audit)
     for check_id in ("15-performance.lcp", "15-performance.fcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
         assert result["checks"][check_id]["status"] == "UNKNOWN"
@@ -440,6 +457,7 @@ def test_missing_pagespeed_evidence_is_unknown():
 
 def test_poor_web_vitals_fail_their_checks():
     audit = _audit_result()
+    audit["inventory"]["browser_vitals"] = {"lcp_ms": 5000.0, "fcp_ms": 3000.0, "cls": 0.4, "tbt_ms": 600.0}
     audit["inventory"]["pagespeed"] = {"lcp_ms": 5000.0, "fcp_ms": 3000.0, "cls": 0.4, "tbt_ms": 600.0, "inp_ms": 600.0}
     result = execute_audit_checks(audit)
     for check_id in ("15-performance.lcp", "15-performance.fcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
@@ -1012,3 +1030,129 @@ def test_all_136_checks_are_bound():
     all_ids = set(registered_check_ids())
     bound_and_external = BOUND | EXTERNAL_EVIDENCE | FINDING_RECORD_CHECKS
     assert bound_and_external == all_ids, f"Unbound: {all_ids - bound_and_external}"
+
+
+# --- Browser evidence integration tests ---
+
+
+def test_browser_vitals_pass_cwv_checks():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = None
+    audit["inventory"]["browser_vitals"] = {
+        "fcp_ms": 1200.0, "lcp_ms": 2000.0, "cls": 0.05, "tbt_ms": 100.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.fcp"]["status"] == "PASS"
+    assert result["checks"]["15-performance.lcp"]["status"] == "PASS"
+    assert result["checks"]["15-performance.cls"]["status"] == "PASS"
+    assert result["checks"]["15-performance.tbt"]["status"] == "PASS"
+    for check_id in ("15-performance.fcp", "15-performance.lcp", "15-performance.cls", "15-performance.tbt"):
+        evidence = result["checks"][check_id].get("evidence", [])
+        assert any(e.get("source") == "ope-browser" for e in evidence)
+
+
+def test_browser_vitals_fail_cwv_checks():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = None
+    audit["inventory"]["browser_vitals"] = {
+        "fcp_ms": 4000.0, "lcp_ms": 5000.0, "cls": 0.3, "tbt_ms": 800.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.fcp"]["status"] == "FAIL"
+    assert result["checks"]["15-performance.lcp"]["status"] == "FAIL"
+    assert result["checks"]["15-performance.cls"]["status"] == "FAIL"
+    assert result["checks"]["15-performance.tbt"]["status"] == "FAIL"
+
+
+def test_browser_vitals_take_priority_over_psi():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = {"fcp_ms": 4000.0, "lcp_ms": 5000.0, "cls": 0.3, "tbt_ms": 800.0, "inp_ms": 600.0}
+    audit["inventory"]["browser_vitals"] = {
+        "fcp_ms": 1200.0, "lcp_ms": 2000.0, "cls": 0.05, "tbt_ms": 100.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.fcp"]["status"] == "PASS"
+    assert result["checks"]["15-performance.lcp"]["status"] == "PASS"
+    assert result["checks"]["15-performance.cls"]["status"] == "PASS"
+    assert result["checks"]["15-performance.tbt"]["status"] == "PASS"
+    assert result["checks"]["15-performance.inp"]["status"] == "FAIL"
+
+
+def test_psi_fallback_when_no_browser_vitals():
+    audit = _audit_result()
+    audit["inventory"].pop("browser_vitals", None)
+    audit["inventory"]["pagespeed"] = {"fcp_ms": 1200.0, "lcp_ms": 2000.0, "cls": 0.05, "tbt_ms": 100.0, "inp_ms": 150.0}
+    result = execute_audit_checks(audit)
+    for check_id in ("15-performance.fcp", "15-performance.lcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
+        assert result["checks"][check_id]["status"] == "PASS"
+        evidence = result["checks"][check_id].get("evidence", [])
+        assert any(e.get("source") == "pagespeed-insights" for e in evidence)
+
+
+def test_no_browser_no_psi_is_unknown():
+    audit = _audit_result()
+    audit["inventory"].pop("browser_vitals", None)
+    audit["inventory"]["pagespeed"] = None
+    result = execute_audit_checks(audit)
+    for check_id in ("15-performance.fcp", "15-performance.lcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
+        assert result["checks"][check_id]["status"] == "UNKNOWN"
+
+
+def test_inp_stays_unknown_with_browser_only():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = None
+    audit["inventory"]["browser_vitals"] = {
+        "fcp_ms": 1200.0, "lcp_ms": 2000.0, "cls": 0.05, "tbt_ms": 100.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.inp"]["status"] == "UNKNOWN"
+
+
+def test_render_cost_pass():
+    audit = _audit_result()
+    audit["inventory"]["browser_render"] = {
+        "source_html_length": 5000, "rendered_html_length": 10000, "render_ratio": 2.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.render_cost"]["status"] == "PASS"
+    evidence = result["checks"]["15-performance.render_cost"].get("evidence", [])
+    assert any(e.get("source") == "ope-browser" for e in evidence)
+
+
+def test_render_cost_fail():
+    audit = _audit_result()
+    audit["inventory"]["browser_render"] = {
+        "source_html_length": 5000, "rendered_html_length": 20000, "render_ratio": 4.0,
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.render_cost"]["status"] == "FAIL"
+
+
+def test_render_cost_unknown_without_browser():
+    audit = _audit_result()
+    audit["inventory"].pop("browser_render", None)
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.render_cost"]["status"] == "UNKNOWN"
+
+
+def test_frame_cost_pass():
+    audit = _audit_result()
+    audit["inventory"]["browser_vitals"] = {"tbt_ms": 300.0}
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.frame_cost"]["status"] == "PASS"
+    evidence = result["checks"]["15-performance.frame_cost"].get("evidence", [])
+    assert any(e.get("source") == "ope-browser" for e in evidence)
+
+
+def test_frame_cost_fail():
+    audit = _audit_result()
+    audit["inventory"]["browser_vitals"] = {"tbt_ms": 800.0}
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.frame_cost"]["status"] == "FAIL"
+
+
+def test_frame_cost_unknown_without_browser():
+    audit = _audit_result()
+    audit["inventory"].pop("browser_vitals", None)
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.frame_cost"]["status"] == "UNKNOWN"

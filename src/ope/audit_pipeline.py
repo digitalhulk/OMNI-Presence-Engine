@@ -222,6 +222,8 @@ _PSI_VITALS = {
     "15-performance.tbt": ("tbt_ms", 200.0),
     "15-performance.inp": ("inp_ms", 200.0),
 }
+_RENDER_COST_RATIO_BUDGET = 3.0
+_FRAME_COST_TBT_BUDGET = 600.0
 _CITABILITY_SCORE_BUDGET = 50.0
 _MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
 _CERT_EXPIRY_WARNING_DAYS = 14
@@ -242,8 +244,6 @@ _EXTERNAL_EVIDENCE_CHECKS: dict[str, tuple[str, str]] = {
     "11-authority.backlinks": ("11-authority", "Backlink analysis requires a link-index API such as Ahrefs or Moz (OPE_BACKLINK_API_KEY not configured)"),
     "11-authority.reputation": ("11-authority", "Reputation assessment requires a review-aggregation or sentiment API (not configured)"),
     "14-accessibility.contrast": ("14-accessibility", "Colour-contrast verification requires a rendered-page screenshot and WCAG analysis (not available in headless mode)"),
-    "15-performance.render_cost": ("15-performance", "Render-cost measurement requires a browser-based performance trace (not available in headless mode)"),
-    "15-performance.frame_cost": ("15-performance", "Frame-cost measurement requires a browser-based paint profiler (not available in headless mode)"),
     "16-security.dependencies": ("16-security", "Dependency vulnerability scanning requires a CVE database or SCA tool (not configured)"),
     "17-language.translation_quality": ("17-language", "Translation quality assessment requires multilingual NLP analysis (not configured)"),
     "17-language.transliteration": ("17-language", "Transliteration accuracy assessment requires script-conversion analysis (not configured)"),
@@ -381,14 +381,36 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         return result
 
     if check_id in _PSI_VITALS:
-        vitals = inventory.get("pagespeed")
-        if not isinstance(vitals, dict):
-            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="PageSpeed Insights evidence is not configured or unavailable")
         key, budget = _PSI_VITALS[check_id]
-        value = vitals.get(key)
-        if not isinstance(value, (int, float)):
-            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason=f"PageSpeed Insights did not report '{key}'")
-        return _check(check_id, "15-performance", value <= budget, target, {key: value, "budget": budget}, source="pagespeed-insights")
+        browser_vitals = inventory.get("browser_vitals")
+        if isinstance(browser_vitals, dict):
+            value = browser_vitals.get(key)
+            if isinstance(value, (int, float)):
+                return _check(check_id, "15-performance", value <= budget, target, {key: value, "budget": budget}, source="ope-browser")
+        vitals = inventory.get("pagespeed")
+        if isinstance(vitals, dict):
+            value = vitals.get(key)
+            if isinstance(value, (int, float)):
+                return _check(check_id, "15-performance", value <= budget, target, {key: value, "budget": budget}, source="pagespeed-insights")
+        return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason=f"Neither browser vitals nor PageSpeed Insights reported '{key}'")
+
+    if check_id == "15-performance.render_cost":
+        browser_render = inventory.get("browser_render")
+        if not isinstance(browser_render, dict):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Browser render measurement is not available")
+        ratio = browser_render.get("render_ratio")
+        if not isinstance(ratio, (int, float)):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Browser render ratio is missing")
+        return _check(check_id, "15-performance", ratio <= _RENDER_COST_RATIO_BUDGET, target, {"render_ratio": ratio, "budget": _RENDER_COST_RATIO_BUDGET, "source_html_length": browser_render.get("source_html_length"), "rendered_html_length": browser_render.get("rendered_html_length")}, source="ope-browser")
+
+    if check_id == "15-performance.frame_cost":
+        browser_vitals = inventory.get("browser_vitals")
+        if not isinstance(browser_vitals, dict):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Browser vitals are not available for frame-cost estimation")
+        tbt = browser_vitals.get("tbt_ms")
+        if not isinstance(tbt, (int, float)):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Browser TBT measurement is missing")
+        return _check(check_id, "15-performance", tbt <= _FRAME_COST_TBT_BUDGET, target, {"tbt_ms": tbt, "budget_ms": _FRAME_COST_TBT_BUDGET}, source="ope-browser")
 
     if check_id in {"10-ai-search.answer_eligibility", "10-ai-search.citation_presence"}:
         report = inventory.get("citability")

@@ -47,7 +47,12 @@ def setup_project() -> int:
 
 def audit_command(args: argparse.Namespace) -> int:
     try:
-        raw = audit(args.url, timeout=args.timeout, fetch_subresources=not args.no_subresources)
+        browser_profiles = None
+        if getattr(args, "browser_desktop_only", False):
+            browser_profiles = ["DESKTOP"]
+        elif getattr(args, "browser_mobile_only", False):
+            browser_profiles = ["MOBILE"]
+        raw = audit(args.url, timeout=args.timeout, fetch_subresources=not args.no_subresources, browser=getattr(args, "browser", False), browser_timeout=getattr(args, "browser_timeout", 30), browser_profiles=browser_profiles)
         if not args.no_history:
             history.attach_baseline(raw)
         result = normalize_result(raw)
@@ -127,6 +132,10 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--timeout", type=int, default=15)
     audit_parser.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS (faster; leaves cost and stylesheet checks UNKNOWN)")
     audit_parser.add_argument("--no-history", action="store_true", help="do not read or write the local run history used for regression comparison")
+    audit_parser.add_argument("--browser", action="store_true", help="run browser-based performance audit alongside HTTP audit")
+    audit_parser.add_argument("--browser-timeout", type=int, default=30, help="browser timeout in seconds (default 30)")
+    audit_parser.add_argument("--browser-desktop-only", action="store_true", help="browser audit: skip mobile profile")
+    audit_parser.add_argument("--browser-mobile-only", action="store_true", help="browser audit: skip desktop profile")
     audit_parser.set_defaults(handler=audit_command)
     sa = sub.add_parser("site-audit", help="run a multi-page site-level audit")
     sa.add_argument("url")
