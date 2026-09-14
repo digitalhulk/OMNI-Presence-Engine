@@ -98,6 +98,13 @@ class AuditOrchestrator:
                 run.current_module = "20-continuous-optimization"
 
             normalized = self._normalize(raw)
+            # Cancellation may occur while normalization executes outside the
+            # lock. Re-check immediately before any optional external
+            # reasoning call so a cancelled run never starts provider work.
+            with self._lock:
+                if run.status == "CANCELLED":
+                    return run
+
             if enable_reasoning:
                 try:
                     advisory = self._reason(normalized)
