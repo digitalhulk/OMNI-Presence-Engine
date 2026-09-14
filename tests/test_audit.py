@@ -1,5 +1,5 @@
 import ope.audit as audit_module
-from ope.audit import PageParser, _finding, _json_ld_summary, _link_locality, audit
+from ope.audit import PageParser, _finding, _json_ld_summary, _link_locality, audit, markdown_report
 
 
 def test_parser_extracts_core_signals():
@@ -263,3 +263,43 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
     assert inventory["cookies"]["insecure_cookies"] == ["session: missing secure, httponly, samesite"]
     assert inventory["cdn_markers"] == ["cf-ray"]
     assert inventory["exposed_secrets"] == []
+
+
+def test_markdown_report_produces_expected_sections():
+    result = {
+        "target": "https://example.com",
+        "run_id": "ope-1700000000",
+        "inventory": {"status": 200, "title": "Example", "h1": 1},
+        "summary": {"finding_count": 1, "critical": 0, "high": 1, "medium": 0, "low": 0, "info": 0},
+        "findings": [
+            {
+                "id": "T-1",
+                "module": "02-infrastructure",
+                "severity": "high",
+                "priority": 75,
+                "symptom": "Missing HSTS header",
+                "remediation": ["Add Strict-Transport-Security header"],
+                "validation": ["Check header in response"],
+            }
+        ],
+    }
+    md = markdown_report(result)
+    assert "# OPE Audit" in md
+    assert "https://example.com" in md
+    assert "## Inventory" in md
+    assert "## Findings" in md
+    assert "T-1" in md
+    assert "Missing HSTS header" in md
+    assert "Add Strict-Transport-Security header" in md
+
+
+def test_markdown_report_no_findings():
+    result = {
+        "target": "https://clean.example.com",
+        "run_id": "ope-1700000001",
+        "inventory": {"status": 200},
+        "summary": {"finding_count": 0},
+        "findings": [],
+    }
+    md = markdown_report(result)
+    assert "No findings were generated" in md
