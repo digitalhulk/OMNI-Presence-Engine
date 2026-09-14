@@ -33,6 +33,15 @@ BOUND = {
     "15-performance.inp",
     "10-ai-search.answer_eligibility",
     "10-ai-search.citation_presence",
+    "01-entity.identity",
+    "06-semantics.entity_markup",
+    "12-local.nap_consistency",
+    "08-media.image_metadata",
+    "08-media.responsive_media",
+    "07-content.internal_links",
+    "07-content.freshness",
+    "18-analytics.measurement_coverage",
+    "19-conversion.lead_capture",
 }
 
 PAGESPEED_SOURCED = {
@@ -85,6 +94,19 @@ def _audit_result():
                 "average_citability_score": 70.0,
                 "grade_distribution": {"A": 1, "B": 1, "C": 1, "D": 0, "F": 0},
             },
+            "entity_types": ["organization"],
+            "has_entity_type": True,
+            "has_nap": True,
+            "images": 2,
+            "images_missing_dimensions": 0,
+            "images_missing_srcset": 0,
+            "internal_links": 3,
+            "external_links": 1,
+            "last_modified": "Mon, 01 Jan 2024 00:00:00 GMT",
+            "article_modified": "",
+            "has_analytics": True,
+            "forms": 1,
+            "contact_input": True,
         },
         "findings": [],
     }
@@ -104,7 +126,7 @@ def test_bound_audit_checks_produce_schema_complete_evidence():
 
 def test_unbound_checks_remain_unknown():
     result = execute_audit_checks(_audit_result())
-    assert result["checks"]["01-entity.identity"]["status"] == "UNKNOWN"
+    assert result["checks"]["01-entity.ownership"]["status"] == "UNKNOWN"
 
 
 def test_missing_http_status_is_unknown():
@@ -264,3 +286,79 @@ def test_weak_citability_fails_ai_search_checks():
     result = execute_audit_checks(audit)
     assert result["checks"]["10-ai-search.answer_eligibility"]["status"] == "FAIL"
     assert result["checks"]["10-ai-search.citation_presence"]["status"] == "FAIL"
+
+
+def test_no_entity_type_fails_identity_and_entity_markup_checks():
+    audit = _audit_result()
+    audit["inventory"]["has_entity_type"] = False
+    audit["inventory"]["entity_types"] = []
+    result = execute_audit_checks(audit)
+    assert result["checks"]["01-entity.identity"]["status"] == "FAIL"
+    assert result["checks"]["06-semantics.entity_markup"]["status"] == "FAIL"
+
+
+def test_missing_entity_observation_is_unknown():
+    audit = _audit_result()
+    del audit["inventory"]["has_entity_type"]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["01-entity.identity"]["status"] == "UNKNOWN"
+
+
+def test_no_nap_fails_local_consistency_check():
+    audit = _audit_result()
+    audit["inventory"]["has_nap"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["12-local.nap_consistency"]["status"] == "FAIL"
+
+
+def test_missing_image_dimensions_and_srcset_fail_media_checks():
+    audit = _audit_result()
+    audit["inventory"]["images_missing_dimensions"] = 1
+    audit["inventory"]["images_missing_srcset"] = 2
+    result = execute_audit_checks(audit)
+    assert result["checks"]["08-media.image_metadata"]["status"] == "FAIL"
+    assert result["checks"]["08-media.responsive_media"]["status"] == "FAIL"
+
+
+def test_no_images_makes_media_checks_unknown():
+    audit = _audit_result()
+    audit["inventory"]["images"] = 0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["08-media.image_metadata"]["status"] == "UNKNOWN"
+    assert result["checks"]["08-media.responsive_media"]["status"] == "UNKNOWN"
+
+
+def test_no_internal_links_fails_content_check():
+    audit = _audit_result()
+    audit["inventory"]["internal_links"] = 0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["07-content.internal_links"]["status"] == "FAIL"
+
+
+def test_no_freshness_signal_fails_freshness_check():
+    audit = _audit_result()
+    audit["inventory"]["last_modified"] = None
+    audit["inventory"]["article_modified"] = ""
+    result = execute_audit_checks(audit)
+    assert result["checks"]["07-content.freshness"]["status"] == "FAIL"
+
+
+def test_no_analytics_fails_measurement_coverage_check():
+    audit = _audit_result()
+    audit["inventory"]["has_analytics"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["18-analytics.measurement_coverage"]["status"] == "FAIL"
+
+
+def test_no_contact_input_fails_lead_capture_check():
+    audit = _audit_result()
+    audit["inventory"]["contact_input"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["19-conversion.lead_capture"]["status"] == "FAIL"
+
+
+def test_no_forms_makes_lead_capture_check_unknown():
+    audit = _audit_result()
+    audit["inventory"]["forms"] = 0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["19-conversion.lead_capture"]["status"] == "UNKNOWN"

@@ -39,6 +39,15 @@ AUDIT_BINDINGS = (
     "15-performance.inp",
     "10-ai-search.answer_eligibility",
     "10-ai-search.citation_presence",
+    "01-entity.identity",
+    "06-semantics.entity_markup",
+    "12-local.nap_consistency",
+    "08-media.image_metadata",
+    "08-media.responsive_media",
+    "07-content.internal_links",
+    "07-content.freshness",
+    "18-analytics.measurement_coverage",
+    "19-conversion.lead_capture",
 )
 
 # Deterministic performance/citability thresholds. These are widely cited
@@ -198,6 +207,51 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         distribution = report.get("grade_distribution") or {}
         strong = int(distribution.get("A", 0)) + int(distribution.get("B", 0))
         return _check(check_id, "10-ai-search", strong > 0, target, {"grade_distribution": distribution})
+
+    if check_id in {"01-entity.identity", "06-semantics.entity_markup"}:
+        module = check_id.split(".", 1)[0]
+        if "has_entity_type" not in inventory:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="JSON-LD entity observation is missing")
+        types = list(inventory.get("entity_types") or [])
+        return _check(check_id, module, bool(inventory.get("has_entity_type")), target, {"entity_types": types})
+
+    if check_id == "12-local.nap_consistency":
+        if "has_nap" not in inventory:
+            return CheckResult(check_id, "12-local", ExecutionStatus.UNKNOWN, reason="LocalBusiness JSON-LD observation is missing")
+        return _check(check_id, "12-local", bool(inventory.get("has_nap")), target, {"has_nap": inventory.get("has_nap"), "entity_types": list(inventory.get("entity_types") or [])})
+
+    if check_id in {"08-media.image_metadata", "08-media.responsive_media"}:
+        if inventory.get("images", 0) == 0:
+            return CheckResult(check_id, "08-media", ExecutionStatus.UNKNOWN, reason="Page has no images to evaluate")
+        key = "images_missing_dimensions" if check_id == "08-media.image_metadata" else "images_missing_srcset"
+        missing = inventory.get(key)
+        if not isinstance(missing, int):
+            return CheckResult(check_id, "08-media", ExecutionStatus.UNKNOWN, reason=f"'{key}' observation is missing")
+        return _check(check_id, "08-media", missing == 0, target, {key: missing, "images": inventory.get("images")})
+
+    if check_id == "07-content.internal_links":
+        internal = inventory.get("internal_links")
+        if not isinstance(internal, int):
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Link observation is missing")
+        return _check(check_id, "07-content", internal > 0, target, {"internal_links": internal})
+
+    if check_id == "07-content.freshness":
+        if "last_modified" not in inventory and "article_modified" not in inventory:
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Freshness observation is missing")
+        has_freshness_signal = bool(inventory.get("last_modified") or inventory.get("article_modified"))
+        return _check(check_id, "07-content", has_freshness_signal, target, {"last_modified": inventory.get("last_modified"), "article_modified": inventory.get("article_modified")})
+
+    if check_id == "18-analytics.measurement_coverage":
+        if "has_analytics" not in inventory:
+            return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
+        return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id == "19-conversion.lead_capture":
+        if inventory.get("forms", 0) == 0:
+            return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Page has no forms to evaluate")
+        if "contact_input" not in inventory:
+            return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Contact-field observation is missing")
+        return _check(check_id, "19-conversion", bool(inventory.get("contact_input")), target, {"contact_input": inventory.get("contact_input"), "forms": inventory.get("forms")})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),

@@ -26,9 +26,12 @@ class PageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.title = ""; self.lang = ""; self.headings: list[str] = []; self.links: list[str] = []
-        self.images = 0; self.images_missing_alt = 0; self.forms = 0; self.json_ld = 0
+        self.images = 0; self.images_missing_alt = 0; self.images_missing_dimensions = 0; self.images_missing_srcset = 0
+        self.forms = 0; self.json_ld = 0; self.json_ld_raw: list[str] = []
         self.canonical = ""; self.viewport = ""; self.description = ""; self.h1_count = 0; self._in_title = False
         self.meta_robots = ""; self.hreflang_count = 0; self.landmarks: set[str] = set()
+        self.article_modified = ""; self.contact_input = False; self.script_srcs: list[str] = []
+        self._in_json_ld = False; self._json_ld_buffer: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
@@ -41,6 +44,9 @@ class PageParser(HTMLParser):
         if tag == "img":
             self.images += 1
             if not (a.get("alt") or "").strip(): self.images_missing_alt += 1
+            if not (a.get("width") and a.get("height")): self.images_missing_dimensions += 1
+            if not a.get("srcset"): self.images_missing_srcset += 1
+        if tag == "input" and (a.get("type") or "").lower() in {"email", "tel"}: self.contact_input = True
         if tag == "form": self.forms += 1
         if tag == "link":
             rel = (a.get("rel") or "").lower().split()
@@ -48,16 +54,27 @@ class PageParser(HTMLParser):
             if "alternate" in rel and a.get("hreflang"): self.hreflang_count += 1
         if tag == "meta":
             name = (a.get("name") or "").lower()
+            prop = (a.get("property") or "").lower()
             if name == "viewport": self.viewport = a.get("content", "") or ""
             if name == "description": self.description = a.get("content", "") or ""
             if name == "robots": self.meta_robots = a.get("content", "") or ""
-        if tag == "script" and (a.get("type") or "").lower() == "application/ld+json": self.json_ld += 1
+            if prop == "article:modified_time": self.article_modified = a.get("content", "") or ""
+        if tag == "script":
+            if a.get("src"): self.script_srcs.append(a["src"] or "")
+            if (a.get("type") or "").lower() == "application/ld+json":
+                self.json_ld += 1
+                self._in_json_ld = True
+                self._json_ld_buffer = []
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "title": self._in_title = False
+        if tag == "script" and self._in_json_ld:
+            self.json_ld_raw.append("".join(self._json_ld_buffer))
+            self._in_json_ld = False
 
     def handle_data(self, data: str) -> None:
         if self._in_title: self.title += data.strip()
+        if self._in_json_ld: self._json_ld_buffer.append(data)
 
 
 @dataclass
@@ -129,6 +146,49 @@ def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], byt
         return final_url, r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8", dns_ms, ttfb_ms
 
 
+_ENTITY_TYPES = {"organization", "person", "localbusiness", "corporation", "ngo", "educationalorganization", "governmentorganization"}
+_ANALYTICS_MARKERS = ("googletagmanager.com", "google-analytics.com", "gtag/js")
+
+
+def _json_ld_entities(raw_blocks: list[str]) -> dict[str, Any]:
+    """Parse JSON-LD blocks already present in the page for entity/NAP signals.
+
+    Malformed JSON-LD is common and is skipped rather than treated as an
+    error; only what successfully parses is reported as evidence.
+    """
+    types: set[str] = set()
+    has_nap = False
+    for raw in raw_blocks:
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            continue
+        candidates = parsed if isinstance(parsed, list) else [parsed]
+        for node in candidates:
+            if not isinstance(node, dict):
+                continue
+            node_type = node.get("@type")
+            node_types = {str(t).lower() for t in (node_type if isinstance(node_type, list) else [node_type]) if t}
+            types |= node_types
+            if node_types & {"localbusiness"} and node.get("address") and node.get("telephone"):
+                has_nap = True
+    return {"types": sorted(types), "has_entity_type": bool(types & _ENTITY_TYPES), "has_nap": has_nap}
+
+
+def _link_locality(links: list[str], final_url: str) -> dict[str, int]:
+    origin = urllib.parse.urlparse(final_url).hostname or ""
+    internal = external = 0
+    for href in links:
+        parsed = urllib.parse.urlparse(href)
+        if parsed.scheme and parsed.scheme not in ALLOWED_SCHEMES:
+            continue
+        if not parsed.hostname or parsed.hostname == origin:
+            internal += 1
+        else:
+            external += 1
+    return {"internal_links": internal, "external_links": external}
+
+
 def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[Evidence], remediation: list[str], validation: list[str], impact: float = .5, urgency: float = .5, fixability: float = .8) -> Finding:
     confidence = min((e.confidence for e in evidence), default=0.2)
     priority = round(100 * impact * confidence * urgency * fixability, 2)
@@ -144,6 +204,9 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     robots = crawler.fetch_robots(final_url, timeout=timeout)
     citability_report = citability.analyze_blocks(citability.extract_content_blocks(html))
     pagespeed_vitals = fetch_vitals(final_url)
+    entities = _json_ld_entities(p.json_ld_raw)
+    link_locality = _link_locality(p.links, final_url)
+    has_analytics = any(marker in html for marker in _ANALYTICS_MARKERS)
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -180,7 +243,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], "has_entity_type": entities["has_entity_type"], "has_nap": entities["has_nap"], "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:

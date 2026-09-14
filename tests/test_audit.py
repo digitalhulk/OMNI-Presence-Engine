@@ -1,5 +1,5 @@
 import ope.audit as audit_module
-from ope.audit import PageParser, _finding, audit
+from ope.audit import PageParser, _finding, _json_ld_entities, _link_locality, audit
 
 
 def test_parser_extracts_core_signals():
@@ -31,6 +31,42 @@ def test_priority_is_bounded():
     assert 0 <= f.priority <= 100
 
 
+def test_parser_extracts_json_ld_content_images_and_forms():
+    p = PageParser()
+    p.feed(
+        '<html><body>'
+        '<script type="application/ld+json">{"@type": "Organization", "name": "Acme"}</script>'
+        '<img src="a.jpg" alt="A" width="100" height="100" srcset="a-2x.jpg 2x">'
+        '<img src="b.jpg" alt="B">'
+        '<form><input type="email" name="email"></form>'
+        '<script src="https://www.googletagmanager.com/gtag/js?id=G-XXXX"></script>'
+        "</body></html>"
+    )
+    assert p.json_ld_raw == ['{"@type": "Organization", "name": "Acme"}']
+    assert p.images_missing_dimensions == 1
+    assert p.images_missing_srcset == 1
+    assert p.contact_input is True
+    assert p.script_srcs == ["https://www.googletagmanager.com/gtag/js?id=G-XXXX"]
+
+
+def test_json_ld_entities_extracts_types_and_skips_malformed_blocks():
+    result = _json_ld_entities(['{"@type": "Organization"}', "not json", '{"@type": ["LocalBusiness"], "address": "1 Main St", "telephone": "555-0100"}'])
+    assert result["types"] == ["localbusiness", "organization"]
+    assert result["has_entity_type"] is True
+    assert result["has_nap"] is True
+
+
+def test_json_ld_entities_without_nap_fields_is_false():
+    result = _json_ld_entities(['{"@type": "LocalBusiness"}'])
+    assert result["has_nap"] is False
+
+
+def test_link_locality_splits_internal_and_external():
+    result = _link_locality(["/about", "https://example.com/contact", "https://other.com/page", "mailto:a@example.com"], "https://example.com/")
+    assert result["internal_links"] == 2
+    assert result["external_links"] == 1
+
+
 def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
     def fake_request(url, timeout=15):
         html = (
@@ -38,7 +74,10 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
             '<meta name="viewport" content="width=device-width">'
             '<meta name="description" content="A description long enough to plausibly pass the snippet length check here.">'
             '<link rel="canonical" href="https://example.com/"></head>'
-            "<body><header></header><nav></nav><main><h1>Hi</h1></main><footer></footer></body></html>"
+            '<body><header></header><nav></nav><main><h1>Hi</h1>'
+            '<script type="application/ld+json">{"@type": "Organization"}</script>'
+            '<a href="/about">About</a>'
+            "</main><footer></footer></body></html>"
         )
         headers = {"Strict-Transport-Security": "max-age=1", "X-Content-Type-Options": "nosniff"}
         return "https://example.com/", 200, headers, html.encode(), "utf-8", 12.3, 250.0
@@ -63,3 +102,8 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
     assert inventory["ttfb_ms"] == 250.0
     assert inventory["citability"]["total_blocks_analyzed"] == 0
     assert inventory["pagespeed"] is None
+    assert inventory["has_entity_type"] is True
+    assert inventory["entity_types"] == ["organization"]
+    assert inventory["internal_links"] == 1
+    assert inventory["has_analytics"] is False
+    assert inventory["contact_input"] is False
