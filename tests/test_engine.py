@@ -1,5 +1,5 @@
 from ope import engine
-from ope.engine import normalize_performance_result
+from ope.engine import normalize_performance_result, normalize_site_result
 
 
 def _result(status="PASS"):
@@ -8,6 +8,14 @@ def _result(status="PASS"):
             "01": {"status": status, "findings": []},
             "02": {"status": "PASS", "findings": []},
         },
+        "findings": [],
+        "inventory": {},
+    }
+
+
+def _full_result():
+    return {
+        "modules": {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)},
         "findings": [],
         "inventory": {},
     }
@@ -190,3 +198,85 @@ class TestNormalizePerformanceResult:
         }
         result = normalize_performance_result(perf)
         assert result["findings"][0]["module"] == "15-performance"
+
+
+class TestScoringIntegration:
+    def test_normalize_result_has_health(self, monkeypatch) -> None:
+        def fake_execute(_):
+            return {"checks": {}}
+
+        monkeypatch.setattr(engine, "execute_audit_checks", fake_execute)
+        output = engine.normalize_result(_full_result())
+        assert "health" in output
+
+    def test_normalize_result_modules_have_score(self, monkeypatch) -> None:
+        def fake_execute(_):
+            return {
+                "checks": {
+                    cid: {"module": "01-entity", "status": "PASS", "evidence": [{"confidence": 1.0}]}
+                    for cid in engine.checks_for_module("01-entity")
+                }
+            }
+
+        monkeypatch.setattr(engine, "execute_audit_checks", fake_execute)
+        output = engine.normalize_result(_full_result())
+        assert output["modules"]["01"]["score"] == 100.0
+
+    def test_normalize_result_health_is_numeric_or_none(self, monkeypatch) -> None:
+        def fake_execute(_):
+            return {"checks": {}}
+
+        monkeypatch.setattr(engine, "execute_audit_checks", fake_execute)
+        output = engine.normalize_result(_full_result())
+        health = output["health"]
+        assert health is None or isinstance(health, float)
+
+    def test_normalize_site_result_has_health(self) -> None:
+        site = {"findings": [], "pages": [], "crawl_summary": {}, "inventory": {}}
+        result = normalize_site_result(site)
+        assert "health" in result
+        for mod in result["modules"].values():
+            assert "score" in mod
+
+    def test_normalize_performance_result_has_health(self) -> None:
+        perf = {
+            "target": "https://example.com",
+            "status": "COMPLETED",
+            "performance_report": {"url": "https://example.com/", "findings": []},
+        }
+        result = normalize_performance_result(perf)
+        assert "health" in result
+        for mod in result["modules"].values():
+            assert "score" in mod
+
+    def test_all_pass_checks_give_full_score(self, monkeypatch) -> None:
+        check_ids = engine.checks_for_module("01-entity")
+        def fake_execute(_):
+            return {
+                "checks": {
+                    cid: {"module": "01-entity", "status": "PASS", "evidence": [{"confidence": 0.9}]}
+                    for cid in check_ids
+                }
+            }
+
+        monkeypatch.setattr(engine, "execute_audit_checks", fake_execute)
+        output = engine.normalize_result(_full_result())
+        assert output["modules"]["01"]["score"] == 100.0
+
+    def test_mixed_checks_give_partial_score(self, monkeypatch) -> None:
+        check_ids = list(engine.checks_for_module("01-entity"))
+        def fake_execute(_):
+            checks = {}
+            for i, cid in enumerate(check_ids):
+                checks[cid] = {
+                    "module": "01-entity",
+                    "status": "PASS" if i % 2 == 0 else "FAIL",
+                    "evidence": [{"confidence": 0.9}],
+                }
+            return {"checks": checks}
+
+        monkeypatch.setattr(engine, "execute_audit_checks", fake_execute)
+        output = engine.normalize_result(_full_result())
+        score = output["modules"]["01"]["score"]
+        assert score is not None
+        assert 0.0 < score < 100.0

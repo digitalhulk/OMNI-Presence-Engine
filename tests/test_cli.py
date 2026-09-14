@@ -179,6 +179,157 @@ class TestAuditCommand:
         assert audit_command(args) == 2
 
 
+class TestSiteAuditCommand:
+    @mock.patch("ope.cli.history")
+    @mock.patch("ope.site_audit.site_audit")
+    @mock.patch("ope.engine.normalize_site_result")
+    def test_json_output(self, mock_norm: mock.Mock, mock_sa: mock.Mock, mock_hist: mock.Mock, capsys: pytest.CaptureFixture[str]) -> None:
+        site_result_obj = mock.Mock()
+        site_result_obj.to_dict.return_value = {
+            "target": "https://example.com",
+            "findings": [],
+            "pages": [],
+            "crawl_summary": {"pages_crawled": 1},
+            "inventory": {},
+        }
+        mock_sa.return_value = site_result_obj
+        mock_norm.return_value = {
+            "target": "https://example.com",
+            "engine_contract": "evidence-diagnostic-v1",
+            "findings": [],
+            "modules": {},
+        }
+        import argparse
+
+        from ope.cli import site_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", max_pages=200, max_depth=10,
+            timeout=15, delay=0.5, allow_subdomains=False,
+            no_sitemaps=False, no_robots=False, no_history=False,
+            markdown=False, html=None,
+        )
+        result = site_audit_command(args)
+        assert result == 0
+        output = json.loads(capsys.readouterr().out)
+        assert output["engine_contract"] == "evidence-diagnostic-v1"
+
+    @mock.patch("ope.cli.history")
+    @mock.patch("ope.site_audit.site_audit")
+    @mock.patch("ope.engine.normalize_site_result")
+    @mock.patch("ope.report_html_site.write_site_html_report")
+    def test_html_output(self, mock_html: mock.Mock, mock_norm: mock.Mock, mock_sa: mock.Mock, mock_hist: mock.Mock, tmp_path: pytest.TempPathFactory) -> None:
+        site_result_obj = mock.Mock()
+        site_result_obj.to_dict.return_value = {
+            "target": "https://example.com",
+            "findings": [],
+            "pages": [],
+            "crawl_summary": {},
+            "inventory": {},
+        }
+        mock_sa.return_value = site_result_obj
+        mock_norm.return_value = {"target": "https://example.com", "findings": [], "modules": {}}
+        html_path = str(tmp_path / "site.html")
+        mock_html.return_value = html_path
+
+        import argparse
+
+        from ope.cli import site_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", max_pages=200, max_depth=10,
+            timeout=15, delay=0.5, allow_subdomains=False,
+            no_sitemaps=False, no_robots=False, no_history=False,
+            markdown=False, html=html_path,
+        )
+        result = site_audit_command(args)
+        assert result == 0
+        mock_html.assert_called_once()
+
+    @mock.patch("ope.site_audit.site_audit", side_effect=Exception("crawl failed"))
+    def test_exception_returns_2(self, mock_sa: mock.Mock) -> None:
+        import argparse
+
+        from ope.cli import site_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", max_pages=200, max_depth=10,
+            timeout=15, delay=0.5, allow_subdomains=False,
+            no_sitemaps=False, no_robots=False, no_history=True,
+            markdown=False, html=None,
+        )
+        assert site_audit_command(args) == 2
+
+
+class TestPerformanceAuditCommand:
+    @mock.patch("ope.performance_audit.performance_audit")
+    @mock.patch("ope.engine.normalize_performance_result")
+    def test_json_output(self, mock_norm: mock.Mock, mock_pa: mock.Mock, capsys: pytest.CaptureFixture[str]) -> None:
+        perf_result_obj = mock.Mock()
+        perf_result_obj.to_dict.return_value = {
+            "target": "https://example.com",
+            "findings": [],
+            "performance_report": {"findings": []},
+            "inventory": {},
+        }
+        mock_pa.return_value = perf_result_obj
+        mock_norm.return_value = {
+            "target": "https://example.com",
+            "engine_contract": "evidence-diagnostic-v1",
+            "findings": [],
+            "modules": {},
+        }
+        import argparse
+
+        from ope.cli import performance_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", timeout=30,
+            desktop_only=False, mobile_only=False,
+            no_screenshot=False, markdown=False, html=None,
+        )
+        result = performance_audit_command(args)
+        assert result == 0
+        output = json.loads(capsys.readouterr().out)
+        assert output["engine_contract"] == "evidence-diagnostic-v1"
+
+    @mock.patch("ope.performance_audit.performance_audit")
+    @mock.patch("ope.engine.normalize_performance_result")
+    @mock.patch("ope.report_html_performance.write_performance_html_report")
+    def test_html_output(self, mock_html: mock.Mock, mock_norm: mock.Mock, mock_pa: mock.Mock, tmp_path: pytest.TempPathFactory) -> None:
+        perf_result_obj = mock.Mock()
+        perf_result_obj.to_dict.return_value = {
+            "target": "https://example.com",
+            "findings": [],
+            "performance_report": {"findings": []},
+            "inventory": {},
+        }
+        mock_pa.return_value = perf_result_obj
+        mock_norm.return_value = {"target": "https://example.com", "findings": [], "modules": {}}
+        html_path = str(tmp_path / "perf.html")
+        mock_html.return_value = html_path
+
+        import argparse
+
+        from ope.cli import performance_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", timeout=30,
+            desktop_only=False, mobile_only=False,
+            no_screenshot=False, markdown=False, html=html_path,
+        )
+        result = performance_audit_command(args)
+        assert result == 0
+        mock_html.assert_called_once()
+
+    @mock.patch("ope.performance_audit.performance_audit", side_effect=Exception("browser failed"))
+    def test_exception_returns_2(self, mock_pa: mock.Mock) -> None:
+        import argparse
+
+        from ope.cli import performance_audit_command
+        args = argparse.Namespace(
+            url="https://example.com", timeout=30,
+            desktop_only=False, mobile_only=False,
+            no_screenshot=False, markdown=False, html=None,
+        )
+        assert performance_audit_command(args) == 2
+
+
 class TestSiteAuditMarkdownReport:
     def test_basic_report(self) -> None:
         result = {

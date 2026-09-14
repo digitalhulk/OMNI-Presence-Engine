@@ -19,7 +19,7 @@ This document is the contract. What of it runs today:
 | Durable monitoring registration | Not implemented: runs are local and manual, with no scheduler |
 | Dataset and research execution classes | Not implemented: no backlink, ranking or research provider is bound |
 
-All 136 registry checks have a bound evidence provider: 113 deterministic checks, 3 finding-record checks (N/A when no findings exist), and 20 external-evidence checks (UNKNOWN with a specific reason naming the missing API). The rest of the contract below applies to all checks.
+All 136 registry checks have a bound evidence provider: 115 deterministic checks, 3 finding-record checks (N/A when no findings exist), and 18 external-evidence checks (UNKNOWN with a specific reason naming the missing API). The rest of the contract below applies to all checks.
 
 ## Run contract
 1. Load entity/project configuration.
@@ -31,7 +31,7 @@ All 136 registry checks have a bound evidence provider: 113 deterministic checks
 7. Normalize observations into `ope.audit.finding` records.
 8. Keep evidence lifecycle (`FACT`, `OBSERVED`, `ESTIMATE`, `HYPOTHESIS`, `EXPERIMENT`, `DEPRECATED`) separate from execution state (`PASS`, `FAIL`, `UNKNOWN`, `BLOCKED`, `N/A`).
 9. Trace symptom to dependency and root cause.
-10. Calculate priority using `ope.priority`.
+10. Calculate priority using `ope.scoring`.
 11. Produce remediation, validation and regression requirements.
 12. Re-run affected checks after implementation.
 13. Register durable monitoring for high-impact findings.
