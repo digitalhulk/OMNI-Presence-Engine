@@ -59,6 +59,36 @@ def test_normalize_finding_clamps_priority_to_0_100_not_0_1():
     assert by_id["negative"]["priority"] == 0.0
 
 
+def test_normalize_finding_priority_never_produces_nan_or_infinity():
+    # Regression test: priority's clamp is min(100.0, _safe_float(...)) --
+    # literal 100.0 first, value second. Python's min()/max() return the
+    # first argument when compared against NaN (min(100.0, nan) == 100.0,
+    # but min(nan, 100.0) == nan) -- so this specific argument order is
+    # what keeps a NaN priority input from silently surviving the clamp.
+    # This pins that behavior explicitly rather than relying on it being
+    # an accidental side effect of argument placement that a future
+    # reordering could silently break.
+    import math
+
+    result = normalize_result(
+        {
+            "findings": [
+                {"id": "nan", "module": "01-entity", "priority": float("nan"), "evidence": [], "root_cause": "rc"},
+                {"id": "inf", "module": "01-entity", "priority": float("inf"), "evidence": [], "root_cause": "rc"},
+                {"id": "ninf", "module": "01-entity", "priority": float("-inf"), "evidence": [], "root_cause": "rc"},
+            ]
+        }
+    )
+    by_id = {f["id"]: f for f in result["findings"]}
+    for fid in ("nan", "inf", "ninf"):
+        priority = by_id[fid]["priority"]
+        assert not math.isnan(priority), f"{fid}: priority must never be NaN, got {priority}"
+        assert not math.isinf(priority), f"{fid}: priority must never be infinite, got {priority}"
+        assert 0.0 <= priority <= 100.0
+    assert by_id["inf"]["priority"] == 100.0
+    assert by_id["ninf"]["priority"] == 0.0
+
+
 def test_audit_rejects_local_targets():
     try:
         audit("http://127.0.0.1/")

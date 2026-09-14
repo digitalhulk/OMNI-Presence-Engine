@@ -59,6 +59,35 @@ def test_empty_source_raises_invalid_evidence_error():
         normalize_evidence([{"source": "", "target": "y", "value": 1}])
 
 
+def test_whitespace_only_source_raises_invalid_evidence_error():
+    # Regression test: a bare truthiness check ("not item.get('source')")
+    # treats a whitespace-only string as present, since "   " is truthy in
+    # Python. This mirrors the same class of bug fixed for root_cause in
+    # engine.py -- whitespace-only text must not count as a real identifier.
+    with pytest.raises(InvalidEvidenceError):
+        normalize_evidence([{"source": "   ", "target": "y", "value": 1}])
+
+
+def test_whitespace_only_target_raises_invalid_evidence_error():
+    with pytest.raises(InvalidEvidenceError):
+        normalize_evidence([{"source": "x", "target": "\t\n  ", "value": 1}])
+
+
+def test_evidence_record_with_whitespace_source_raises_invalid_evidence_error():
+    # The EvidenceRecord passthrough path must enforce the same identity
+    # requirement as the dict path -- constructing a frozen EvidenceRecord
+    # directly must not bypass validation.
+    with pytest.raises(InvalidEvidenceError):
+        normalize_evidence([EvidenceRecord(source="   ", target="y", value=1)])
+
+
+def test_non_string_source_raises_invalid_evidence_error():
+    with pytest.raises(InvalidEvidenceError):
+        normalize_evidence([{"source": None, "target": "y", "value": 1}])
+    with pytest.raises(InvalidEvidenceError):
+        normalize_evidence([{"source": 123, "target": "y", "value": 1}])
+
+
 def test_non_dict_non_record_item_raises_invalid_evidence_error():
     with pytest.raises(InvalidEvidenceError):
         normalize_evidence(["not-a-valid-evidence-item"])

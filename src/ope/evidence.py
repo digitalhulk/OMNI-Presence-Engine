@@ -54,9 +54,15 @@ def normalize_evidence(items: list[EvidenceRecord | dict[str, Any]]) -> list[dic
     normalized: list[dict[str, Any]] = []
     for item in items:
         if isinstance(item, EvidenceRecord):
+            if not item.source.strip() or not item.target.strip():
+                raise InvalidEvidenceError(
+                    "Evidence item is missing a required 'source' or 'target' identifier"
+                )
             record = item
         elif isinstance(item, dict):
-            if not item.get("source") or not item.get("target"):
+            source = item.get("source")
+            target = item.get("target")
+            if not isinstance(source, str) or not source.strip() or not isinstance(target, str) or not target.strip():
                 raise InvalidEvidenceError(
                     "Evidence item is missing a required 'source' or 'target' identifier"
                 )
