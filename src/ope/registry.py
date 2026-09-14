@@ -25,7 +25,7 @@ _CHECK_DEFINITIONS: tuple[tuple[str, str], ...] = (
     ("03-code", "html.validity semantic_html head_metadata structured_data css_cost js_cost third_party_code forms"),
     ("04-crawl", "robots_access sitemap_discovery bot_access crawl_errors crawl_budget_risk"),
     ("05-index", "indexability canonicalization status_codes duplication rendering_indexability"),
-    ("06-semantics", "entity_markup topic_coverage query_intent relationships taxonomy knowledge_consistency"),
+    ("06-semantics", "entity_markup topic_coverage query_intent relationships taxonomy knowledge_consistency structured_data"),
     ("07-content", "intent_match completeness originality factual_accuracy helpfulness freshness internal_links conversion_context"),
     ("08-media", "image_quality image_metadata responsive_media video_metadata captions_transcripts media_performance"),
     ("09-search", "query_visibility serp_eligibility snippets sitelinks image_visibility local_visibility"),

@@ -99,10 +99,13 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
             module_code,
         )
         check_ids = checks_for_module(module_id)
+        # Checks missing from execution output are treated as UNKNOWN.
+        # This prevents partial registry coverage from silently becoming PASS.
         statuses = [
             str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
-            for check_id in check_ids
             if isinstance(checks.get(check_id), dict)
+            else ExecutionStatus.UNKNOWN.value
+            for check_id in check_ids
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
