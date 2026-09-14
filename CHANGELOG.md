@@ -4,6 +4,35 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.4.0
+
+Performance-audit engine contract and unified history integration. The
+performance subsystem now produces the same `evidence-diagnostic-v1`
+contract as single-page and site audits.
+
+### Added
+
+- **`normalize_performance_result()`** in `engine.py`: stamps
+  `engine_contract: "evidence-diagnostic-v1"` and
+  `engine_scope: "performance"`, converts performance findings into the
+  engine finding schema, runs all 136 registry checks against the
+  performance inventory, and reconciles 20-module statuses.
+- **`performance_evidence.py`**: bridge module injecting five performance
+  signal groups (`perf_vitals_summary`, `perf_resource_analysis`,
+  `perf_dom_analysis`, `perf_render_analysis`, `perf_findings_summary`)
+  into the inventory using `setdefault()` to never overwrite existing
+  keys. Only injects when the performance result status is `COMPLETED`.
+- **`--markdown` flag** for `ope performance-audit`: generates a
+  formatted report with Core Web Vitals table and findings sorted by
+  priority.
+- **Site-audit history**: `ope site-audit` now records run history via
+  `history.attach_baseline()` and `history.save_run()`, gated on the
+  `--no-history` flag.
+- **`--no-history` flag** for `ope site-audit`.
+- **Test coverage expansion**: 75 new tests across five new test files
+  (`test_cli.py`, `test_evidence.py`, `test_registry.py`,
+  `test_performance_evidence.py`) and additions to `test_engine.py`.
+
 ## 0.3.0
 
 Full check-binding coverage: all 136 registry checks across 20 modules are now

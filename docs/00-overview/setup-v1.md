@@ -31,6 +31,40 @@ ope-audit https://example.com --markdown
 | `--no-subresources` | Skip fetching linked CSS/JS. Faster, but the CSS cost, third-party, motion and focus checks report `UNKNOWN` |
 | `--no-history` | Do not read or write the local run history, so regression comparison is skipped |
 
+## Site audit
+
+```bash
+ope site-audit https://example.com --markdown
+```
+
+Crawls the site, builds a link graph, detects orphan pages, and produces
+cross-page findings under the `evidence-diagnostic-v1` contract.
+
+| Flag | Effect |
+| --- | --- |
+| `--max-pages N` | Maximum pages to crawl (default 200) |
+| `--max-depth N` | Maximum crawl depth (default 10) |
+| `--delay SECONDS` | Delay between requests (default 0.5) |
+| `--markdown` | Markdown output |
+| `--no-history` | Skip local run history |
+| `--no-sitemaps` | Skip sitemap discovery |
+
+## Performance audit
+
+```bash
+ope performance-audit https://example.com --markdown
+```
+
+Runs browser-based performance analysis (Core Web Vitals, resource
+analysis, DOM analysis, render analysis) and produces findings under the
+`evidence-diagnostic-v1` contract.
+
+| Flag | Effect |
+| --- | --- |
+| `--timeout SECONDS` | Per-request timeout (default 30) |
+| `--markdown` | Markdown output with CWV table and prioritized findings |
+| `--desktop-only` | Skip mobile profile |
+
 ## Run history
 
 Each audit records a compact snapshot — tracked metrics, finding ids and check

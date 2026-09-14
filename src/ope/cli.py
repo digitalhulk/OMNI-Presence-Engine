@@ -88,7 +88,12 @@ def site_audit_command(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"OPE site-audit failed: {exc}", file=sys.stderr)
         return 2
-    result = normalize_site_result(raw.to_dict())
+    raw_dict = raw.to_dict()
+    if not args.no_history:
+        history.attach_baseline(raw_dict)
+    result = normalize_site_result(raw_dict)
+    if not args.no_history:
+        history.save_run(result)
     if args.markdown:
         print(site_audit_markdown_report(result))
     else:
@@ -128,6 +133,7 @@ def site_audit_markdown_report(result: dict) -> str:
 
 def performance_audit_command(args: argparse.Namespace) -> int:
     from .browser import DeviceProfile
+    from .engine import normalize_performance_result
     from .performance_audit import PerformanceAuditConfig
     from .performance_audit import performance_audit as run_perf_audit
 
@@ -146,12 +152,63 @@ def performance_audit_command(args: argparse.Namespace) -> int:
         capture_screenshot=not args.no_screenshot,
     )
     try:
-        result = run_perf_audit(args.url, config=cfg)
+        raw = run_perf_audit(args.url, config=cfg)
     except Exception as exc:
         print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    result = normalize_performance_result(raw.to_dict())
+    if args.markdown:
+        print(performance_audit_markdown_report(result))
+    else:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
+
+
+def performance_audit_markdown_report(result: dict) -> str:
+    """Generate a markdown summary from a normalized performance audit result."""
+    lines = [
+        f"# OPE Performance Audit — {result.get('target', 'unknown')}",
+        "",
+        f"**Status:** `{result.get('status', 'UNKNOWN')}`  ",
+        f"**Duration:** `{result.get('duration_s', 0):.1f}s`  ",
+        f"**Findings:** `{len(result.get('findings', []))}`",
+        "",
+    ]
+    report = result.get("performance_report")
+    if isinstance(report, dict):
+        vitals = report.get("vitals_summary")
+        if isinstance(vitals, dict) and vitals:
+            lines += ["## Core Web Vitals", ""]
+            for profile, metrics in vitals.items():
+                if not isinstance(metrics, dict):
+                    continue
+                lines.append(f"### {profile}")
+                lines.append("")
+                lines.append("| Metric | Value | Rating |")
+                lines.append("|--------|-------|--------|")
+                for metric, data in metrics.items():
+                    if not isinstance(data, dict):
+                        continue
+                    val = data.get("value_ms") or data.get("value", "?")
+                    unit = "ms" if "value_ms" in data else ""
+                    lines.append(f"| {metric.upper()} | {val}{unit} | {data.get('rating', '?')} |")
+                lines.append("")
+
+    findings = result.get("findings", [])
+    if findings:
+        lines += ["## Findings", ""]
+        for f in sorted(findings, key=lambda x: x.get("priority", 0), reverse=True):
+            lines += [
+                f"### {f.get('id', '?')} — {f.get('severity', '?').upper()} — Priority {f.get('priority', 0)}",
+                f"**Symptom:** {f.get('symptom', '?')}",
+                "",
+            ]
+            if f.get("root_cause"):
+                lines.append(f"**Root cause:** {f['root_cause']}")
+            lines.append("")
+    else:
+        lines.append("No performance findings were generated.")
+    return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -182,6 +239,7 @@ def build_parser() -> argparse.ArgumentParser:
     sa.add_argument("--allow-subdomains", action="store_true")
     sa.add_argument("--no-sitemaps", action="store_true", help="skip sitemap discovery")
     sa.add_argument("--no-robots", action="store_true", help="skip robots.txt fetch")
+    sa.add_argument("--no-history", action="store_true", help="do not read or write the local run history")
     sa.set_defaults(handler=site_audit_command)
     pa = sub.add_parser("performance-audit", help="run browser-based performance audit")
     pa.add_argument("url")
@@ -189,6 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--desktop-only", action="store_true", help="skip mobile profile")
     pa.add_argument("--mobile-only", action="store_true", help="skip desktop profile")
     pa.add_argument("--no-screenshot", action="store_true", help="skip screenshot capture")
+    pa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
     pa.set_defaults(handler=performance_audit_command)
     return parser
 
