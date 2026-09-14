@@ -92,7 +92,7 @@ def main() -> int:
     if not getattr(args, "command", None):
         parser.print_help()
         return 0
-    return args.handler(args)
+    return int(args.handler(args))
 
 
 if __name__ == "__main__":

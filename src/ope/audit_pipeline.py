@@ -7,7 +7,6 @@ from typing import Any
 from .module_runner import CheckResult, ExecutionStatus
 from .registry import build_runner, registered_check_ids
 
-
 AUDIT_BINDINGS = (
     "02-infrastructure.hosting.availability",
     "03-code.head_metadata",

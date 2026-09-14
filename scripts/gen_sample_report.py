@@ -1,9 +1,11 @@
 """Regenerate web/sample-report.js from a real audit run against a fixed page."""
-import json, tempfile
+import json
+import tempfile
+
 import ope.audit as A
-from ope.audit import audit, Response
-from ope.engine import normalize_result
 from ope import history
+from ope.audit import Response, audit
+from ope.engine import normalize_result
 
 PAGE = """<!DOCTYPE html><html lang="en"><head><title>StarBrand — Digital Presence</title>
 <meta charset="utf-8">
