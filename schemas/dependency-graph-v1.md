@@ -18,7 +18,11 @@ This is a dependency model, not a rigid workflow. Any observed failure can enter
 
 ## Executable implementation
 
-The graph is encoded in `src/ope/dependency_graph.py` as `MODULE_DEPENDENCIES` with computed topological ordering. `cascade_blocked()` propagates BLOCKED downstream from FAIL modules (UNKNOWN does not cascade). `find_root_causes()` traces each BLOCKED module back to the upstream FAIL modules, skipping BLOCKED intermediaries. The engine runs both after check execution and module status reconciliation.
+The graph is encoded in `src/ope/dependency_graph.py` as `MODULE_DEPENDENCIES` with computed deterministic topological ordering. Graph construction rejects dangling dependencies and cycles rather than silently accepting malformed topology.
+
+`cascade_blocked()` propagates `BLOCKED` downstream from upstream `FAIL` or `BLOCKED` states. A module with its own `FAIL` evidence keeps `FAIL`; dependency propagation must not overwrite direct evidence with a derived state. `UNKNOWN` and `N/A` upstream states never cascade because absent or inapplicable evidence is not a failure.
+
+`find_root_causes()` traces each `BLOCKED` module through transitive upstream dependencies and reports only upstream modules that actually have `FAIL` status. `BLOCKED` intermediaries are never fabricated as root causes, and root-cause lists are deterministic. The engine runs both functions after check execution and module status reconciliation.
 
 ## Parallel branches
 
