@@ -34,6 +34,23 @@ ope audit https://example.com --markdown
 ope audit https://example.com --html reports/audit.report.html
 ```
 
+Audit options:
+
+```bash
+ope audit https://example.com --no-subresources   # skip fetching linked CSS/JS
+ope audit https://example.com --no-history        # do not read or write local run history
+ope audit https://example.com --timeout 30
+```
+
+Run history is stored locally at `~/.ope/runs` (override the base directory with `OPE_HOME`) and is what lets the engine detect regressions between runs.
+
+Optional external evidence — set the environment variable and the matching checks upgrade from `UNKNOWN` to measured evidence; nothing is fabricated when it is absent:
+
+| Variable | Unlocks |
+| --- | --- |
+| `OPE_PAGESPEED_API_KEY` | Core Web Vitals (LCP, FCP, CLS, TBT, INP) from Google PageSpeed Insights |
+| `OPENROUTER_API_KEY` | Optional advisory reasoning layer over deterministic evidence |
+
 Legacy `ope-audit` remains supported.
 
 **Security:** API keys, OAuth tokens, cookies, passwords, private documents, production credentials and payment credentials must remain local or in a secret manager. Never commit real secrets.
@@ -74,16 +91,42 @@ JSON / MARKDOWN / RAWBLOCK HTML REPORTING
 - **JSON / Markdown / RawBlock HTML reporting**.
 - **Machine-readable audit/finding schemas**.
 - **CI test foundation** and executable contract tests.
+- **Dependency-aware `ModuleRunner`** executing the 136-check, 20-module registry.
+- **Evidence-backed check bindings** — 93 of 136 registry checks execute against real observations; the rest stay `UNKNOWN` because no provider is bound.
+- **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
+- **Local run history** — regression and anomaly comparison between runs of the same target.
+- **Optional external evidence** — PageSpeed Insights (Core Web Vitals) and an advisory OpenRouter reasoning layer, both credential-gated.
+
+### Check coverage by module
+
+Bound (evidence-backed) checks per module — **93 of 136 total**:
+
+| Module | Bound | Module | Bound |
+| --- | --- | --- | --- |
+| 01-entity | 4/5 | 11-authority | 3/7 |
+| 02-infrastructure | 5/5 | 12-local | 7/7 |
+| 03-code | 8/8 | 13-ux | 5/6 |
+| 04-crawl | 3/5 | 14-accessibility | 7/8 |
+| 05-index | 4/5 | 15-performance | 9/11 |
+| 06-semantics | 5/6 | 16-security | 7/10 |
+| 07-content | 3/8 | 17-language | 4/7 |
+| 08-media | 4/6 | 18-analytics | 1/7 |
+| 09-search | 2/6 | 19-conversion | 2/6 |
+| 10-ai-search | 3/6 | 20-continuous-optimization | 7/7 |
+
+An unbound check is not a silent gap: it executes and returns `UNKNOWN` with the reason no provider is bound. Run this to print the live numbers rather than trusting this table:
+
+```bash
+python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDIT_BINDINGS; print(len(AUDIT_BINDINGS), '/', len(CHECKS))"
+```
 
 ### Not yet claimed as implemented
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- full machine-executable 20-module check registry
-- dependency-aware `ModuleRunner` execution surface
-- complete provider adapters for every external data source
-- complete 20-module evidence/check coverage
-- continuous monitoring/orchestration across all modules
+- the remaining 43 unbound registry checks, which need evidence this engine does not yet collect (backlink and brand-mention data, Search Console and analytics APIs, rendered-browser metrics, dependency and auth scanning)
+- provider adapters for external data sources beyond PageSpeed Insights
+- orchestration and scheduling across multiple targets
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**
 

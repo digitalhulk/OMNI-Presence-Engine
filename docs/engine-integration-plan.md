@@ -13,23 +13,25 @@ Connect the deterministic `ModuleRunner` and the 20-module registry to observati
 - Unbound registry checks remain `UNKNOWN`.
 - Existing report keys and module identifiers remain stable.
 
-## First evidence-backed bindings
+## Evidence-backed bindings
 
-The current audit already observes these signals:
+`AUDIT_BINDINGS` in `src/ope/audit_pipeline.py` is the authoritative list; it is validated against the registry, so a binding naming a check that does not exist cannot silently disappear. The observation sources it draws on:
 
-| Module | Check | Evidence source |
-| --- | --- | --- |
-| 02 Infrastructure | hosting availability | HTTP status |
-| 03 Code | head metadata | parsed title |
-| 05 Index | canonicalization | parsed canonical link |
-| 06 Semantics | structured data | JSON-LD block count |
-| 13 UX | mobile usability | viewport metadata |
-| 14 Accessibility | alt text | image/alt counts |
-| 16 Security | HTTPS | final URL |
-| 16 Security | security headers | response headers |
-| 17 Language | language declaration | HTML `lang` |
+| Evidence source | Example bound checks |
+| --- | --- |
+| HTTP response (status, headers, timing, cookies) | `02-infrastructure.hosting.availability`, `02-infrastructure.server_reachability`, `15-performance.ttfb`, `16-security.security_headers`, `16-security.cookies` |
+| TLS handshake | `16-security.tls` |
+| Parsed HTML (head, structure, landmarks, media, forms) | `03-code.head_metadata`, `03-code.html.validity`, `05-index.canonicalization`, `13-ux.mobile_usability`, `14-accessibility.alt_text`, `17-language.language_declaration` |
+| JSON-LD entity graph | `01-entity.identity`, `06-semantics.entity_markup`, `11-authority.reviews`, `12-local.nap_consistency` |
+| robots.txt / AI crawler access | `04-crawl.robots_access`, `04-crawl.bot_access`, `10-ai-search.agent_accessibility` |
+| Linked CSS/JS measurement | `03-code.css_cost`, `03-code.js_cost`, `14-accessibility.reduced_motion` |
+| Content citability analysis | `10-ai-search.answer_eligibility`, `10-ai-search.citation_presence` |
+| Local run history | `20-continuous-optimization.monitoring`, `20-continuous-optimization.regression_guards` |
+| PageSpeed Insights (optional, key-gated) | `15-performance.lcp`, `15-performance.cls`, `15-performance.inp` |
 
-These are deliberately limited to observations the existing audit already makes.
+Note that `structured_data` is a check of module `03-code` in the registry, not of `06-semantics`; `06-semantics` owns `entity_markup`. Bindings must use the registry's own check ids.
+
+Each binding is deliberately limited to an observation the audit actually makes.
 
 ## Reconciliation rule
 
@@ -38,6 +40,8 @@ A module can become `FAIL` when an evidence-backed bound check fails.
 A module can become `PASS` only when every registered check in that module has an evidence provider and every covered check passes.
 
 Partial coverage must remain `UNKNOWN`. This prevents a small set of passing checks from being presented as proof that an entire module has passed.
+
+`N/A` is reserved for a check that cannot apply to the target as observed: markup detailing an entity or local business the page never declares, a defect count over a population the page does not contain (form inputs, buttons, video), or a history comparison with no stored baseline. `N/A` is a deliberate statement that the check does not apply — it is never a substitute for `UNKNOWN` (no evidence) or `FAIL` (evidence of a problem).
 
 ## Integration sequence
 
