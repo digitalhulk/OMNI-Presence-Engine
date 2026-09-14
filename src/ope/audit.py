@@ -78,6 +78,20 @@ class PageParser(HTMLParser):
 
 
 @dataclass
+class Response:
+    """One fetched HTTP response plus the timings observed around it."""
+
+    final_url: str
+    status: int
+    headers: dict[str, str]
+    set_cookies: list[str]
+    body: bytes
+    charset: str
+    dns_ms: float
+    ttfb_ms: float
+
+
+@dataclass
 class Evidence:
     source: str
     observed_at: str
@@ -123,7 +137,7 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, safe)
 
 
-def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], bytes, str, float, float]:
+def _request(url: str, timeout: int = 15) -> Response:
     safe_url = _validate_url(url)
     hostname = urllib.parse.urlparse(safe_url).hostname or ""
     dns_start = time.perf_counter()
@@ -142,8 +156,18 @@ def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], byt
         body = r.read(MAX_RESPONSE_BYTES + 1)
         if len(body) > MAX_RESPONSE_BYTES:
             raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
-        final_url = _validate_url(r.geturl())
-        return final_url, r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8", dns_ms, ttfb_ms
+        return Response(
+            final_url=_validate_url(r.geturl()),
+            status=r.status,
+            headers={k.lower(): v for k, v in r.headers.items()},
+            # get_all keeps every Set-Cookie; a plain dict would collapse
+            # them to the last one and hide insecure cookies.
+            set_cookies=list(r.headers.get_all("Set-Cookie") or []),
+            body=body,
+            charset=r.headers.get_content_charset() or "utf-8",
+            dns_ms=dns_ms,
+            ttfb_ms=ttfb_ms,
+        )
 
 
 _ENTITY_TYPES = {"organization", "person", "localbusiness", "corporation", "ngo", "educationalorganization", "governmentorganization"}
@@ -259,6 +283,84 @@ def _link_locality(links: list[str], final_url: str) -> dict[str, int]:
     return {"internal_links": internal, "external_links": external}
 
 
+_MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
+_CERT_EXPIRY_WARNING_DAYS = 14
+# Narrow, high-confidence credential patterns. Only the pattern label and a
+# count are ever reported — a matched secret is never copied into evidence.
+_SECRET_PATTERNS = (
+    ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("google_api_key", re.compile(r"AIza[0-9A-Za-z_\-]{35}")),
+    ("private_key_block", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----")),
+    ("slack_token", re.compile(r"xox[baprs]-[0-9A-Za-z-]{10,}")),
+    ("stripe_live_secret", re.compile(r"sk_live_[0-9A-Za-z]{16,}")),
+    ("github_token", re.compile(r"gh[pousr]_[0-9A-Za-z]{36}")),
+)
+_CDN_HEADER_MARKERS = ("cf-ray", "x-amz-cf-id", "x-akamai-transformed", "x-vercel-id", "x-served-by", "x-cache", "x-fastly-request-id", "x-cdn", "cdn-cache")
+_WAF_MARKERS = ("cf-ray", "x-sucuri-id", "x-iinfo", "x-akamai-transformed", "x-waf-status", "x-sitelock-id")
+
+
+def _tls_profile(url: str, timeout: int = 10) -> dict[str, Any]:
+    """Inspect the live TLS handshake for protocol version and certificate life.
+
+    Returns an error entry rather than raising so an unreachable or
+    proxy-intercepted endpoint becomes UNKNOWN evidence, not a false FAIL.
+    """
+    parsed = urllib.parse.urlparse(_validate_url(url))
+    if parsed.scheme != "https":
+        return {"protocol": None, "days_until_expiry": None, "error": "Target is not served over HTTPS"}
+    context = ssl.create_default_context()
+    try:
+        with socket.create_connection((parsed.hostname, parsed.port or 443), timeout=max(1, min(timeout, 30))) as raw_socket:
+            with context.wrap_socket(raw_socket, server_hostname=parsed.hostname) as tls_socket:
+                protocol = tls_socket.version()
+                cipher = tls_socket.cipher()
+                certificate = tls_socket.getpeercert() or {}
+    except Exception as exc:
+        return {"protocol": None, "days_until_expiry": None, "error": f"{type(exc).__name__}: {exc}"}
+    days_until_expiry = None
+    not_after = certificate.get("notAfter")
+    if not_after:
+        try:
+            expires_at = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+            days_until_expiry = (expires_at - datetime.now(timezone.utc)).days
+        except ValueError:
+            days_until_expiry = None
+    return {"protocol": protocol, "cipher": cipher[0] if cipher else None, "days_until_expiry": days_until_expiry, "error": None}
+
+
+def _cookie_profile(set_cookies: list[str]) -> dict[str, Any]:
+    """Summarise Set-Cookie flag hygiene without recording cookie values."""
+    insecure: list[str] = []
+    for raw in set_cookies:
+        attributes = raw.lower()
+        name = raw.split("=", 1)[0].strip()
+        missing = [flag for flag in ("secure", "httponly", "samesite") if flag not in attributes]
+        if missing:
+            insecure.append(f"{name}: missing {', '.join(missing)}")
+    return {"cookie_count": len(set_cookies), "insecure_cookies": insecure}
+
+
+def _csp_profile(header_value: str | None) -> dict[str, Any]:
+    if not header_value:
+        return {"present": False, "unsafe_directives": []}
+    lowered = header_value.lower()
+    unsafe = [token for token in ("unsafe-inline", "unsafe-eval") if token in lowered]
+    return {"present": True, "unsafe_directives": unsafe}
+
+
+def _scan_secrets(html: str) -> list[str]:
+    """Return the labels of credential patterns exposed in the page source."""
+    return sorted({label for label, pattern in _SECRET_PATTERNS if pattern.search(html)})
+
+
+def _edge_markers(headers: dict[str, str], markers: tuple[str, ...]) -> list[str]:
+    server = (headers.get("server") or "").lower()
+    detected = [marker for marker in markers if marker in headers]
+    if "cloudflare" in server:
+        detected.append("server: cloudflare")
+    return sorted(set(detected))
+
+
 def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[Evidence], remediation: list[str], validation: list[str], impact: float = .5, urgency: float = .5, fixability: float = .8) -> Finding:
     confidence = min((e.confidence for e in evidence), default=0.2)
     priority = round(100 * impact * confidence * urgency * fixability, 2)
@@ -268,8 +370,10 @@ def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[
 def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     started = time.time()
     normalized = url if urllib.parse.urlparse(url).scheme else "https://" + url
-    final_url, status, headers, body, charset, dns_ms, ttfb_ms = _request(normalized, timeout)
-    html = body.decode(charset, errors="replace")
+    response = _request(normalized, timeout)
+    final_url, status, headers, body = response.final_url, response.status, response.headers, response.body
+    dns_ms, ttfb_ms = response.dns_ms, response.ttfb_ms
+    html = body.decode(response.charset, errors="replace")
     p = PageParser(); p.feed(html)
     robots = crawler.fetch_robots(final_url, timeout=timeout)
     citability_report = citability.analyze_blocks(citability.extract_content_blocks(html))
@@ -277,6 +381,12 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     entities = _json_ld_summary(p.json_ld_raw, p.title.strip(), p.description)
     link_locality = _link_locality(p.links, final_url)
     has_analytics = any(marker in html for marker in _ANALYTICS_MARKERS)
+    tls = _tls_profile(final_url, timeout)
+    cookies = _cookie_profile(response.set_cookies)
+    csp = _csp_profile(headers.get("content-security-policy"))
+    exposed_secrets = _scan_secrets(html)
+    cdn_markers = _edge_markers(headers, _CDN_HEADER_MARKERS)
+    waf_markers = _edge_markers(headers, _WAF_MARKERS)
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -313,7 +423,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:

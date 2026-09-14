@@ -97,6 +97,38 @@ def test_json_ld_summary_consistency_is_none_without_comparable_values():
     assert matched["description_matches"] is True
 
 
+def test_cookie_profile_flags_missing_attributes_without_recording_values():
+    profile = audit_module._cookie_profile([
+        "session=secret-value; Path=/; Secure; HttpOnly; SameSite=Lax",
+        "tracker=another-secret; Path=/",
+    ])
+    assert profile["cookie_count"] == 2
+    assert profile["insecure_cookies"] == ["tracker: missing secure, httponly, samesite"]
+    assert "secret-value" not in str(profile)
+    assert "another-secret" not in str(profile)
+
+
+def test_csp_profile_detects_unsafe_directives():
+    assert audit_module._csp_profile(None) == {"present": False, "unsafe_directives": []}
+    profile = audit_module._csp_profile("default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'")
+    assert profile["present"] is True
+    assert profile["unsafe_directives"] == ["unsafe-inline", "unsafe-eval"]
+
+
+def test_secret_scan_reports_labels_only_never_the_secret():
+    html = '<script>const key = "AKIAIOSFODNN7EXAMPLE"; const g = "AIza' + "a" * 35 + '";</script>'
+    labels = audit_module._scan_secrets(html)
+    assert labels == ["aws_access_key", "google_api_key"]
+    assert "AKIAIOSFODNN7EXAMPLE" not in str(labels)
+    assert audit_module._scan_secrets("<p>nothing sensitive here</p>") == []
+
+
+def test_tls_profile_reports_error_instead_of_raising_for_plain_http():
+    profile = audit_module._tls_profile("http://example.com/")
+    assert profile["protocol"] is None
+    assert profile["error"]
+
+
 def test_link_locality_splits_internal_and_external():
     result = _link_locality(["/about", "https://example.com/contact", "https://other.com/page", "mailto:a@example.com"], "https://example.com/")
     assert result["internal_links"] == 2
@@ -115,8 +147,16 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
             '<a href="/about">About</a>'
             "</main><footer></footer></body></html>"
         )
-        headers = {"Strict-Transport-Security": "max-age=1", "X-Content-Type-Options": "nosniff"}
-        return "https://example.com/", 200, headers, html.encode(), "utf-8", 12.3, 250.0
+        return audit_module.Response(
+            final_url="https://example.com/",
+            status=200,
+            headers={"strict-transport-security": "max-age=1", "x-content-type-options": "nosniff", "cf-ray": "abc123"},
+            set_cookies=["session=1; Path=/"],
+            body=html.encode(),
+            charset="utf-8",
+            dns_ms=12.3,
+            ttfb_ms=250.0,
+        )
 
     fake_robots = {
         "url": "https://example.com/robots.txt", "status": 200, "error": None, "rule_count": 0,
@@ -126,6 +166,7 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
 
     monkeypatch.setattr(audit_module, "_request", fake_request)
     monkeypatch.setattr(audit_module.crawler, "fetch_robots", lambda url, timeout=10: fake_robots)
+    monkeypatch.setattr(audit_module, "_tls_profile", lambda url, timeout=10: {"protocol": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384", "days_until_expiry": 60, "error": None})
 
     result = audit("https://example.com")
     inventory = result["inventory"]
@@ -143,3 +184,7 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
     assert inventory["internal_links"] == 1
     assert inventory["has_analytics"] is False
     assert inventory["contact_input"] is False
+    assert inventory["tls"]["protocol"] == "TLSv1.3"
+    assert inventory["cookies"]["insecure_cookies"] == ["session: missing secure, httponly, samesite"]
+    assert inventory["cdn_markers"] == ["cf-ray"]
+    assert inventory["exposed_secrets"] == []

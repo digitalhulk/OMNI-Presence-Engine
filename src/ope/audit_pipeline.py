@@ -63,6 +63,13 @@ AUDIT_BINDINGS = (
     "12-local.service_area",
     "12-local.reviews",
     "09-search.local_visibility",
+    "16-security.tls",
+    "16-security.csp",
+    "16-security.cookies",
+    "16-security.secrets",
+    "16-security.waf",
+    "02-infrastructure.cdn.configuration",
+    "02-infrastructure.server_reachability",
 )
 
 # Structured-data checks, split by what absence of the signal actually means.
@@ -109,6 +116,8 @@ _PSI_VITALS = {
     "15-performance.inp": ("inp_ms", 200.0),
 }
 _CITABILITY_SCORE_BUDGET = 50.0
+_MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
+_CERT_EXPIRY_WARNING_DAYS = 14
 
 
 def _evidence(target: str, value: Any, source: str = "ope-audit") -> list[dict[str, Any]]:
@@ -290,6 +299,59 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "has_analytics" not in inventory:
             return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
         return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id == "16-security.tls":
+        tls = inventory.get("tls")
+        if not isinstance(tls, dict):
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="TLS observation is missing")
+        if tls.get("error") or not tls.get("protocol"):
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason=f"TLS handshake evidence is unavailable: {tls.get('error') or 'no protocol reported'}")
+        days = tls.get("days_until_expiry")
+        modern = str(tls.get("protocol")) in _MODERN_TLS
+        healthy_certificate = days is None or days > _CERT_EXPIRY_WARNING_DAYS
+        return _check(check_id, "16-security", modern and healthy_certificate, target, {"protocol": tls.get("protocol"), "cipher": tls.get("cipher"), "days_until_expiry": days})
+
+    if check_id == "16-security.csp":
+        profile = inventory.get("csp_profile")
+        if not isinstance(profile, dict):
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Content-Security-Policy observation is missing")
+        unsafe = list(profile.get("unsafe_directives", []))
+        return _check(check_id, "16-security", bool(profile.get("present")) and not unsafe, target, {"present": profile.get("present"), "unsafe_directives": unsafe})
+
+    if check_id == "16-security.cookies":
+        profile = inventory.get("cookies")
+        if not isinstance(profile, dict):
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Cookie observation is missing")
+        if not profile.get("cookie_count"):
+            return CheckResult(check_id, "16-security", ExecutionStatus.NA, reason="The response sets no cookies")
+        insecure = list(profile.get("insecure_cookies", []))
+        return _check(check_id, "16-security", not insecure, target, {"cookie_count": profile.get("cookie_count"), "insecure_cookies": insecure})
+
+    if check_id == "16-security.secrets":
+        exposed = inventory.get("exposed_secrets")
+        if exposed is None:
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Secret-scan observation is missing")
+        exposed = list(exposed)
+        return _check(check_id, "16-security", not exposed, target, {"exposed_secret_types": exposed})
+
+    if check_id in {"16-security.waf", "02-infrastructure.cdn.configuration"}:
+        # Edge platforms are detected from response headers. Their absence
+        # does not prove a site has none (many strip identifying headers),
+        # so an undetected edge stays UNKNOWN rather than becoming a FAIL.
+        module, key, label = ("16-security", "waf_markers", "WAF") if check_id == "16-security.waf" else ("02-infrastructure", "cdn_markers", "CDN")
+        markers = inventory.get(key)
+        if markers is None:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"{label} observation is missing")
+        markers = list(markers)
+        if not markers:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"No {label} signature was advertised in response headers; absence does not prove none is deployed")
+        return _check(check_id, module, True, target, {f"{label.lower()}_markers": markers})
+
+    if check_id == "02-infrastructure.server_reachability":
+        status = inventory.get("status")
+        if not isinstance(status, int):
+            return CheckResult(check_id, "02-infrastructure", ExecutionStatus.UNKNOWN, reason="No response was observed from the origin")
+        return _check(check_id, "02-infrastructure", True, target, {"status": status, "ttfb_ms": inventory.get("ttfb_ms")})
 
     if check_id in _SD_PRESENCE_CHECKS:
         module, key = _SD_PRESENCE_CHECKS[check_id]

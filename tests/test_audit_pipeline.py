@@ -57,6 +57,13 @@ BOUND = {
     "12-local.service_area",
     "12-local.reviews",
     "09-search.local_visibility",
+    "16-security.tls",
+    "16-security.csp",
+    "16-security.cookies",
+    "16-security.secrets",
+    "16-security.waf",
+    "02-infrastructure.cdn.configuration",
+    "02-infrastructure.server_reachability",
 }
 
 PAGESPEED_SOURCED = {
@@ -137,6 +144,12 @@ def _audit_result():
             "has_analytics": True,
             "forms": 1,
             "contact_input": True,
+            "tls": {"protocol": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384", "days_until_expiry": 60, "error": None},
+            "cookies": {"cookie_count": 1, "insecure_cookies": []},
+            "csp_profile": {"present": True, "unsafe_directives": []},
+            "exposed_secrets": [],
+            "cdn_markers": ["cf-ray"],
+            "waf_markers": ["cf-ray"],
         },
         "findings": [],
     }
@@ -440,6 +453,59 @@ def test_mismatched_entity_name_fails_consistency_check():
     audit["inventory"]["name_matches_title"] = False
     result = execute_audit_checks(audit)
     assert result["checks"]["01-entity.consistency"]["status"] == "FAIL"
+
+
+def test_outdated_tls_or_expiring_certificate_fails_tls_check():
+    audit = _audit_result()
+    audit["inventory"]["tls"] = {"protocol": "TLSv1", "cipher": "X", "days_until_expiry": 60, "error": None}
+    assert execute_audit_checks(audit)["checks"]["16-security.tls"]["status"] == "FAIL"
+    audit["inventory"]["tls"] = {"protocol": "TLSv1.3", "cipher": "X", "days_until_expiry": 3, "error": None}
+    assert execute_audit_checks(audit)["checks"]["16-security.tls"]["status"] == "FAIL"
+
+
+def test_unreachable_tls_handshake_is_unknown_not_fail():
+    audit = _audit_result()
+    audit["inventory"]["tls"] = {"protocol": None, "days_until_expiry": None, "error": "TimeoutError: timed out"}
+    assert execute_audit_checks(audit)["checks"]["16-security.tls"]["status"] == "UNKNOWN"
+
+
+def test_unsafe_or_absent_csp_fails_csp_check():
+    audit = _audit_result()
+    audit["inventory"]["csp_profile"] = {"present": True, "unsafe_directives": ["unsafe-inline"]}
+    assert execute_audit_checks(audit)["checks"]["16-security.csp"]["status"] == "FAIL"
+    audit["inventory"]["csp_profile"] = {"present": False, "unsafe_directives": []}
+    assert execute_audit_checks(audit)["checks"]["16-security.csp"]["status"] == "FAIL"
+
+
+def test_insecure_cookie_fails_and_no_cookies_is_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["cookies"] = {"cookie_count": 2, "insecure_cookies": ["a: missing secure"]}
+    assert execute_audit_checks(audit)["checks"]["16-security.cookies"]["status"] == "FAIL"
+    audit["inventory"]["cookies"] = {"cookie_count": 0, "insecure_cookies": []}
+    assert execute_audit_checks(audit)["checks"]["16-security.cookies"]["status"] == "N/A"
+
+
+def test_exposed_secret_fails_secrets_check():
+    audit = _audit_result()
+    audit["inventory"]["exposed_secrets"] = ["aws_access_key"]
+    assert execute_audit_checks(audit)["checks"]["16-security.secrets"]["status"] == "FAIL"
+
+
+def test_undetected_edge_platform_is_unknown_not_fail():
+    audit = _audit_result()
+    audit["inventory"]["cdn_markers"] = []
+    audit["inventory"]["waf_markers"] = []
+    result = execute_audit_checks(audit)
+    assert result["checks"]["02-infrastructure.cdn.configuration"]["status"] == "UNKNOWN"
+    assert result["checks"]["16-security.waf"]["status"] == "UNKNOWN"
+
+
+def test_server_reachability_passes_even_on_error_status():
+    audit = _audit_result()
+    audit["inventory"]["status"] = 503
+    result = execute_audit_checks(audit)
+    assert result["checks"]["02-infrastructure.server_reachability"]["status"] == "PASS"
+    assert result["checks"]["02-infrastructure.hosting.availability"]["status"] == "FAIL"
 
 
 def test_missing_structured_data_observation_is_unknown():
