@@ -5,6 +5,7 @@ from typing import Any
 
 from .audit_pipeline import execute_audit_checks
 from .module_runner import ExecutionStatus
+from .performance_evidence import inject_performance_evidence
 from .registry import checks_for_module
 from .site_evidence import inject_site_evidence
 
@@ -173,3 +174,104 @@ def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
     return output
+
+
+def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
+    """Attach the evidence-diagnostic-v1 contract to a performance audit result.
+
+    Converts performance findings into the engine finding schema, injects
+    performance evidence into inventory, and runs the check registry.
+    Performance-only inventory is sparse, so most non-performance checks
+    will correctly return UNKNOWN.
+    """
+    output = deepcopy(perf_result) if isinstance(perf_result, dict) else {}
+    output["engine_contract"] = "evidence-diagnostic-v1"
+    output["engine_scope"] = "performance"
+
+    raw_findings = _extract_performance_findings(output)
+    output["findings"] = [normalize_finding(f) for f in raw_findings]
+
+    inventory: dict[str, Any] = output.get("inventory", {})
+    if not isinstance(inventory, dict):
+        inventory = {}
+    inject_performance_evidence(inventory, output)
+    output["inventory"] = inventory
+
+    modules: dict[str, dict[str, Any]] = {
+        f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)
+    }
+    for f in output["findings"]:
+        module_key = str(f.get("module", "")).split("-")[0]
+        if module_key in modules:
+            modules[module_key]["findings"].append(f.get("id", ""))
+            modules[module_key]["status"] = "FAIL"
+    output["modules"] = modules
+
+    execution = execute_audit_checks(output)
+    checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
+    if not isinstance(checks, dict):
+        checks = {}
+    output["checks"] = checks
+
+    for module_number, module in modules.items():
+        module_code = str(module_number)
+        module_id = next(
+            (
+                str(value.get("module"))
+                for value in checks.values()
+                if isinstance(value, dict)
+                and str(value.get("module", "")).startswith(module_code + "-")
+            ),
+            module_code,
+        )
+        check_ids = checks_for_module(module_id)
+        statuses = [
+            str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
+            if isinstance(checks.get(check_id), dict)
+            else ExecutionStatus.UNKNOWN.value
+            for check_id in check_ids
+        ]
+        module["status"] = _reconcile_module_status(module.get("status"), statuses)
+
+    return output
+
+
+_PERF_SEVERITY_PRIORITY: dict[str, float] = {
+    "HIGH": 0.8, "MEDIUM": 0.5, "LOW": 0.3, "INFO": 0.1,
+}
+
+
+def _extract_performance_findings(output: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert performance-report findings into the engine finding schema."""
+    report = output.get("performance_report")
+    if not isinstance(report, dict):
+        return []
+    raw = report.get("findings")
+    if not isinstance(raw, list):
+        return []
+
+    findings: list[dict[str, Any]] = []
+    for idx, item in enumerate(raw):
+        if not isinstance(item, dict):
+            continue
+        severity = str(item.get("severity", "MEDIUM")).lower()
+        module_raw = str(item.get("module", "15-performance"))
+        if not any(c == "-" for c in module_raw):
+            module_raw = "15-performance"
+        evidence_entry: dict[str, Any] = {"source": "performance-audit", "confidence": 0.9}
+        raw_evidence = item.get("evidence")
+        if isinstance(raw_evidence, dict):
+            evidence_entry["value"] = raw_evidence
+        findings.append({
+            "id": f"perf-{idx + 1:03d}",
+            "module": module_raw,
+            "symptom": item.get("symptom", ""),
+            "severity": severity,
+            "status": "OBSERVED",
+            "priority": _PERF_SEVERITY_PRIORITY.get(
+                str(item.get("severity", "MEDIUM")).upper(), 0.5
+            ),
+            "root_cause": item.get("recommendation") or "Performance issue detected by browser audit",
+            "evidence": [evidence_entry],
+        })
+    return findings
