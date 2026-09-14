@@ -66,6 +66,8 @@ The performance normalizer converts browser-level findings into the engine findi
 
 Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass coverage per module (N/A excluded, UNKNOWN never treated as pass), and `scoring.global_health()` computes a dependency-aware global score where upstream failures reduce downstream confidence. Each normalizer attaches per-module `score` and a top-level `health` key.
 
+Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass coverage per module (N/A excluded, UNKNOWN never treated as pass), and `scoring.global_health()` computes a dependency-aware global score where upstream failures reduce downstream confidence. Each normalizer attaches per-module `score` and a top-level `health` key.
+
 ## Explicit non-goals
 
 - No synthetic evidence.
