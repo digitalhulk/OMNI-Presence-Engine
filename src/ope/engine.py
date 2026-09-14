@@ -7,6 +7,7 @@ from .audit_pipeline import execute_audit_checks
 from .module_runner import ExecutionStatus
 from .performance_evidence import inject_performance_evidence
 from .registry import checks_for_module
+from .scoring import global_health, module_score
 from .site_evidence import inject_site_evidence
 
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
@@ -62,6 +63,23 @@ def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
     return ExecutionStatus.UNKNOWN.value
 
 
+def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str, float | None]:
+    """Compute per-module scores and attach them to each module dict."""
+    scores: dict[str, float | None] = {}
+    for module_number, module in modules.items():
+        if not isinstance(module, dict):
+            continue
+        module_code = str(module_number)
+        module_checks: dict[str, Any] = {}
+        for check_id, check_data in checks.items():
+            if isinstance(check_data, dict) and str(check_data.get("module", "")).startswith(module_code + "-"):
+                module_checks[check_id] = check_data
+        score = module_score(module, module_checks=module_checks or None)
+        module["score"] = score
+        scores[module_number] = score
+    return scores
+
+
 def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     """Attach the stable evidence/diagnostic contract to an audit result."""
     output = deepcopy(result) if isinstance(result, dict) else {}
@@ -112,6 +130,9 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
             for check_id in check_ids
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
+
+    scores = _compute_scores(modules, checks)
+    output["health"] = global_health(scores)
 
     return output
 
@@ -173,6 +194,9 @@ def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
+    scores = _compute_scores(modules, checks)
+    output["health"] = global_health(scores)
+
     return output
 
 
@@ -232,6 +256,9 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
             for check_id in check_ids
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
+
+    scores = _compute_scores(modules, checks)
+    output["health"] = global_health(scores)
 
     return output
 

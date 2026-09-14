@@ -4,6 +4,47 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.6.0
+
+Scoring integration, CLI test coverage, documentation accuracy, and dead code
+removal.
+
+### Added
+
+- **Scoring integration in `engine.py`**: all three normalizers
+  (`normalize_result`, `normalize_site_result`,
+  `normalize_performance_result`) now compute per-module
+  `module_score()` and `global_health()` from `scoring.py`. Each
+  module dict carries a `"score"` key (float or None) and the output
+  dict carries a `"health"` key.
+- **CLI command tests**: `TestSiteAuditCommand` (JSON output, HTML
+  dispatch, exception handling) and `TestPerformanceAuditCommand`
+  (JSON output, HTML dispatch, exception handling) — 6 new tests
+  covering the two previously untested command functions.
+- **Engine scoring tests**: `TestScoringIntegration` — 7 new tests
+  verifying that all three normalizers produce `health` and per-module
+  `score` keys, with full-pass, mixed, and empty-check scenarios.
+
+### Fixed
+
+- **Documentation accuracy**: `audit-runner-v1.md` and
+  `engine-integration-plan.md` now state the correct check breakdown
+  (115 deterministic + 3 finding-record + 18 external-evidence = 136).
+  The `ope.priority` reference in `audit-runner-v1.md` is corrected to
+  `ope.scoring`. The engine integration plan version is updated to
+  v0.5.0.
+
+### Removed
+
+- **Dead code**: `evidence.py`, `evidence_provider.py`, `root_cause.py`
+  and their test files (`test_evidence.py`, `test_evidence_provider.py`,
+  `test_root_cause.py`). These modules were never imported by any
+  production code — `evidence.py` and `evidence_provider.py` were
+  superseded by `engine.py`'s inline normalization, and `root_cause.py`
+  was a thin alias wrapper. All functionality they provided is covered
+  by the canonical `engine.normalize_finding()` and
+  `engine.normalize_result()`.
+
 ## 0.5.0
 
 Contract integrity, unified HTML reporting, and scoring engine.
