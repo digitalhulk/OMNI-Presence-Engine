@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from typing import Any
 
 
+MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
+
 @dataclass(frozen=True)
 class OpenRouterConfig:
     api_key: str
@@ -62,10 +65,20 @@ class OpenRouterClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=max(1, min(self.config.timeout, 120))) as response:
-                body = response.read()
+                # OPE will never intentionally read more than
+                # MAX_RESPONSE_BYTES + 1 bytes from the response body. This
+                # bounds memory consumption from an oversized or malicious
+                # response; it does not (and cannot) guarantee anything
+                # about urllib's own internal buffering below this call.
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise OpenRouterError("OpenRouter response exceeds safety limit")
         except urllib.error.HTTPError as exc:
-            detail = exc.read(2048).decode("utf-8", errors="replace")
-            raise OpenRouterError(f"OpenRouter HTTP {exc.code}: {detail}") from exc
+            # Only safe diagnostic data (status code, standard HTTP reason)
+            # goes into the exception string. The response body is never
+            # read here and never appears in str(error) -- it may contain
+            # arbitrary provider-controlled content.
+            raise OpenRouterError(f"OpenRouter HTTP {exc.code}: {exc.reason}") from exc
         except urllib.error.URLError as exc:
             raise OpenRouterError(f"OpenRouter request failed: {exc.reason}") from exc
 

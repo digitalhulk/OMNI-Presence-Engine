@@ -3,7 +3,6 @@ from __future__ import annotations
 import ipaddress
 import socket
 import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
@@ -51,11 +50,6 @@ def _safe_url(url: str) -> str:
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.params, parsed.query, ""))
 
 
-def robots_url(page_url: str) -> str:
-    parsed = urllib.parse.urlparse(_safe_url(page_url))
-    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, "/robots.txt", "", "", ""))
-
-
 def parse_robots(text: str) -> list[RobotsRule]:
     rules: list[RobotsRule] = []
     agents: list[str] = []
@@ -99,19 +93,3 @@ def analyze_robots(text: str, path: str = "/") -> dict[str, Any]:
         "sitemaps": [r.value for r in rules if r.directive == "sitemap"],
         "rules": [r.__dict__ for r in rules],
     }
-
-
-def fetch_robots(page_url: str, timeout: int = 10) -> dict[str, Any]:
-    target = robots_url(page_url)
-    request = urllib.request.Request(target, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
-    try:
-        with urllib.request.urlopen(request, timeout=max(1, min(timeout, 30))) as response:
-            body = response.read(MAX_ROBOTS_BYTES + 1)
-            if len(body) > MAX_ROBOTS_BYTES:
-                raise ValueError(f"robots.txt exceeds OPE safety limit of {MAX_ROBOTS_BYTES} bytes")
-            text = body.decode(response.headers.get_content_charset() or "utf-8", errors="replace")
-            result = analyze_robots(text)
-            result.update({"url": target, "status": response.status, "bytes": len(body), "error": None})
-            return result
-    except Exception as exc:
-        return {"url": target, "status": None, "bytes": 0, "error": str(exc), "ai_crawlers": {}, "blocked_ai_crawlers": [], "allowed_ai_crawlers": [], "rule_count": 0, "sitemaps": [], "rules": []}
