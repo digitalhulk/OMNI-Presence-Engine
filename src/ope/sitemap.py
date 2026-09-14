@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import USER_AGENT
+
 MAX_SITEMAP_BYTES = 50 * 1024 * 1024
 MAX_SITEMAP_URLS = 50_000
 MAX_SITEMAP_DEPTH = 3
@@ -88,7 +90,7 @@ def parse_sitemap_xml(content: bytes, url: str = "") -> SitemapResult:
 def _fetch_sitemap_bytes(url: str, timeout: int = 15) -> tuple[bytes, int]:
     from .url import validate_url_strict
     safe = validate_url_strict(url)
-    req = urllib.request.Request(safe, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+    req = urllib.request.Request(safe, headers={"User-Agent": USER_AGENT}, method="GET")
     with urllib.request.urlopen(req, timeout=max(1, min(timeout, 30))) as resp:
         body = resp.read(MAX_SITEMAP_BYTES + 1)
         if len(body) > MAX_SITEMAP_BYTES:

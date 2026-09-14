@@ -5,3 +5,5 @@ try:
     __version__ = _pkg_version("omni-presence-engine")
 except PackageNotFoundError:
     __version__ = "0.0.0-dev"
+
+USER_AGENT = f"OPE-Audit/{__version__}"
