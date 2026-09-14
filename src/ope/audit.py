@@ -405,7 +405,7 @@ def _fetch_subresources(page_url: str, stylesheets: list[str], scripts: list[str
     for kind, absolute in resolved[:MAX_SUBRESOURCES]:
         try:
             safe_url = validate_url_strict(absolute)
-            request = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+            request = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
             with urllib.request.urlopen(request, timeout=max(1, min(timeout, 20))) as response:
                 payload = response.read(MAX_SUBRESOURCE_BYTES)
         except Exception:
