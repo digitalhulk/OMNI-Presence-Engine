@@ -10,11 +10,23 @@ from .registry import checks_for_module
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
 
 
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
-    """Normalize one finding without treating missing evidence as success."""
-    item = deepcopy(finding)
-    evidence = item.get("evidence") or []
-    confidence = min((float(e.get("confidence", 0.2)) for e in evidence), default=0.2)
+    """Normalize one finding without treating malformed evidence as success."""
+    item = deepcopy(finding) if isinstance(finding, dict) else {}
+    raw_evidence = item.get("evidence")
+    evidence = raw_evidence if isinstance(raw_evidence, list) else []
+    valid_evidence = [entry for entry in evidence if isinstance(entry, dict)]
+    confidence = min(
+        (_safe_float(entry.get("confidence", 0.2), 0.2) for entry in valid_evidence),
+        default=0.2,
+    )
     item["confidence"] = round(max(0.0, min(1.0, confidence)), 3)
     item.setdefault("affected_layer", item.get("module", ""))
     item.setdefault("dependency", "")
@@ -27,7 +39,7 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
         item["root_cause"] = HYPOTHESIS_ROOT_CAUSE
         item["status"] = "HYPOTHESIS"
         item["evidence_status"] = "HYPOTHESIS"
-    item["priority"] = round(float(item.get("priority", 0.0)), 2)
+    item["priority"] = round(max(0.0, min(1.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
     return item
 
 
@@ -50,22 +62,48 @@ def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
 
 def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     """Attach the stable evidence/diagnostic contract to an audit result."""
-    output = deepcopy(result)
+    output = deepcopy(result) if isinstance(result, dict) else {}
     output["engine_contract"] = "evidence-diagnostic-v1"
-    output["findings"] = [normalize_finding(f) for f in output.get("findings", [])]
+
+    raw_findings = output.get("findings")
+    findings = raw_findings if isinstance(raw_findings, list) else []
+    output["findings"] = [normalize_finding(finding) for finding in findings]
 
     # Execute the deterministic registry against the evidence already collected
     # by audit.py. No new evidence is invented here.
     execution = execute_audit_checks(output)
-    checks = execution.get("checks", {})
+    checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
+    if not isinstance(checks, dict):
+        checks = {}
 
     # Reconcile only the existing module status field. Inventory, findings and
     # other report keys are preserved exactly; partial registry coverage is
     # explicitly UNKNOWN rather than a false PASS.
-    for module_number, module in output.get("modules", {}).items():
+    modules = output.get("modules")
+    if not isinstance(modules, dict):
+        modules = {}
+        output["modules"] = modules
+
+    for module_number, module in modules.items():
+        if not isinstance(module, dict):
+            module = {}
+            modules[module_number] = module
         module_code = str(module_number)
-        check_ids = checks_for_module(next((str(value.get("module", module_code)) for value in checks.values() if str(value.get("module", "")).startswith(module_code + "-")), module_code)
-        statuses = [str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value)) for check_id in check_ids if check_id in checks]
+        module_id = next(
+            (
+                str(value.get("module"))
+                for value in checks.values()
+                if isinstance(value, dict)
+                and str(value.get("module", "")).startswith(module_code + "-")
+            ),
+            module_code,
+        )
+        check_ids = checks_for_module(module_id)
+        statuses = [
+            str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
+            for check_id in check_ids
+            if isinstance(checks.get(check_id), dict)
+        ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
     return output
