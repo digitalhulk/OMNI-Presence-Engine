@@ -66,6 +66,26 @@ def audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def site_audit_command(args: argparse.Namespace) -> int:
+    from .site_audit import SiteAuditConfig
+    from .site_audit import site_audit as run_site_audit
+
+    cfg = SiteAuditConfig(
+        max_pages=args.max_pages, max_depth=args.max_depth,
+        timeout=args.timeout, delay=args.delay,
+        allow_subdomains=args.allow_subdomains,
+        fetch_sitemaps=not args.no_sitemaps,
+        fetch_robots=not args.no_robots,
+    )
+    try:
+        result = run_site_audit(args.url, config=cfg)
+    except Exception as exc:
+        print(f"OPE site-audit failed: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
     sub = parser.add_subparsers(dest="command")
@@ -80,12 +100,22 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS (faster; leaves cost and stylesheet checks UNKNOWN)")
     audit_parser.add_argument("--no-history", action="store_true", help="do not read or write the local run history used for regression comparison")
     audit_parser.set_defaults(handler=audit_command)
+    sa = sub.add_parser("site-audit", help="run a multi-page site-level audit")
+    sa.add_argument("url")
+    sa.add_argument("--max-pages", type=int, default=200)
+    sa.add_argument("--max-depth", type=int, default=10)
+    sa.add_argument("--timeout", type=int, default=15)
+    sa.add_argument("--delay", type=float, default=0.5)
+    sa.add_argument("--allow-subdomains", action="store_true")
+    sa.add_argument("--no-sitemaps", action="store_true", help="skip sitemap discovery")
+    sa.add_argument("--no-robots", action="store_true", help="skip robots.txt fetch")
+    sa.set_defaults(handler=site_audit_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
