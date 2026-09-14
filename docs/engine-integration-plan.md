@@ -53,7 +53,7 @@ Partial coverage must remain `UNKNOWN`. This prevents a small set of passing che
 6. Add regression tests for pass, fail, partial coverage, and unbound checks.
 7. Wire the normalized engine into the CLI only after the core integration is stable and the shared CLI contract has been coordinated with Agent-A.
 
-## Current state (v0.6.0)
+## Current state (v0.8.0)
 
 All 136 registry checks across 20 modules are bound: 115 deterministic checks execute against observations, 3 finding-record checks return `N/A` when no findings exist, and 18 external-evidence checks return `UNKNOWN` with a specific reason naming the missing API or service.
 
@@ -62,7 +62,7 @@ Three normalizers share the same `evidence-diagnostic-v1` contract:
 - `normalize_site_result()` — site-wide crawl audit (`engine_scope: "site"`)
 - `normalize_performance_result()` — browser performance audit (`engine_scope: "performance"`)
 
-The performance normalizer converts browser-level findings into the engine finding schema, injects five performance evidence groups into the inventory via `performance_evidence.py`, runs all 136 registry checks, and reconciles module statuses. All three audit types record run history for regression detection.
+The performance normalizer converts browser-level findings into the engine finding schema, injects five performance evidence groups into the inventory via `performance_evidence.py`, runs all 136 registry checks, and reconciles module statuses. The single-page and site audit types record run history for regression detection; performance audit does not yet record run history.
 
 Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass coverage per module (N/A excluded, UNKNOWN never treated as pass), and `scoring.global_health()` computes a dependency-aware global score where upstream failures reduce downstream confidence. Each normalizer attaches per-module `score` and a top-level `health` key.
 

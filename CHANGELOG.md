@@ -4,6 +4,56 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.8.0
+
+SSRF final consolidation, User-Agent unification, version sync, and test
+coverage expansion.
+
+### Changed
+
+- **SSRF validation fully consolidated**: `crawler.py` now imports
+  `validate_url_strict()` from `url.py` instead of maintaining its own
+  `_safe_url()` duplicate. All robots-related URL validation goes through
+  the single canonical implementation in `url.py`.
+- **User-Agent string unified**: all six remaining hardcoded
+  `"OPE-Audit/0.1"` strings across `audit.py`, `crawler.py`,
+  `sitemap.py`, `site_crawler.py`, `site_audit.py`, and
+  `integrations/pagespeed.py` now derive from the centralized
+  `ope.USER_AGENT` constant (or `ENGINE_VERSION` in `audit.py`), which
+  tracks the installed package version dynamically.
+- **`ope.USER_AGENT`**: new package-level constant in `__init__.py`
+  providing a single source of truth for the HTTP User-Agent string
+  (`OPE-Audit/{version}`).
+
+### Fixed
+
+- **Version sync**: README.md (0.6.0 → 0.8.0), engine-integration-plan.md
+  (v0.6.0 → v0.8.0), conftest.py fixture (0.6.0 → 0.8.0).
+- **README check-count accuracy**: corrected "116 deterministic / 20
+  UNKNOWN" to "115 deterministic + 3 finding-record / 18 UNKNOWN"
+  throughout README.md to match the canonical breakdown in
+  `audit-runner-v1.md` and `engine-integration-plan.md`.
+- **Documentation accuracy**: `engine-integration-plan.md` now correctly
+  states that performance audit does not yet record run history (previously
+  claimed all three audit types do).
+
+### Added
+
+- **`crawler.robots_url()` tests**: URL construction, port preservation,
+  SSRF rejection via the canonical `validate_url_strict` path.
+- **`crawler.fetch_robots()` tests**: successful fetch with structured
+  result, network error handling, robots.txt size-limit enforcement, and
+  dynamic User-Agent verification.
+- **`audit.markdown_report()` tests**: section presence, finding rendering,
+  and empty-findings path.
+
+### Removed
+
+- **Dead SSRF duplicate**: `crawler._safe_url()` removed — was the last
+  remaining duplicate of `url.validate_url_strict()`. `import ipaddress`
+  and `import socket` removed from `crawler.py` as they were only used by
+  `_safe_url()`.
+
 ## 0.7.0
 
 DRY consolidation, version sync, and spec accuracy.

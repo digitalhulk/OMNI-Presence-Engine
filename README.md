@@ -98,14 +98,14 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Machine-readable audit/finding schemas**.
 - **CI test foundation** and executable contract tests.
 - **Dependency-aware `ModuleRunner`** executing the 136-check, 20-module registry.
-- **Evidence-backed check bindings** — all 136 registry checks are bound; 116 execute deterministically against observations, 20 return `UNKNOWN` with a specific reason naming the missing external API or service.
+- **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
 - **Optional external evidence** — PageSpeed Insights (Core Web Vitals) and an advisory OpenRouter reasoning layer, both credential-gated.
 
 ### Check coverage by module
 
-Bound checks per module — **136 of 136 total** (20 require external APIs and return `UNKNOWN` with a reason):
+Bound checks per module — **136 of 136 total** (18 require external APIs and return `UNKNOWN` with a reason):
 
 | Module | Bound | Module | Bound |
 | --- | --- | --- | --- |
@@ -130,7 +130,7 @@ python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDI
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- provider adapters for external data sources beyond PageSpeed Insights (20 checks are bound but return `UNKNOWN` until their APIs are configured)
+- provider adapters for external data sources beyond PageSpeed Insights (18 checks are bound but return `UNKNOWN` until their APIs are configured)
 - orchestration and scheduling across multiple targets
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**
@@ -420,7 +420,7 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.6.0`  
+**Version:** `0.8.0`  
 **Stage:** Evidence-driven executable foundation — 136/136 checks bound, scoring integrated  
 **Contract:** `evidence-diagnostic-v1`
 
