@@ -39,7 +39,11 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
         item["root_cause"] = HYPOTHESIS_ROOT_CAUSE
         item["status"] = "HYPOTHESIS"
         item["evidence_status"] = "HYPOTHESIS"
-    item["priority"] = round(max(0.0, min(1.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
+    # priority is a 0-100 scale per schemas/audit/finding-v1.yaml and matches
+    # the scale audit.py and evidence.py already produce (100 * impact *
+    # confidence * urgency * fixability). This must not be confused with
+    # confidence, which is a distinct 0-1 scale.
+    item["priority"] = round(max(0.0, min(100.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
     return item
 
 

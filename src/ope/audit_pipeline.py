@@ -60,7 +60,7 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         return _check(check_id, "10-ai-search", not blocked, target, {"blocked_ai_crawlers": blocked, "ai_crawlers": robots["ai_crawlers"]})
 
     rules = {
-        "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),
+        "03-code.head_metadata": ("03-code", "03-CODE-META-001", "title"),
         "05-index.canonicalization": ("05-index", "05-INDEX-CAN-001", "canonical"),
         "06-semantics.structured_data": ("06-semantics", "06-SEM-JSONLD-001", "json_ld_blocks"),
         "13-ux.mobile_usability": ("13-ux", "13-UX-MOBILE-001", "viewport"),

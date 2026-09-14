@@ -74,7 +74,29 @@ def test_missing_observation_is_unknown_not_fail():
 def test_failed_audit_observation_produces_fail():
     audit = _audit_result()
     audit["inventory"]["title"] = ""
+    audit["findings"] = [{"id": "03-CODE-META-001"}]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["03-code.head_metadata"]["status"] == "FAIL"
+
+
+def test_head_metadata_uses_its_own_finding_id_not_an_unrelated_one():
+    # Regression test: 03-code.head_metadata was previously bound to
+    # "CODE-HTTP-001" (the unrelated HTTP-status-error finding ID) instead of
+    # "03-CODE-META-001" (the actual missing-title finding ID audit.py emits).
+    # This meant an unrelated HTTP error could cross-wire into a false FAIL
+    # for head_metadata even when the title was perfectly fine.
+    audit = _audit_result()
+    audit["inventory"]["title"] = "A Perfectly Fine Title"
+    audit["inventory"]["status"] = 500
     audit["findings"] = [{"id": "CODE-HTTP-001"}]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["03-code.head_metadata"]["status"] == "PASS"
+
+
+def test_head_metadata_fails_only_on_its_own_finding_id():
+    audit = _audit_result()
+    audit["inventory"]["title"] = "A Perfectly Fine Title"
+    audit["findings"] = [{"id": "03-CODE-META-001"}]
     result = execute_audit_checks(audit)
     assert result["checks"]["03-code.head_metadata"]["status"] == "FAIL"
 
