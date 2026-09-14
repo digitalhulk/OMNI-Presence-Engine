@@ -345,17 +345,14 @@ Generated reports are gitignored.
 
 ```text
 schemas/       → machine-readable contracts
-frameworks/    → SEO/AEO/GEO/LLMO/SXO/CRO views
 docs/          → module and system specifications
-automation/    → execution, adapters, monitoring targets
-integrations/  → external evidence providers
-verticals/     → generic industry implementations
-research/      → source registry and updates
-governance/    → evidence, terminology and update rules
+automation/    → execution, adapters, monitoring targets (specs)
+integrations/  → external evidence providers (specs + pagespeed/openrouter)
 design/        → RawBlock design system
 web/           → dashboard + report viewer
 src/ope/       → executable engine and CLI
 tests/         → executable contract coverage
+scripts/       → report generation and utilities
 ```
 
 ---
@@ -423,8 +420,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.1.1`  
-**Stage:** Evidence-driven executable foundation  
+**Version:** `0.3.0`  
+**Stage:** Evidence-driven executable foundation — 136/136 checks bound  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**
