@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from . import history
 from .audit import audit, markdown_report
@@ -105,7 +106,7 @@ def site_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def site_audit_markdown_report(result: dict) -> str:
+def site_audit_markdown_report(result: dict[str, Any]) -> str:
     """Generate a markdown summary from a normalized site audit result."""
     lines = [
         f"# OPE Site Audit — {result.get('target', 'unknown')}",
@@ -172,7 +173,7 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def performance_audit_markdown_report(result: dict) -> str:
+def performance_audit_markdown_report(result: dict[str, Any]) -> str:
     """Generate a markdown summary from a normalized performance audit result."""
     lines = [
         f"# OPE Performance Audit — {result.get('target', 'unknown')}",

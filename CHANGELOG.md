@@ -4,6 +4,51 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.7.0
+
+DRY consolidation, version sync, and spec accuracy.
+
+### Changed
+
+- **SSRF validation consolidated**: `audit.py` now imports
+  `validate_url_strict()` and `ALLOWED_SCHEMES` from the canonical
+  `url.py` module instead of maintaining a duplicate `_validate_url()`
+  implementation. `_SafeRedirect` uses the same shared function.
+  Security-critical code path — one source of truth.
+- **Priority formula DRY**: `audit.py:_finding()` now calls
+  `scoring.priority()` instead of inlining the same formula.
+  `scoring.priority()` was previously orphaned (implemented but never
+  called from production code).
+- **Engine normalizer DRY**: extracted `_reconcile_and_score()` and
+  `_init_modules_from_findings()` in `engine.py`, eliminating ~80 lines
+  of duplicated reconciliation/scoring logic across the three normalizers.
+- **User-Agent version derived dynamically**: `audit.py:_request()` and
+  `browser.py` device configs now derive the OPE version from
+  `importlib.metadata` instead of hardcoding stale version strings.
+
+### Fixed
+
+- **Version sync**: README.md (0.5.0 → 0.6.0), engine-integration-plan.md
+  (v0.5.0 → v0.6.0), conftest.py fixture (0.5.0 → 0.6.0), browser.py
+  User-Agent (0.3 → dynamic), audit.py User-Agent (0.1 → dynamic).
+- **Documentation accuracy**: `setup-v1.md` now documents all CLI flags
+  including `--browser*`, `--no-robots`, `--allow-subdomains`,
+  `--mobile-only`, and `--no-screenshot`. Engine integration plan updated
+  with scoring integration status.
+- **Type hints**: `cli.py` markdown report functions use `dict[str, Any]`
+  instead of bare `dict`. `registry.py:_unknown_runner()` has an explicit
+  `CheckRunner` return type. `audit.py:_SafeRedirect.redirect_request()`
+  has parameter type annotations.
+
+### Removed
+
+- **Dead constants**: `_MODERN_TLS`, `_CERT_EXPIRY_WARNING_DAYS`,
+  `_LOCALE_PATTERN`, and `_CONTENT_WORD_BUDGET` removed from `audit.py`
+  — they were duplicates of the canonical definitions in
+  `audit_pipeline.py` and were never referenced in `audit.py`.
+- **Dead import**: `import ipaddress` removed from `audit.py` (was only
+  used by the now-removed `_validate_url()`).
+
 ## 0.6.0
 
 Scoring integration, CLI test coverage, documentation accuracy, and dead code

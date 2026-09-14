@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ipaddress
 import json
 import re
 import socket
@@ -18,10 +17,11 @@ from typing import Any
 
 from . import citability, crawler
 from .integrations.pagespeed import fetch_vitals
+from .scoring import priority as compute_priority
+from .url import ALLOWED_SCHEMES, validate_url_strict
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
-ALLOWED_SCHEMES = {"http", "https"}
 
 try:
     # Reported in every audit result, so it is read from the installed package
@@ -206,36 +206,19 @@ class Finding:
     validation: list[str] = field(default_factory=list)
 
 
-def _validate_url(url: str) -> str:
-    parsed = urllib.parse.urlparse(url)
-    if parsed.scheme not in ALLOWED_SCHEMES or not parsed.hostname:
-        raise ValueError("OPE accepts only absolute HTTP(S) URLs with a hostname")
-    host = parsed.hostname.rstrip(".")
-    try:
-        addresses = {ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
-    except socket.gaierror as exc:
-        raise ValueError(f"DNS resolution failed for target: {host}") from exc
-    if not addresses:
-        raise ValueError(f"No address resolved for target: {host}")
-    for addr in addresses:
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_multicast or addr.is_unspecified:
-            raise ValueError(f"Target resolves to a restricted network address: {addr}")
-    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.params, parsed.query, ""))
-
-
 class _SafeRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        safe = _validate_url(newurl)
+    def redirect_request(self, req: urllib.request.Request, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> urllib.request.Request | None:
+        safe = validate_url_strict(newurl)
         return super().redirect_request(req, fp, code, msg, headers, safe)
 
 
 def _request(url: str, timeout: int = 15) -> Response:
-    safe_url = _validate_url(url)
+    safe_url = validate_url_strict(url)
     hostname = urllib.parse.urlparse(safe_url).hostname or ""
     dns_start = time.perf_counter()
     socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
     dns_ms = round((time.perf_counter() - dns_start) * 1000, 1)
-    req = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+    req = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
     ctx = ssl.create_default_context()
     opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
     opener.max_redirections = MAX_REDIRECTS  # type: ignore[attr-defined]
@@ -249,7 +232,7 @@ def _request(url: str, timeout: int = 15) -> Response:
         if len(body) > MAX_RESPONSE_BYTES:
             raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
         return Response(
-            final_url=_validate_url(r.geturl()),
+            final_url=validate_url_strict(r.geturl()),
             status=r.status,
             headers={k.lower(): v for k, v in r.headers.items()},
             # get_all keeps every Set-Cookie; a plain dict would collapse
@@ -376,8 +359,6 @@ def _link_locality(links: list[str], final_url: str) -> dict[str, int]:
     return {"internal_links": internal, "external_links": external}
 
 
-_MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
-_CERT_EXPIRY_WARNING_DAYS = 14
 # Narrow, high-confidence credential patterns. Only the pattern label and a
 # count are ever reported — a matched secret is never copied into evidence.
 _SECRET_PATTERNS = (
@@ -391,8 +372,6 @@ _SECRET_PATTERNS = (
 _TRUST_PATH_MARKERS = ("privacy", "terms", "contact", "about", "refund", "imprint", "impressum", "legal", "disclaimer")
 _CTA_PATTERN = re.compile(r"\b(get|start|book|buy|contact|sign\s?up|subscribe|request|call|order|download|demo|quote|register|apply|join|schedule|enquire|inquire)\b", re.IGNORECASE)
 _QUESTION_PATTERN = re.compile(r"^(how|what|why|when|where|which|who|can|do|does|is|are|should)\b", re.IGNORECASE)
-_LOCALE_PATTERN = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
-_CONTENT_WORD_BUDGET = 300
 _CDN_HEADER_MARKERS = ("cf-ray", "x-amz-cf-id", "x-akamai-transformed", "x-vercel-id", "x-served-by", "x-cache", "x-fastly-request-id", "x-cdn", "cdn-cache")
 _WAF_MARKERS = ("cf-ray", "x-sucuri-id", "x-iinfo", "x-akamai-transformed", "x-waf-status", "x-sitelock-id")
 
@@ -425,7 +404,7 @@ def _fetch_subresources(page_url: str, stylesheets: list[str], scripts: list[str
     css_text: list[str] = []
     for kind, absolute in resolved[:MAX_SUBRESOURCES]:
         try:
-            safe_url = _validate_url(absolute)
+            safe_url = validate_url_strict(absolute)
             request = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
             with urllib.request.urlopen(request, timeout=max(1, min(timeout, 20))) as response:
                 payload = response.read(MAX_SUBRESOURCE_BYTES)
@@ -463,7 +442,7 @@ def _tls_profile(url: str, timeout: int = 10) -> dict[str, Any]:
     Returns an error entry rather than raising so an unreachable or
     proxy-intercepted endpoint becomes UNKNOWN evidence, not a false FAIL.
     """
-    parsed = urllib.parse.urlparse(_validate_url(url))
+    parsed = urllib.parse.urlparse(validate_url_strict(url))
     if parsed.scheme != "https":
         return {"protocol": None, "days_until_expiry": None, "error": "Target is not served over HTTPS"}
     context = ssl.create_default_context()
@@ -521,8 +500,8 @@ def _edge_markers(headers: dict[str, str], markers: tuple[str, ...]) -> list[str
 
 def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[Evidence], remediation: list[str], validation: list[str], impact: float = .5, urgency: float = .5, fixability: float = .8) -> Finding:
     confidence = min((e.confidence for e in evidence), default=0.2)
-    priority = round(100 * impact * confidence * urgency * fixability, 2)
-    return Finding(fid, module, symptom, "OBSERVED", severity, priority, [asdict(e) for e in evidence], remediation=remediation, validation=validation)
+    prio = compute_priority(impact=impact, confidence=confidence, urgency=urgency, fixability=fixability)
+    return Finding(fid, module, symptom, "OBSERVED", severity, prio, [asdict(e) for e in evidence], remediation=remediation, validation=validation)
 
 
 def _run_browser_pass(

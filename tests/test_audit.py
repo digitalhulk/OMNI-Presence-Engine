@@ -171,7 +171,7 @@ def test_css_behaviour_reads_motion_and_focus_handling():
 
 
 def test_subresource_fetch_classifies_third_party_hosts_and_survives_failures(monkeypatch):
-    monkeypatch.setattr(audit_module, "_validate_url", lambda url: url)
+    monkeypatch.setattr(audit_module, "validate_url_strict", lambda url: url)
 
     class _FakeResponse:
         def __init__(self, payload): self._payload = payload

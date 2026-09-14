@@ -1,6 +1,6 @@
 import pytest
 
-from ope.audit import _validate_url
+from ope.url import validate_url_strict as _validate_url
 
 
 @pytest.mark.parametrize(

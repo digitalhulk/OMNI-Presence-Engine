@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .module_runner import CheckResult, CheckSpec, ExecutionStatus, ModuleRunner
+from .module_runner import CheckResult, CheckRunner, CheckSpec, ExecutionStatus, ModuleRunner
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ CHECKS: tuple[RegisteredCheck, ...] = tuple(
 )
 
 
-def _unknown_runner(check: RegisteredCheck):
+def _unknown_runner(check: RegisteredCheck) -> CheckRunner:
     def run(_: dict[str, Any]) -> CheckResult:
         return CheckResult(
             check_id=check.id,
