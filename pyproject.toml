@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omni-presence-engine"
-version = "0.4.0"
+version = "0.5.0"
 description = "Evidence-driven digital presence audit and root-cause engine"
 requires-python = ">=3.10"
 dependencies = []
@@ -24,6 +24,10 @@ where = ["src"]
 # from installed environments (report_html.py also searches the source tree).
 [tool.setuptools.data-files]
 "share/ope" = ["design/rawblock.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q", "--tb=short"]
 
 [tool.ruff]
 target-version = "py310"

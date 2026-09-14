@@ -46,6 +46,7 @@ cross-page findings under the `evidence-diagnostic-v1` contract.
 | `--max-depth N` | Maximum crawl depth (default 10) |
 | `--delay SECONDS` | Delay between requests (default 0.5) |
 | `--markdown` | Markdown output |
+| `--html PATH` | Write a standalone RawBlock HTML report |
 | `--no-history` | Skip local run history |
 | `--no-sitemaps` | Skip sitemap discovery |
 
@@ -63,6 +64,7 @@ analysis, DOM analysis, render analysis) and produces findings under the
 | --- | --- |
 | `--timeout SECONDS` | Per-request timeout (default 30) |
 | `--markdown` | Markdown output with CWV table and prioritized findings |
+| `--html PATH` | Write a standalone RawBlock HTML report |
 | `--desktop-only` | Skip mobile profile |
 
 ## Run history

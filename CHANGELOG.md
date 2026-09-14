@@ -4,6 +4,49 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.5.0
+
+Contract integrity, unified HTML reporting, and scoring engine.
+
+### Added
+
+- **Evidence-weighted `module_score()`** in `scoring.py`: replaces the
+  binary 0/100/None stub with evidence-weighted pass coverage per the
+  `scoring-v1` spec. Each check's contribution is weighted by its
+  evidence confidence. N/A checks are excluded from the denominator.
+  UNKNOWN is never treated as pass.
+- **`global_health()`** in `scoring.py`: dependency-aware global health
+  score per the spec. Upstream failures reduce confidence in downstream
+  module scores.
+- **`report_html_site.py`**: standalone RawBlock HTML report for site
+  audits, with crawl summary cards, page table, module grid and
+  severity-filtered findings. Reuses shared helpers from `report_html.py`.
+- **`report_html_performance.py`**: standalone RawBlock HTML report for
+  performance audits, with Core Web Vitals table, resource summary,
+  module grid and findings. Reuses shared helpers from `report_html.py`.
+- **`--html PATH` flag** for `ope site-audit` and `ope performance-audit`.
+- **`conftest.py`**: shared pytest fixtures (`minimal_audit_result`,
+  `minimal_site_result`, `minimal_performance_result`).
+- **`[tool.pytest.ini_options]`** in `pyproject.toml` with `testpaths`
+  and `addopts`.
+- **Test coverage expansion**: new test files for site HTML reports
+  (`test_report_html_site.py`, 12 tests) and performance HTML reports
+  (`test_report_html_performance.py`, 12 tests); scoring tests expanded
+  from 3 to 19 covering evidence weighting, N/A exclusion, global
+  health, and upstream penalties.
+
+### Fixed
+
+- **Version single source of truth**: `__init__.py` now derives
+  `__version__` from `importlib.metadata` at runtime instead of a
+  hardcoded string, so it always matches `pyproject.toml`.
+- **Scoring engine**: `module_score()` was a binary stub returning
+  0.0 (FAIL), 100.0 (PASS), or None, which contradicted the
+  `scoring-v1` spec requiring evidence-weighted pass coverage.
+- **README version**: was `0.3.0`, now derives from `pyproject.toml`.
+- **`audit-runner-v1.md`**: claimed "93 of 136" bound checks, corrected
+  to "all 136" with the actual breakdown.
+
 ## 0.4.0
 
 Performance-audit engine contract and unified history integration. The

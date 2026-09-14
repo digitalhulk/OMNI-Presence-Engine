@@ -19,7 +19,7 @@ This document is the contract. What of it runs today:
 | Durable monitoring registration | Not implemented: runs are local and manual, with no scheduler |
 | Dataset and research execution classes | Not implemented: no backlink, ranking or research provider is bound |
 
-93 of the 136 registry checks have a bound evidence provider. The rest execute and return `UNKNOWN` with a reason, per the contract below.
+All 136 registry checks have a bound evidence provider: 113 deterministic checks, 3 finding-record checks (N/A when no findings exist), and 20 external-evidence checks (UNKNOWN with a specific reason naming the missing API). The rest of the contract below applies to all checks.
 
 ## Run contract
 1. Load entity/project configuration.
