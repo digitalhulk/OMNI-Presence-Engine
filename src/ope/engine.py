@@ -6,6 +6,7 @@ from typing import Any
 from .audit_pipeline import execute_audit_checks
 from .module_runner import ExecutionStatus
 from .registry import checks_for_module
+from .site_evidence import inject_site_evidence
 
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
 
@@ -92,6 +93,66 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(module, dict):
             module = {}
             modules[module_number] = module
+        module_code = str(module_number)
+        module_id = next(
+            (
+                str(value.get("module"))
+                for value in checks.values()
+                if isinstance(value, dict)
+                and str(value.get("module", "")).startswith(module_code + "-")
+            ),
+            module_code,
+        )
+        check_ids = checks_for_module(module_id)
+        statuses = [
+            str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
+            if isinstance(checks.get(check_id), dict)
+            else ExecutionStatus.UNKNOWN.value
+            for check_id in check_ids
+        ]
+        module["status"] = _reconcile_module_status(module.get("status"), statuses)
+
+    return output
+
+
+def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
+    """Attach the evidence-diagnostic-v1 contract to a site audit result.
+
+    Normalizes site-level findings, injects site evidence into a synthetic
+    inventory, and runs the check registry against it.  The seed page's
+    inventory is minimal (site-level signals only), so most single-page
+    checks will return UNKNOWN — that is correct rather than fabricating
+    PASS from absent evidence.
+    """
+    output = deepcopy(site_result) if isinstance(site_result, dict) else {}
+    output["engine_contract"] = "evidence-diagnostic-v1"
+    output["engine_scope"] = "site"
+
+    raw_findings = output.get("findings")
+    findings = raw_findings if isinstance(raw_findings, list) else []
+    output["findings"] = [normalize_finding(finding) for finding in findings]
+
+    inventory: dict[str, Any] = output.get("inventory", {})
+    if not isinstance(inventory, dict):
+        inventory = {}
+    inject_site_evidence(inventory, output)
+    output["inventory"] = inventory
+
+    modules: dict[str, dict[str, Any]] = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
+    for f in output["findings"]:
+        module_key = str(f.get("module", "")).split("-")[0]
+        if module_key in modules:
+            modules[module_key]["findings"].append(f.get("id", ""))
+            modules[module_key]["status"] = "FAIL"
+    output["modules"] = modules
+
+    execution = execute_audit_checks(output)
+    checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
+    if not isinstance(checks, dict):
+        checks = {}
+    output["checks"] = checks
+
+    for module_number, module in modules.items():
         module_code = str(module_number)
         module_id = next(
             (

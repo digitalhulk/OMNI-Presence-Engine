@@ -200,67 +200,106 @@ def _analyze_crawlability(
     )
 
 
+_SEVERITY_PRIORITY: dict[str, float] = {
+    "critical": 0.9, "high": 0.7, "medium": 0.5, "low": 0.3, "info": 0.1,
+}
+
+
 def _generate_findings(result: SiteAuditResult, graph: LinkGraph) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     fid = 0
 
-    def add(module: str, symptom: str, severity: str, evidence: list[dict[str, Any]], **kw: Any) -> None:
+    def add(
+        module: str, symptom: str, severity: str,
+        evidence: list[dict[str, Any]],
+        root_cause: str = "", **kw: Any,
+    ) -> None:
         nonlocal fid
         fid += 1
-        findings.append({"id": f"site-{fid:03d}", "module": module, "symptom": symptom, "severity": severity, "status": "OBSERVED", "evidence": evidence, **kw})
+        for e in evidence:
+            e.setdefault("confidence", 0.8)
+        findings.append({
+            "id": f"site-{fid:03d}",
+            "module": module,
+            "symptom": symptom,
+            "severity": severity,
+            "status": "OBSERVED",
+            "priority": _SEVERITY_PRIORITY.get(severity, 0.5),
+            "root_cause": root_cause,
+            "evidence": evidence,
+            **kw,
+        })
 
     orphans = graph.orphan_candidates()
     if orphans:
-        add("crawlability", f"{len(orphans)} orphan page(s) with no incoming internal links", "medium",
+        add("04-crawl", f"{len(orphans)} orphan page(s) with no incoming internal links", "medium",
             [{"source": "link_graph", "value": orphans[:20]}],
-            remediation=["Add internal links to orphan pages from relevant content pages"])
+            root_cause="Pages are not linked from any other internal page",
+            remediation=["Add internal links to orphan pages from relevant content pages"],
+            validation=["Re-crawl and verify all pages have at least one incoming internal link"])
 
     deep = [u for u, p in graph.pages.items() if p.depth > 5]
     if deep:
-        add("crawlability", f"{len(deep)} page(s) at depth > 5", "low",
+        add("04-crawl", f"{len(deep)} page(s) at depth > 5", "low",
             [{"source": "crawl", "value": {"count": len(deep), "urls": deep[:10]}}],
-            remediation=["Reduce click depth by improving internal linking"])
+            root_cause="Site structure places content too many clicks from the homepage",
+            remediation=["Reduce click depth by improving internal linking"],
+            validation=["Re-crawl and verify max depth is 5 or fewer"])
 
     ms = result.metadata_summary or {}
     if ms.get("missing_title", 0):
-        add("metadata", f"{ms['missing_title']} page(s) missing title tag", "high",
+        add("03-code", f"{ms['missing_title']} page(s) missing title tag", "high",
             [{"source": "metadata_analysis", "value": {"missing_title": ms["missing_title"]}}],
-            remediation=["Add unique, descriptive <title> to every page"])
+            root_cause="Pages lack a <title> element",
+            remediation=["Add unique, descriptive <title> to every page"],
+            validation=["Re-crawl and verify all pages have a non-empty title tag"])
     if ms.get("missing_description", 0):
-        add("metadata", f"{ms['missing_description']} page(s) missing meta description", "medium",
+        add("03-code", f"{ms['missing_description']} page(s) missing meta description", "medium",
             [{"source": "metadata_analysis", "value": {"missing_description": ms["missing_description"]}}],
-            remediation=["Add meta description to improve CTR in search results"])
+            root_cause="Pages lack a meta description element",
+            remediation=["Add meta description to improve CTR in search results"],
+            validation=["Re-crawl and verify all pages have a meta description"])
     if ms.get("missing_og", 0):
-        add("metadata", f"{ms['missing_og']} page(s) missing Open Graph metadata", "low",
+        add("03-code", f"{ms['missing_og']} page(s) missing Open Graph metadata", "low",
             [{"source": "metadata_analysis", "value": {"missing_og": ms["missing_og"]}}],
-            remediation=["Add og:title and og:image for social sharing"])
+            root_cause="Pages lack og:title and/or og:image tags",
+            remediation=["Add og:title and og:image for social sharing"],
+            validation=["Re-crawl and verify Open Graph tags are present"])
 
     non_idx = [i for i in result.indexability if i.get("status") == "NON_INDEXABLE"]
     if non_idx:
-        add("indexability", f"{len(non_idx)} page(s) are non-indexable", "medium",
-            [{"source": "indexability_analysis", "value": {"count": len(non_idx), "urls": [i["url"] for i in non_idx[:10]]}}])
+        add("05-index", f"{len(non_idx)} page(s) are non-indexable", "medium",
+            [{"source": "indexability_analysis", "value": {"count": len(non_idx), "urls": [i["url"] for i in non_idx[:10]]}}],
+            root_cause="Pages are blocked from indexing by meta robots, X-Robots-Tag, or non-2xx status")
 
     if result.duplicate_candidates:
-        add("indexability", f"{len(result.duplicate_candidates)} potential duplicate content group(s)", "medium",
+        add("05-index", f"{len(result.duplicate_candidates)} potential duplicate content group(s)", "medium",
             [{"source": "duplicate_detection", "value": result.duplicate_candidates[:5]}],
-            remediation=["Consolidate duplicate pages with canonical tags or redirects"])
+            root_cause="Multiple pages share the same title or canonical URL",
+            remediation=["Consolidate duplicate pages with canonical tags or redirects"],
+            validation=["Re-crawl and verify duplicate groups are resolved"])
 
     cs = result.crawl_summary or {}
     if cs.get("errors", 0):
-        add("crawlability", f"{cs['errors']} page(s) returned crawl errors", "medium",
-            [{"source": "crawl", "value": {"error_count": cs["errors"]}}])
+        add("04-crawl", f"{cs['errors']} page(s) returned crawl errors", "medium",
+            [{"source": "crawl", "value": {"error_count": cs["errors"]}}],
+            root_cause="Server returned error status codes during crawl")
 
     comparison = (result.crawlability or {}).get("sitemap_comparison")
     if comparison:
         so = comparison.get("sitemap_only", 0)
         co = comparison.get("crawl_only", 0)
         if so:
-            add("sitemap", f"{so} URL(s) in sitemap but not discovered by crawl", "medium",
+            add("04-crawl", f"{so} URL(s) in sitemap but not discovered by crawl", "medium",
                 [{"source": "sitemap_crawl_comparison", "value": {"sitemap_only": so}}],
-                remediation=["Ensure sitemap-only URLs are linked from the site or remove from sitemap"])
+                root_cause="Sitemap contains URLs that are not reachable through internal links",
+                remediation=["Ensure sitemap-only URLs are linked from the site or remove from sitemap"],
+                validation=["Re-crawl and verify sitemap/crawl overlap"])
         if co:
-            add("sitemap", f"{co} crawled URL(s) missing from sitemap", "low",
+            add("04-crawl", f"{co} crawled URL(s) missing from sitemap", "low",
                 [{"source": "sitemap_crawl_comparison", "value": {"crawl_only": co}}],
-                remediation=["Add crawled URLs to sitemap for faster discovery"])
+                root_cause="Crawled pages are not listed in the sitemap",
+                remediation=["Add crawled URLs to sitemap for faster discovery"],
+                validation=["Verify all indexable URLs appear in the sitemap"])
 
     return findings

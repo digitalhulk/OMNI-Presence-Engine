@@ -72,6 +72,7 @@ def audit_command(args: argparse.Namespace) -> int:
 
 
 def site_audit_command(args: argparse.Namespace) -> int:
+    from .engine import normalize_site_result
     from .site_audit import SiteAuditConfig
     from .site_audit import site_audit as run_site_audit
 
@@ -83,12 +84,46 @@ def site_audit_command(args: argparse.Namespace) -> int:
         fetch_robots=not args.no_robots,
     )
     try:
-        result = run_site_audit(args.url, config=cfg)
+        raw = run_site_audit(args.url, config=cfg)
     except Exception as exc:
         print(f"OPE site-audit failed: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    result = normalize_site_result(raw.to_dict())
+    if args.markdown:
+        print(site_audit_markdown_report(result))
+    else:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
+
+
+def site_audit_markdown_report(result: dict) -> str:
+    """Generate a markdown summary from a normalized site audit result."""
+    lines = [
+        f"# OPE Site Audit — {result.get('target', 'unknown')}",
+        "",
+        f"**Status:** `{result.get('status', 'UNKNOWN')}`  ",
+        f"**Pages crawled:** `{result.get('crawl_summary', {}).get('pages_crawled', 0) if isinstance(result.get('crawl_summary'), dict) else 0}`  ",
+        f"**Findings:** `{len(result.get('findings', []))}`",
+        "",
+    ]
+    findings = result.get("findings", [])
+    if findings:
+        lines += ["## Findings", ""]
+        for f in sorted(findings, key=lambda x: x.get("priority", 0), reverse=True):
+            lines += [
+                f"### {f.get('id', '?')} — {f.get('severity', '?').upper()} — Priority {f.get('priority', 0)}",
+                f"**Module:** {f.get('module', '?')}",
+                f"**Symptom:** {f.get('symptom', '?')}",
+                "",
+            ]
+            if f.get("root_cause"):
+                lines.append(f"**Root cause:** {f['root_cause']}")
+            if f.get("remediation"):
+                lines += ["", "**Remediation:**"] + [f"- {x}" for x in f["remediation"]]
+            lines.append("")
+    else:
+        lines.append("No site-level findings were generated.")
+    return "\n".join(lines)
 
 
 def performance_audit_command(args: argparse.Namespace) -> int:
@@ -139,6 +174,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.set_defaults(handler=audit_command)
     sa = sub.add_parser("site-audit", help="run a multi-page site-level audit")
     sa.add_argument("url")
+    sa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
     sa.add_argument("--max-pages", type=int, default=200)
     sa.add_argument("--max-depth", type=int, default=10)
     sa.add_argument("--timeout", type=int, default=15)
