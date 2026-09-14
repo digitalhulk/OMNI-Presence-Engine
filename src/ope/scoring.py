@@ -43,7 +43,11 @@ def module_score(module: dict[str, Any], module_checks: dict[str, Any] | None = 
 
     Returns None when no evidence-backed checks exist (all N/A, or no
     checks at all), signalling that a numeric score cannot be stated.
+    BLOCKED modules always return None — their results may be unreliable
+    due to upstream failure.
     """
+    if module.get("status") == "BLOCKED":
+        return None
     if not module_checks:
         status = module.get("status")
         if status in {None, "UNKNOWN", "BLOCKED", "N/A"}:
@@ -79,24 +83,38 @@ def module_score(module: dict[str, Any], module_checks: dict[str, Any] | None = 
 def global_health(module_scores: dict[str, float | None]) -> float | None:
     """Dependency-aware global health per scoring-v1 spec.
 
-    Upstream modules (lower-numbered) that score poorly reduce confidence
-    in downstream scores, but downstream observations remain visible.
+    Upstream modules that score poorly reduce confidence in downstream
+    scores.  The traversal follows the real dependency graph (not module
+    numbers), so parallel branches do not penalise each other.
     Returns None when no modules have a numeric score.
     """
+    from .dependency_graph import DEPENDENCIES_BY_NUMBER, TOPOLOGICAL_ORDER_NUMBERS
+
     scored = {k: v for k, v in module_scores.items() if v is not None}
     if not scored:
         return None
 
+    confidence: dict[str, float] = {}
     weighted_sum = 0.0
     total_weight = 0.0
-    upstream_confidence = 1.0
 
-    for module_key in sorted(scored.keys()):
+    for module_key in TOPOLOGICAL_ORDER_NUMBERS:
+        if module_key not in scored:
+            continue
+
+        upstream_conf = 1.0
+        for dep_key in DEPENDENCIES_BY_NUMBER.get(module_key, ()):
+            if dep_key in confidence:
+                upstream_conf = min(upstream_conf, confidence[dep_key])
+
         score = scored[module_key]
-        adjusted = score * upstream_confidence
+        adjusted = score * upstream_conf
         weighted_sum += adjusted
         total_weight += 1.0
+
+        module_conf = upstream_conf
         if score < 50.0:
-            upstream_confidence *= 0.9
+            module_conf *= 0.9
+        confidence[module_key] = module_conf
 
     return clamp(weighted_sum / total_weight)

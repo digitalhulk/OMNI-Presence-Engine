@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omni-presence-engine"
-version = "0.8.0"
+version = "0.9.0"
 description = "Evidence-driven digital presence audit and root-cause engine"
 requires-python = ">=3.10"
 dependencies = []

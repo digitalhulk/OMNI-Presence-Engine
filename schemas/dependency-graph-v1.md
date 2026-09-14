@@ -16,6 +16,10 @@ This is a dependency model, not a rigid workflow. Any observed failure can enter
 8. Define measurable validation.
 9. Add a regression guard.
 
+## Executable implementation
+
+The graph is encoded in `src/ope/dependency_graph.py` as `MODULE_DEPENDENCIES` with computed topological ordering. `cascade_blocked()` propagates BLOCKED downstream from FAIL modules (UNKNOWN does not cascade). `find_root_causes()` traces each BLOCKED module back to the upstream FAIL modules, skipping BLOCKED intermediaries. The engine runs both after check execution and module status reconciliation.
+
 ## Parallel branches
 
-Research, SEO data, first-party data, technical measurements and business data may execute concurrently, then converge at Evidence Normalization.
+Content(07)/Media(08), Search(09)/AI-Search(10), Authority(11)/Local(12), and UX(13)/Accessibility(14)/Performance(15)/Security(16)/Language(17) are parallel branches that share the same upstream and feed the same downstream tier. Research, SEO data, first-party data, technical measurements and business data may execute concurrently, then converge at Evidence Normalization.

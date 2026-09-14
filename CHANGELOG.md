@@ -4,6 +4,48 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.9.0
+
+Executable dependency graph, BLOCKED cascade propagation, graph-based
+root-cause traversal, and dependency-aware scoring.
+
+### Added
+
+- **`dependency_graph.py`**: the 20-module dependency graph from
+  `schemas/dependency-graph-v1.md` encoded as `MODULE_DEPENDENCIES` with
+  topological ordering (`TOPOLOGICAL_ORDER`, `TOPOLOGICAL_ORDER_NUMBERS`),
+  number-keyed dependency mapping (`DEPENDENCIES_BY_NUMBER`), and four
+  query functions: `upstream_modules()`, `downstream_modules()`,
+  `cascade_blocked()`, `find_root_causes()`.
+- **BLOCKED cascade propagation**: `cascade_blocked()` iterates modules in
+  topological order and marks any module BLOCKED when an upstream dependency
+  has FAIL or BLOCKED status. UNKNOWN upstream does not cascade — absent
+  evidence is not a failure. The cascade is deterministic and execution-order
+  independent.
+- **Graph-based root-cause traversal**: `find_root_causes()` traces each
+  BLOCKED module's transitive upstream to find the FAIL modules that caused
+  it, skipping BLOCKED intermediaries. Root causes are reported per module
+  in `dependency_root_causes` and per blocked module in `blocked_by`.
+- **`test_dependency_graph.py`**: 38 tests across 8 classes covering graph
+  structure, parallel branches, upstream/downstream queries, cascade
+  propagation, root-cause traversal, the definitive acceptance test, and
+  execution-order independence.
+
+### Changed
+
+- **`engine.py` reconciliation**: after check execution and module status
+  reconciliation, the engine now runs `cascade_blocked()` and
+  `find_root_causes()` against the 20-module status map. Modules whose
+  status changes to BLOCKED get a `blocked_by` key listing root causes.
+  The output gains a `dependency_root_causes` map when any module is blocked.
+- **`scoring.module_score()`**: BLOCKED modules now return `None` instead
+  of computing scores from unreliable check results.
+- **`scoring.global_health()`**: replaced alphabetical module-key ordering
+  with topological-order traversal from the dependency graph. Upstream
+  confidence uses `min()` across direct graph dependencies, so parallel
+  branches (Content/Media, Search/AI, Authority/Local, UX tier) do not
+  penalize each other.
+
 ## 0.8.0
 
 SSRF final consolidation, User-Agent unification, version sync, and test

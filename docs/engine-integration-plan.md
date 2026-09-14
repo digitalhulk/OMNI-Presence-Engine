@@ -53,7 +53,7 @@ Partial coverage must remain `UNKNOWN`. This prevents a small set of passing che
 6. Add regression tests for pass, fail, partial coverage, and unbound checks.
 7. Wire the normalized engine into the CLI only after the core integration is stable and the shared CLI contract has been coordinated with Agent-A.
 
-## Current state (v0.8.0)
+## Current state (v0.9.0)
 
 All 136 registry checks across 20 modules are bound: 115 deterministic checks execute against observations, 3 finding-record checks return `N/A` when no findings exist, and 18 external-evidence checks return `UNKNOWN` with a specific reason naming the missing API or service.
 
@@ -64,7 +64,9 @@ Three normalizers share the same `evidence-diagnostic-v1` contract:
 
 The performance normalizer converts browser-level findings into the engine finding schema, injects five performance evidence groups into the inventory via `performance_evidence.py`, runs all 136 registry checks, and reconciles module statuses. The single-page and site audit types record run history for regression detection; performance audit does not yet record run history.
 
-Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass coverage per module (N/A excluded, UNKNOWN never treated as pass), and `scoring.global_health()` computes a dependency-aware global score where upstream failures reduce downstream confidence. Each normalizer attaches per-module `score` and a top-level `health` key.
+The 20-module dependency graph from `schemas/dependency-graph-v1.md` is executable in `dependency_graph.py`. After check execution and module status reconciliation, the engine runs `cascade_blocked()` to propagate BLOCKED downstream from FAIL modules (UNKNOWN does not cascade), then `find_root_causes()` to trace each BLOCKED module back to the upstream FAIL modules that caused it. Root causes are reported in the output's `dependency_root_causes` map and per blocked module in `blocked_by`.
+
+Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass coverage per module (N/A excluded, UNKNOWN never treated as pass, BLOCKED returns None), and `scoring.global_health()` traverses the dependency graph in topological order so parallel branches do not penalize each other. Each normalizer attaches per-module `score` and a top-level `health` key.
 
 ## Explicit non-goals
 

@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import Any
 
 from .audit_pipeline import execute_audit_checks
+from .dependency_graph import cascade_blocked, find_root_causes
 from .module_runner import ExecutionStatus
 from .performance_evidence import inject_performance_evidence
 from .registry import checks_for_module
@@ -110,6 +111,22 @@ def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> Non
             for check_id in check_ids
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
+
+    pre_cascade = {
+        num: mod.get("status", "UNKNOWN")
+        for num, mod in modules.items()
+        if isinstance(mod, dict)
+    }
+    cascaded = cascade_blocked(pre_cascade)
+    root_cause_map = find_root_causes(cascaded)
+    for num, mod in modules.items():
+        if isinstance(mod, dict) and cascaded.get(num) != pre_cascade.get(num):
+            mod["status"] = cascaded[num]
+            if num in root_cause_map:
+                mod["blocked_by"] = root_cause_map[num]
+
+    if root_cause_map:
+        output["dependency_root_causes"] = root_cause_map
 
     scores = _compute_scores(modules, checks)
     output["health"] = global_health(scores)
