@@ -12,6 +12,8 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import Any
 
 from . import citability, crawler
@@ -20,6 +22,13 @@ from .integrations.pagespeed import fetch_vitals
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
 ALLOWED_SCHEMES = {"http", "https"}
+
+try:
+    # Reported in every audit result, so it is read from the installed package
+    # rather than restated here where it would drift out of date.
+    ENGINE_VERSION = _package_version("omni-presence-engine")
+except PackageNotFoundError:
+    ENGINE_VERSION = "0.0.0+unknown"
 
 
 class PageParser(HTMLParser):
@@ -568,7 +577,7 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True) -> dict[
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": ENGINE_VERSION, "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:

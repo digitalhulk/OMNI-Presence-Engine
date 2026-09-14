@@ -3,6 +3,24 @@
 ## Purpose
 Turn the module registry into a deterministic, evidence-first audit execution plan.
 
+## Implementation status
+
+This document is the contract. What of it runs today:
+
+| Contract step | Status |
+| --- | --- |
+| Load configuration, resolve target | `ope.cli` / `ope.audit` |
+| Load the 20-module registry, resolve dependencies, execute checks | `ope.registry` + `ope.module_runner` — all 136 checks execute every run |
+| Collect observations with source, timestamp and target | `ope.audit` (HTTP, TLS, robots, HTML, JSON-LD, CSS/JS), `ope.crawler`, `ope.citability`, `ope.integrations.pagespeed` |
+| Normalize into finding records, keep evidence lifecycle separate from execution state | `ope.engine` |
+| Priority calculation | `ope.scoring` / `ope.audit` |
+| Remediation and validation requirements | Finding records carry both |
+| Re-run and compare after implementation | `ope.history` — metric and finding regression against the previous run |
+| Durable monitoring registration | Not implemented: runs are local and manual, with no scheduler |
+| Dataset and research execution classes | Not implemented: no backlink, ranking or research provider is bound |
+
+93 of the 136 registry checks have a bound evidence provider. The rest execute and return `UNKNOWN` with a reason, per the contract below.
+
 ## Run contract
 1. Load entity/project configuration.
 2. Resolve targets, markets, languages and devices.

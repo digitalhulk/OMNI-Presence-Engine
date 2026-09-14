@@ -1,101 +1,2676 @@
-/* Sample OPE audit result — same shape emitted by `ope audit --json`. */
+/* Sample OPE audit result — generated from a real `ope audit --json` run
+   against a fixed example page, so this file always matches the shape the
+   engine actually emits. Regenerate with scripts/gen_sample_report.py. */
 window.OPE_SAMPLE_REPORT = {
-  engine: "ope",
-  version: "0.1.0",
-  run_id: "ope-1726190400",
-  target: "https://starbrand.example.com",
-  final_url: "https://starbrand.example.com/",
-  started_at: 1726190400,
-  completed_at: 1726190402.4,
-  engine_contract: "evidence-root-cause-v1",
-  inventory: {
-    status: 200,
-    bytes: 48213,
-    title: "StarBrand — Digital Presence",
-    description: "",
-    lang: "en",
-    viewport: "",
-    canonical: "",
-    headings: 11,
-    h1: 1,
-    links: 47,
-    images: 8,
-    images_missing_alt: 3,
-    forms: 2,
-    json_ld_blocks: 0
+  "checks": {
+    "01-entity.consistency": {
+      "check_id": "01-entity.consistency",
+      "duration_ms": 0.028,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152470+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "name_matches_title": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "01-entity.identifiers": {
+      "check_id": "01-entity.identifiers",
+      "duration_ms": 0.013,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152496+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_identifiers": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "01-entity.identity": {
+      "check_id": "01-entity.identity",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152507+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "entity_types": [
+              "organization"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "01-entity.ownership": {
+      "check_id": "01-entity.ownership",
+      "duration_ms": 0.007,
+      "evidence": [],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "01-entity.relationships": {
+      "check_id": "01-entity.relationships",
+      "duration_ms": 0.009,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152525+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_relationships": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "02-infrastructure.cdn.configuration": {
+      "check_id": "02-infrastructure.cdn.configuration",
+      "duration_ms": 0.012,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152536+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "cdn_markers": [
+              "cf-ray",
+              "server: cloudflare"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "02-infrastructure",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "02-infrastructure.dns.resolution": {
+      "check_id": "02-infrastructure.dns.resolution",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152547+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "dns_ms": 18.4
+          }
+        }
+      ],
+      "findings": [],
+      "module": "02-infrastructure",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "02-infrastructure.hosting.availability": {
+      "check_id": "02-infrastructure.hosting.availability",
+      "duration_ms": 0.01,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152557+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "status": 200
+          }
+        }
+      ],
+      "findings": [],
+      "module": "02-infrastructure",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "02-infrastructure.server_reachability": {
+      "check_id": "02-infrastructure.server_reachability",
+      "duration_ms": 0.075,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152634+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "status": 200,
+            "ttfb_ms": 236.0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "02-infrastructure",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "02-infrastructure.tls.valid": {
+      "check_id": "02-infrastructure.tls.valid",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152648+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "scheme": "https"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "02-infrastructure",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "03-code.css_cost": {
+      "check_id": "03-code.css_cost",
+      "duration_ms": 0.009,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152657+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget_bytes": 150000,
+            "css_bytes": 88412,
+            "fetched_requests": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Measured from up to 1 fetched subresources; resources beyond the fetch cap are not counted.",
+      "status": "PASS"
+    },
+    "03-code.forms": {
+      "check_id": "03-code.forms",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152668+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "forms": 1,
+            "forms_missing_action": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "03-code.head_metadata": {
+      "check_id": "03-code.head_metadata",
+      "duration_ms": 0.009,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152677+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "title": "StarBrand — Digital Presence"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "03-code.html.validity": {
+      "check_id": "03-code.html.validity",
+      "duration_ms": 0.009,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152688+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "defects": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "03-code.js_cost": {
+      "check_id": "03-code.js_cost",
+      "duration_ms": 0.013,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152695+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget_bytes": 300000,
+            "fetched_requests": 1,
+            "js_bytes": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Measured from up to 1 fetched subresources; resources beyond the fetch cap are not counted.",
+      "status": "PASS"
+    },
+    "03-code.semantic_html": {
+      "check_id": "03-code.semantic_html",
+      "duration_ms": 0.01,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152713+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "landmarks": [
+              "footer",
+              "header",
+              "main",
+              "nav"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "03-code.structured_data": {
+      "check_id": "03-code.structured_data",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152721+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "json_ld_blocks": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "03-code.third_party_code": {
+      "check_id": "03-code.third_party_code",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152729+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget": 5,
+            "third_party_hosts": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "03-code",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "04-crawl.bot_access": {
+      "check_id": "04-crawl.bot_access",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152736+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "ai_crawlers": {
+              "ClaudeBot": "BLOCK",
+              "GPTBot": "ALLOW",
+              "OAI-SearchBot": "ALLOW",
+              "PerplexityBot": "ALLOW"
+            },
+            "blocked_ai_crawlers": [
+              "ClaudeBot"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "04-crawl.crawl_budget_risk": {
+      "check_id": "04-crawl.crawl_budget_risk",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "04-crawl.crawl_errors": {
+      "check_id": "04-crawl.crawl_errors",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "04-crawl.robots_access": {
+      "check_id": "04-crawl.robots_access",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152749+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "robots_status": 200,
+            "rule_count": 4
+          }
+        }
+      ],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "04-crawl.sitemap_discovery": {
+      "check_id": "04-crawl.sitemap_discovery",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152756+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "sitemaps": [
+              "https://starbrand.example.com/sitemap.xml"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "05-index.canonicalization": {
+      "check_id": "05-index.canonicalization",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152764+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "canonical": "https://starbrand.example.com/"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "05-index",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "05-index.duplication": {
+      "check_id": "05-index.duplication",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152771+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "canonical": "https://starbrand.example.com/",
+            "canonical_is_self": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "05-index",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "05-index.indexability": {
+      "check_id": "05-index.indexability",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152778+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "meta_robots": "",
+            "x_robots_tag": ""
+          }
+        }
+      ],
+      "findings": [],
+      "module": "05-index",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "05-index.rendering_indexability": {
+      "check_id": "05-index.rendering_indexability",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "05-index",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "05-index.status_codes": {
+      "check_id": "05-index.status_codes",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152787+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "status": 200
+          }
+        }
+      ],
+      "findings": [],
+      "module": "05-index",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "06-semantics.entity_markup": {
+      "check_id": "06-semantics.entity_markup",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152796+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "entity_types": [
+              "organization"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "06-semantics.knowledge_consistency": {
+      "check_id": "06-semantics.knowledge_consistency",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152804+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "description_matches": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "06-semantics.query_intent": {
+      "check_id": "06-semantics.query_intent",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152811+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "question_headings": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "06-semantics.relationships": {
+      "check_id": "06-semantics.relationships",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "06-semantics.taxonomy": {
+      "check_id": "06-semantics.taxonomy",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152821+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_breadcrumb": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "06-semantics.topic_coverage": {
+      "check_id": "06-semantics.topic_coverage",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152828+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "h1": 1,
+            "subheadings": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "06-semantics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "07-content.completeness": {
+      "check_id": "07-content.completeness",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152836+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget": 300,
+            "word_count": 97
+          }
+        }
+      ],
+      "findings": [],
+      "module": "07-content",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "07-content.conversion_context": {
+      "check_id": "07-content.conversion_context",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "07-content",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "07-content.factual_accuracy": {
+      "check_id": "07-content.factual_accuracy",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "07-content",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "07-content.freshness": {
+      "check_id": "07-content.freshness",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152847+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "article_modified": "",
+            "last_modified": null
+          }
+        }
+      ],
+      "findings": [],
+      "module": "07-content",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "07-content.helpfulness": {
+      "check_id": "07-content.helpfulness",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "07-content",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "07-content.intent_match": {
+      "check_id": "07-content.intent_match",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "07-content",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "07-content.internal_links": {
+      "check_id": "07-content.internal_links",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152857+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "internal_links": 4
+          }
+        }
+      ],
+      "findings": [],
+      "module": "07-content",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "07-content.originality": {
+      "check_id": "07-content.originality",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "07-content",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "08-media.captions_transcripts": {
+      "check_id": "08-media.captions_transcripts",
+      "duration_ms": 0.055,
+      "evidence": [],
+      "findings": [],
+      "module": "08-media",
+      "reason": "The page embeds no audio or video elements",
+      "status": "N/A"
+    },
+    "08-media.image_metadata": {
+      "check_id": "08-media.image_metadata",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152923+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images": 2,
+            "images_missing_dimensions": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "08-media",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "08-media.image_quality": {
+      "check_id": "08-media.image_quality",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "08-media",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "08-media.media_performance": {
+      "check_id": "08-media.media_performance",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "08-media",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "08-media.responsive_media": {
+      "check_id": "08-media.responsive_media",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152935+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images": 2,
+            "images_missing_srcset": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "08-media",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "08-media.video_metadata": {
+      "check_id": "08-media.video_metadata",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "08-media",
+      "reason": "The page embeds no video elements",
+      "status": "N/A"
+    },
+    "09-search.image_visibility": {
+      "check_id": "09-search.image_visibility",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "09-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "09-search.local_visibility": {
+      "check_id": "09-search.local_visibility",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "09-search",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "09-search.query_visibility": {
+      "check_id": "09-search.query_visibility",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "09-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "09-search.serp_eligibility": {
+      "check_id": "09-search.serp_eligibility",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "09-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "09-search.sitelinks": {
+      "check_id": "09-search.sitelinks",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "09-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "09-search.snippets": {
+      "check_id": "09-search.snippets",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152963+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "description_length": 102
+          }
+        }
+      ],
+      "findings": [],
+      "module": "09-search",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "10-ai-search.agent_accessibility": {
+      "check_id": "10-ai-search.agent_accessibility",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152969+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "ai_crawlers": {
+              "ClaudeBot": "BLOCK",
+              "GPTBot": "ALLOW",
+              "OAI-SearchBot": "ALLOW",
+              "PerplexityBot": "ALLOW"
+            },
+            "blocked_ai_crawlers": [
+              "ClaudeBot"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "10-ai-search.ai_retrievability": {
+      "check_id": "10-ai-search.ai_retrievability",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "10-ai-search.answer_eligibility": {
+      "check_id": "10-ai-search.answer_eligibility",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152981+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "average_citability_score": 38.8
+          }
+        }
+      ],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "10-ai-search.citation_presence": {
+      "check_id": "10-ai-search.citation_presence",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.152988+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "grade_distribution": {
+              "A": 0,
+              "B": 0,
+              "C": 1,
+              "D": 1,
+              "F": 2
+            }
+          }
+        }
+      ],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "10-ai-search.factual_consistency": {
+      "check_id": "10-ai-search.factual_consistency",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "10-ai-search.source_grounding": {
+      "check_id": "10-ai-search.source_grounding",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "10-ai-search",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "11-authority.backlinks": {
+      "check_id": "11-authority.backlinks",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "11-authority.brand_mentions": {
+      "check_id": "11-authority.brand_mentions",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "11-authority.citations": {
+      "check_id": "11-authority.citations",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "11-authority.consistency": {
+      "check_id": "11-authority.consistency",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153008+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_social_profiles": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "11-authority.expert_signals": {
+      "check_id": "11-authority.expert_signals",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153015+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_author": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "11-authority.reputation": {
+      "check_id": "11-authority.reputation",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "11-authority.reviews": {
+      "check_id": "11-authority.reviews",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153024+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_review": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "12-local.gbp_presence": {
+      "check_id": "12-local.gbp_presence",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "12-local.hours": {
+      "check_id": "12-local.hours",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "12-local.local_pages": {
+      "check_id": "12-local.local_pages",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "12-local.maps_presence": {
+      "check_id": "12-local.maps_presence",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "12-local.nap_consistency": {
+      "check_id": "12-local.nap_consistency",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153051+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "entity_types": [
+              "organization"
+            ],
+            "has_nap": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "12-local",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "12-local.reviews": {
+      "check_id": "12-local.reviews",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "12-local.service_area": {
+      "check_id": "12-local.service_area",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "12-local",
+      "reason": "The page declares no local business, so local detail checks do not apply",
+      "status": "N/A"
+    },
+    "13-ux.booking_friction": {
+      "check_id": "13-ux.booking_friction",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "13-ux.hierarchy": {
+      "check_id": "13-ux.hierarchy",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153068+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "h1": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "13-ux.interaction_clarity": {
+      "check_id": "13-ux.interaction_clarity",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153075+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "buttons": 1,
+            "buttons_without_text": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "13-ux.mobile_usability": {
+      "check_id": "13-ux.mobile_usability",
+      "duration_ms": 0.009,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153082+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "viewport": ""
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "13-ux.navigation": {
+      "check_id": "13-ux.navigation",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153091+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "landmarks": [
+              "footer",
+              "header",
+              "main",
+              "nav"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "13-ux.trust_visibility": {
+      "check_id": "13-ux.trust_visibility",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153098+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_trust_links": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "14-accessibility.alt_text": {
+      "check_id": "14-accessibility.alt_text",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153106+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images_missing_alt": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "14-accessibility.captions": {
+      "check_id": "14-accessibility.captions",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "The page embeds no audio or video elements",
+      "status": "N/A"
+    },
+    "14-accessibility.contrast": {
+      "check_id": "14-accessibility.contrast",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "14-accessibility.focus": {
+      "check_id": "14-accessibility.focus",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153119+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_focus_visible": false,
+            "suppresses_focus_outline": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "14-accessibility.forms": {
+      "check_id": "14-accessibility.forms",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153126+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "inputs": 1,
+            "unlabelled_inputs": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "14-accessibility.keyboard": {
+      "check_id": "14-accessibility.keyboard",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153132+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "positive_tabindex": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "14-accessibility.reduced_motion": {
+      "check_id": "14-accessibility.reduced_motion",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153139+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_motion": true,
+            "respects_reduced_motion": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "14-accessibility.semantics": {
+      "check_id": "14-accessibility.semantics",
+      "duration_ms": 0.012,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153149+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "landmarks": [
+              "footer",
+              "header",
+              "main",
+              "nav"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "14-accessibility",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "15-performance.cls": {
+      "check_id": "15-performance.cls",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "PageSpeed Insights evidence is not configured or unavailable",
+      "status": "UNKNOWN"
+    },
+    "15-performance.dns": {
+      "check_id": "15-performance.dns",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153162+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget_ms": 100.0,
+            "dns_ms": 18.4
+          }
+        }
+      ],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "15-performance.fcp": {
+      "check_id": "15-performance.fcp",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "PageSpeed Insights evidence is not configured or unavailable",
+      "status": "UNKNOWN"
+    },
+    "15-performance.frame_cost": {
+      "check_id": "15-performance.frame_cost",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "15-performance.inp": {
+      "check_id": "15-performance.inp",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "PageSpeed Insights evidence is not configured or unavailable",
+      "status": "UNKNOWN"
+    },
+    "15-performance.lcp": {
+      "check_id": "15-performance.lcp",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "PageSpeed Insights evidence is not configured or unavailable",
+      "status": "UNKNOWN"
+    },
+    "15-performance.network": {
+      "check_id": "15-performance.network",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153184+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget": 50,
+            "requests": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "15-performance.page_weight": {
+      "check_id": "15-performance.page_weight",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153190+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget_bytes": 1000000,
+            "css_bytes": 88412,
+            "html_bytes": 1741,
+            "js_bytes": 0,
+            "page_weight_bytes": 90153
+          }
+        }
+      ],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "Document plus fetched CSS/JS; images, fonts and media are not counted.",
+      "status": "PASS"
+    },
+    "15-performance.render_cost": {
+      "check_id": "15-performance.render_cost",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "15-performance.tbt": {
+      "check_id": "15-performance.tbt",
+      "duration_ms": 0.002,
+      "evidence": [],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "PageSpeed Insights evidence is not configured or unavailable",
+      "status": "UNKNOWN"
+    },
+    "15-performance.ttfb": {
+      "check_id": "15-performance.ttfb",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153202+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget_ms": 800.0,
+            "ttfb_ms": 236.0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "15-performance",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "16-security.abuse_controls": {
+      "check_id": "16-security.abuse_controls",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "16-security",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "16-security.auth": {
+      "check_id": "16-security.auth",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "16-security",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "16-security.cookies": {
+      "check_id": "16-security.cookies",
+      "duration_ms": 0.01,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153213+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "cookie_count": 1,
+            "insecure_cookies": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "16-security.csp": {
+      "check_id": "16-security.csp",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153224+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "present": false,
+            "unsafe_directives": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "16-security.dependencies": {
+      "check_id": "16-security.dependencies",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "16-security",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "16-security.https": {
+      "check_id": "16-security.https",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153232+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "scheme": "https"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "16-security.secrets": {
+      "check_id": "16-security.secrets",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153242+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "exposed_secret_types": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "16-security.security_headers": {
+      "check_id": "16-security.security_headers",
+      "duration_ms": 0.011,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153251+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "csp": false,
+            "hsts": true,
+            "referrer_policy_header": false,
+            "x_content_type_options": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "16-security.tls": {
+      "check_id": "16-security.tls",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153262+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "cipher": "TLS_AES_256_GCM_SHA384",
+            "days_until_expiry": 68,
+            "protocol": "TLSv1.3"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "16-security.waf": {
+      "check_id": "16-security.waf",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153270+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "waf_markers": [
+              "cf-ray",
+              "server: cloudflare"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "17-language.hreflang": {
+      "check_id": "17-language.hreflang",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153275+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "hreflang_count": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "17-language",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "17-language.language_declaration": {
+      "check_id": "17-language.language_declaration",
+      "duration_ms": 0.021,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153297+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "lang": "en"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "17-language",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "17-language.locale": {
+      "check_id": "17-language.locale",
+      "duration_ms": 0.011,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153308+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "lang": "en"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "17-language",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "17-language.regional_intent": {
+      "check_id": "17-language.regional_intent",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "17-language",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "17-language.translation_quality": {
+      "check_id": "17-language.translation_quality",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "17-language",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "17-language.transliteration": {
+      "check_id": "17-language.transliteration",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "17-language",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "17-language.unicode": {
+      "check_id": "17-language.unicode",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153324+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "declared_charset": "utf-8"
+          }
+        }
+      ],
+      "findings": [],
+      "module": "17-language",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "18-analytics.ai_referrals": {
+      "check_id": "18-analytics.ai_referrals",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.attribution": {
+      "check_id": "18-analytics.attribution",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.crm_linkage": {
+      "check_id": "18-analytics.crm_linkage",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.event_quality": {
+      "check_id": "18-analytics.event_quality",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.measurement_coverage": {
+      "check_id": "18-analytics.measurement_coverage",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153339+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_analytics": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "18-analytics.search_data": {
+      "check_id": "18-analytics.search_data",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.server_logs": {
+      "check_id": "18-analytics.server_logs",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "19-conversion.booking_completion": {
+      "check_id": "19-conversion.booking_completion",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "19-conversion.cta_clarity": {
+      "check_id": "19-conversion.cta_clarity",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153354+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_cta": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "19-conversion.funnel_dropoff": {
+      "check_id": "19-conversion.funnel_dropoff",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "19-conversion.lead_capture": {
+      "check_id": "19-conversion.lead_capture",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153363+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "contact_input": true,
+            "forms": 1
+          }
+        }
+      ],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "19-conversion.revenue_tracking": {
+      "check_id": "19-conversion.revenue_tracking",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "19-conversion.trust_to_action": {
+      "check_id": "19-conversion.trust_to_action",
+      "duration_ms": 0.001,
+      "evidence": [],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "No evidence provider is bound for this check.",
+      "status": "UNKNOWN"
+    },
+    "20-continuous-optimization.anomaly_detection": {
+      "check_id": "20-continuous-optimization.anomaly_detection",
+      "duration_ms": 0.009,
+      "evidence": [],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "No previous run is stored for this target, so there is no baseline to compare against",
+      "status": "N/A"
+    },
+    "20-continuous-optimization.monitoring": {
+      "check_id": "20-continuous-optimization.monitoring",
+      "duration_ms": 0.035,
+      "evidence": [],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "This is the first recorded run for the target, so there is no monitoring history yet",
+      "status": "N/A"
+    },
+    "20-continuous-optimization.prioritization": {
+      "check_id": "20-continuous-optimization.prioritization",
+      "duration_ms": 0.015,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153428+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "findings": 4,
+            "unranked": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "20-continuous-optimization.regression_guards": {
+      "check_id": "20-continuous-optimization.regression_guards",
+      "duration_ms": 0.005,
+      "evidence": [],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "No previous run is stored for this target, so there is no baseline to compare against",
+      "status": "N/A"
+    },
+    "20-continuous-optimization.root_cause": {
+      "check_id": "20-continuous-optimization.root_cause",
+      "duration_ms": 0.013,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153452+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "findings": 4,
+            "without_established_root_cause": [
+              "13-UX-MOBILE-001",
+              "14-A11Y-IMG-001",
+              "16-SEC-CONTENT-SECURITY-POLICY",
+              "16-SEC-REFERRER-POLICY"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "20-continuous-optimization.update_pipeline": {
+      "check_id": "20-continuous-optimization.update_pipeline",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153464+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "store_writable": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "20-continuous-optimization.validation": {
+      "check_id": "20-continuous-optimization.validation",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.153472+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "findings": 4,
+            "without_validation_steps": []
+          }
+        }
+      ],
+      "findings": [],
+      "module": "20-continuous-optimization",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    }
   },
-  modules: Object.assign(
-    Object.fromEntries(Array.from({ length: 20 }, (_, i) => {
-      const k = String(i + 1).padStart(2, "0");
-      return [k, { status: "UNKNOWN", findings: [] }];
-    })),
+  "completed_at": 1726190402.4,
+  "engine": "ope",
+  "engine_contract": "evidence-diagnostic-v1",
+  "final_url": "https://starbrand.example.com/",
+  "findings": [
     {
-      "03": { status: "FAIL", findings: ["03-CODE-META-001"] },
-      "05": { status: "FAIL", findings: ["05-INDEX-CAN-001"] },
-      "06": { status: "FAIL", findings: ["06-SEM-JSONLD-001"] },
-      "13": { status: "FAIL", findings: ["13-UX-MOBILE-001"] },
-      "14": { status: "FAIL", findings: ["14-A11Y-IMG-001"] },
-      "16": { status: "FAIL", findings: ["16-SEC-CSP", "16-SEC-HSTS"] },
-      "02": { status: "PASS", findings: [] }
+      "affected_layer": "13-ux",
+      "confidence": 1.0,
+      "dependency": "",
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "source": "html-parser",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "viewport": ""
+          }
+        }
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "execution_status": "FAIL",
+      "id": "13-UX-MOBILE-001",
+      "impact": "",
+      "module": "13-ux",
+      "priority": 1.0,
+      "regression_guard": [],
+      "remediation": [
+        "Add an appropriate responsive viewport declaration."
+      ],
+      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
+      "severity": "medium",
+      "status": "HYPOTHESIS",
+      "symptom": "Viewport metadata is missing",
+      "validation": [
+        "Validate mobile rendering across representative devices."
+      ]
+    },
+    {
+      "affected_layer": "14-accessibility",
+      "confidence": 1.0,
+      "dependency": "",
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "source": "html-parser",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images": 2,
+            "missing_alt": 1
+          }
+        }
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "execution_status": "FAIL",
+      "id": "14-A11Y-IMG-001",
+      "impact": "",
+      "module": "14-accessibility",
+      "priority": 1.0,
+      "regression_guard": [],
+      "remediation": [
+        "Add meaningful alt text to informative images; use empty alt for decorative images."
+      ],
+      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
+      "severity": "medium",
+      "status": "HYPOTHESIS",
+      "symptom": "1 of 2 images lack useful alt text",
+      "validation": [
+        "Re-run accessibility checks and inspect representative images."
+      ]
+    },
+    {
+      "affected_layer": "16-security",
+      "confidence": 1.0,
+      "dependency": "",
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "source": "http-headers",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "content-security-policy": null
+          }
+        }
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "execution_status": "FAIL",
+      "id": "16-SEC-CONTENT-SECURITY-POLICY",
+      "impact": "",
+      "module": "16-security",
+      "priority": 1.0,
+      "regression_guard": [],
+      "remediation": [
+        "Review and configure content-security-policy according to the application's threat model."
+      ],
+      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
+      "severity": "low",
+      "status": "HYPOTHESIS",
+      "symptom": "Recommended security header not observed: content-security-policy",
+      "validation": [
+        "Re-fetch response headers and verify content-security-policy."
+      ]
+    },
+    {
+      "affected_layer": "16-security",
+      "confidence": 1.0,
+      "dependency": "",
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "source": "http-headers",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "referrer-policy": null
+          }
+        }
+      ],
+      "evidence_status": "HYPOTHESIS",
+      "execution_status": "FAIL",
+      "id": "16-SEC-REFERRER-POLICY",
+      "impact": "",
+      "module": "16-security",
+      "priority": 1.0,
+      "regression_guard": [],
+      "remediation": [
+        "Review and configure referrer-policy according to the application's threat model."
+      ],
+      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
+      "severity": "low",
+      "status": "HYPOTHESIS",
+      "symptom": "Recommended security header not observed: referrer-policy",
+      "validation": [
+        "Re-fetch response headers and verify referrer-policy."
+      ]
     }
-  ),
-  summary: { finding_count: 7, critical: 0, high: 0, medium: 4, low: 2, info: 1 },
-  findings: [
-    {
-      id: "03-CODE-META-001", module: "03-code", symptom: "Document has no title",
-      status: "OBSERVED", severity: "medium", priority: 49.0, confidence: 1.0,
-      root_cause: "The application template does not render a <title> element for the route.",
-      remediation: ["Add a unique, descriptive title aligned to page intent.", "Wire titles into the shared layout template, not per-page hacks."],
-      validation: ["Re-audit title presence and uniqueness across routes."],
-      evidence: [{ source: "html-parser", target: "https://starbrand.example.com/", value: { title: "" }, confidence: 1.0 }]
+  ],
+  "headers": {
+    "cf-ray": "8a1b2c3d4e5f",
+    "content-type": "text/html; charset=utf-8",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=31536000",
+    "x-content-type-options": "nosniff"
+  },
+  "inventory": {
+    "article_modified": "",
+    "buttons": 1,
+    "buttons_without_text": 0,
+    "bytes": 1741,
+    "canonical": "https://starbrand.example.com/",
+    "canonical_is_self": true,
+    "caption_tracks": 0,
+    "cdn_markers": [
+      "cf-ray",
+      "server: cloudflare"
+    ],
+    "citability": {
+      "average_citability_score": 38.8,
+      "bottom_5_citable": [
+        {
+          "breakdown": {
+            "answer_block_quality": 10,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 2,
+            "uniqueness_signals": 0
+          },
+          "grade": "F",
+          "heading": "",
+          "label": "Poor Citability",
+          "total_score": 24,
+          "word_count": 6
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 20,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 2,
+            "uniqueness_signals": 0
+          },
+          "grade": "F",
+          "heading": "How does the audit work?",
+          "label": "Poor Citability",
+          "total_score": 34,
+          "word_count": 5
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 30,
+            "self_containment": 9,
+            "statistical_density": 0,
+            "structural_readability": 8,
+            "uniqueness_signals": 0
+          },
+          "grade": "D",
+          "heading": "What does StarBrand do?",
+          "label": "Low Citability",
+          "total_score": 47,
+          "word_count": 43
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 30,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 8,
+            "uniqueness_signals": 0
+          },
+          "grade": "C",
+          "heading": "How does the audit work?",
+          "label": "Moderate Citability",
+          "total_score": 50,
+          "word_count": 43
+        }
+      ],
+      "grade_distribution": {
+        "A": 0,
+        "B": 0,
+        "C": 1,
+        "D": 1,
+        "F": 2
+      },
+      "optimal_length_passages": 0,
+      "top_5_citable": [
+        {
+          "breakdown": {
+            "answer_block_quality": 30,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 8,
+            "uniqueness_signals": 0
+          },
+          "grade": "C",
+          "heading": "How does the audit work?",
+          "label": "Moderate Citability",
+          "total_score": 50,
+          "word_count": 43
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 30,
+            "self_containment": 9,
+            "statistical_density": 0,
+            "structural_readability": 8,
+            "uniqueness_signals": 0
+          },
+          "grade": "D",
+          "heading": "What does StarBrand do?",
+          "label": "Low Citability",
+          "total_score": 47,
+          "word_count": 43
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 20,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 2,
+            "uniqueness_signals": 0
+          },
+          "grade": "F",
+          "heading": "How does the audit work?",
+          "label": "Poor Citability",
+          "total_score": 34,
+          "word_count": 5
+        },
+        {
+          "breakdown": {
+            "answer_block_quality": 10,
+            "self_containment": 12,
+            "statistical_density": 0,
+            "structural_readability": 2,
+            "uniqueness_signals": 0
+          },
+          "grade": "F",
+          "heading": "",
+          "label": "Poor Citability",
+          "total_score": 24,
+          "word_count": 6
+        }
+      ],
+      "total_blocks_analyzed": 4
     },
-    {
-      id: "13-UX-MOBILE-001", module: "13-ux", symptom: "Viewport metadata is missing",
-      status: "OBSERVED", severity: "medium", priority: 42.0, confidence: 1.0,
-      root_cause: "The shared HTML head partial dropped the viewport declaration during a redesign.",
-      remediation: ["Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> to the shared head."],
-      validation: ["Validate mobile rendering across representative devices."],
-      evidence: [{ source: "html-parser", target: "https://starbrand.example.com/", value: { viewport: "" }, confidence: 1.0 }]
+    "contact_input": true,
+    "cookies": {
+      "cookie_count": 1,
+      "insecure_cookies": []
     },
-    {
-      id: "05-INDEX-CAN-001", module: "05-index", symptom: "No canonical link was detected",
-      status: "HYPOTHESIS", severity: "medium", priority: 35.0, confidence: 1.0,
-      root_cause: "Not yet established; additional evidence or dependency analysis is required.",
-      remediation: ["Define canonicalization deliberately for indexable URLs."],
-      validation: ["Confirm canonical points to the intended URL and is crawlable."],
-      evidence: [{ source: "html-parser", target: "https://starbrand.example.com/", value: { canonical: "" }, confidence: 1.0 }]
+    "csp": false,
+    "csp_profile": {
+      "present": false,
+      "unsafe_directives": []
     },
-    {
-      id: "14-A11Y-IMG-001", module: "14-accessibility", symptom: "3 of 8 images lack useful alt text",
-      status: "OBSERVED", severity: "medium", priority: 28.8, confidence: 1.0,
-      root_cause: "Marketing images are injected from a CMS field that does not require alt text.",
-      remediation: ["Require alt text in the CMS schema for informative images.", "Use empty alt for purely decorative images."],
-      validation: ["Re-run accessibility checks and inspect representative images."],
-      evidence: [{ source: "html-parser", target: "https://starbrand.example.com/", value: { images: 8, missing_alt: 3 }, confidence: 1.0 }]
+    "css_bytes": 88412,
+    "declared_charset": "utf-8",
+    "description": "StarBrand builds evidence-driven digital presence for growing businesses across search and AI answers.",
+    "description_matches": true,
+    "discovered_requests": 1,
+    "dns_ms": 18.4,
+    "doctype": "DOCTYPE html",
+    "entity_types": [
+      "organization"
+    ],
+    "exposed_secrets": [],
+    "external_links": 0,
+    "fetched_requests": 1,
+    "forms": 1,
+    "forms_missing_action": 1,
+    "h1": 1,
+    "has_address": false,
+    "has_analytics": false,
+    "has_author": false,
+    "has_breadcrumb": false,
+    "has_css": true,
+    "has_cta": true,
+    "has_entity_type": true,
+    "has_focus_visible": false,
+    "has_geo": false,
+    "has_google_profile": false,
+    "has_identifiers": true,
+    "has_motion": true,
+    "has_nap": false,
+    "has_opening_hours": false,
+    "has_relationships": false,
+    "has_review": false,
+    "has_service_area": false,
+    "has_social_profiles": true,
+    "has_trust_links": true,
+    "headings": 3,
+    "history": {
+      "baseline_recorded_at": null,
+      "baseline_run_id": null,
+      "metric_regressions": null,
+      "new_findings": null,
+      "resolved_findings": null,
+      "runs_recorded": 0,
+      "store_writable": true
     },
-    {
-      id: "16-SEC-CSP", module: "16-security", symptom: "Recommended security header not observed: content-security-policy",
-      status: "OBSERVED", severity: "low", priority: 11.2, confidence: 1.0,
-      root_cause: "The edge layer was never configured to emit a Content-Security-Policy header.",
-      remediation: ["Review and configure content-security-policy against the application threat model."],
-      validation: ["Re-fetch response headers and verify content-security-policy."],
-      evidence: [{ source: "http-headers", target: "https://starbrand.example.com/", value: { "content-security-policy": null }, confidence: 1.0 }]
+    "hreflang_count": 0,
+    "hsts": true,
+    "images": 2,
+    "images_missing_alt": 1,
+    "images_missing_dimensions": 2,
+    "images_missing_srcset": 2,
+    "inputs": 1,
+    "internal_links": 4,
+    "is_local_business": false,
+    "js_bytes": 0,
+    "json_ld_blocks": 1,
+    "landmarks": [
+      "footer",
+      "header",
+      "main",
+      "nav"
+    ],
+    "lang": "en",
+    "last_modified": null,
+    "links": 4,
+    "local_visibility_ready": false,
+    "media_elements": 0,
+    "meta_robots": "",
+    "name_matches_title": true,
+    "page_weight_bytes": 90153,
+    "pagespeed": null,
+    "positive_tabindex": 0,
+    "question_headings": 2,
+    "referrer_policy_header": false,
+    "respects_reduced_motion": false,
+    "robots": {
+      "ai_crawlers": {
+        "ClaudeBot": "BLOCK",
+        "GPTBot": "ALLOW",
+        "OAI-SearchBot": "ALLOW",
+        "PerplexityBot": "ALLOW"
+      },
+      "allowed_ai_crawlers": [
+        "GPTBot",
+        "OAI-SearchBot",
+        "PerplexityBot"
+      ],
+      "blocked_ai_crawlers": [
+        "ClaudeBot"
+      ],
+      "error": null,
+      "rule_count": 4,
+      "rules": [],
+      "sitemaps": [
+        "https://starbrand.example.com/sitemap.xml"
+      ],
+      "status": 200,
+      "url": "https://starbrand.example.com/robots.txt"
     },
-    {
-      id: "16-SEC-HSTS", module: "16-security", symptom: "Recommended security header not observed: strict-transport-security",
-      status: "OBSERVED", severity: "low", priority: 11.2, confidence: 1.0,
-      root_cause: "HSTS was not enabled when TLS was terminated at the CDN.",
-      remediation: ["Enable strict-transport-security with an appropriate max-age."],
-      validation: ["Re-fetch response headers and verify strict-transport-security."],
-      evidence: [{ source: "http-headers", target: "https://starbrand.example.com/", value: { "strict-transport-security": null }, confidence: 1.0 }]
+    "status": 200,
+    "structure": [
+      "body",
+      "head",
+      "html"
+    ],
+    "subheadings": 2,
+    "suppresses_focus_outline": true,
+    "third_party_hosts": [],
+    "title": "StarBrand — Digital Presence",
+    "title_count": 1,
+    "tls": {
+      "cipher": "TLS_AES_256_GCM_SHA384",
+      "days_until_expiry": 68,
+      "error": null,
+      "protocol": "TLSv1.3"
     },
-    {
-      id: "06-SEM-JSONLD-001", module: "06-semantics", symptom: "No JSON-LD structured data was detected",
-      status: "OBSERVED", severity: "info", priority: 3.6, confidence: 1.0,
-      root_cause: "Entity schema was planned but never shipped to the template layer.",
-      remediation: ["Add schema.org structured data that accurately represents visible content."],
-      validation: ["Validate structured data and compare it with visible content."],
-      evidence: [{ source: "html-parser", target: "https://starbrand.example.com/", value: { json_ld_blocks: 0 }, confidence: 1.0 }]
+    "ttfb_ms": 236.0,
+    "unlabelled_inputs": 1,
+    "videos": 0,
+    "videos_missing_metadata": 0,
+    "viewport": "",
+    "waf_markers": [
+      "cf-ray",
+      "server: cloudflare"
+    ],
+    "word_count": 97,
+    "x_content_type_options": true,
+    "x_robots_tag": null
+  },
+  "modules": {
+    "01": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "02": {
+      "findings": [],
+      "status": "PASS"
+    },
+    "03": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "04": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "05": {
+      "findings": [],
+      "status": "UNKNOWN"
+    },
+    "06": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "07": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "08": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "09": {
+      "findings": [],
+      "status": "UNKNOWN"
+    },
+    "10": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "11": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "12": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "13": {
+      "findings": [
+        "13-UX-MOBILE-001"
+      ],
+      "status": "FAIL"
+    },
+    "14": {
+      "findings": [
+        "14-A11Y-IMG-001"
+      ],
+      "status": "FAIL"
+    },
+    "15": {
+      "findings": [],
+      "status": "UNKNOWN"
+    },
+    "16": {
+      "findings": [
+        "16-SEC-CONTENT-SECURITY-POLICY",
+        "16-SEC-REFERRER-POLICY"
+      ],
+      "status": "FAIL"
+    },
+    "17": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "18": {
+      "findings": [],
+      "status": "FAIL"
+    },
+    "19": {
+      "findings": [],
+      "status": "UNKNOWN"
+    },
+    "20": {
+      "findings": [],
+      "status": "FAIL"
     }
-  ]
+  },
+  "run_id": "ope-1726190400",
+  "started_at": 1726190400,
+  "summary": {
+    "critical": 0,
+    "finding_count": 4,
+    "high": 0,
+    "info": 0,
+    "low": 2,
+    "medium": 2
+  },
+  "target": "https://starbrand.example.com",
+  "version": "0.2.0"
 };

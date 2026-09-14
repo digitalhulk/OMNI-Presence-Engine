@@ -145,7 +145,8 @@ ope audit https://example.com --html reports/audit.report.html</pre>
 <script>
 (function () {
   var SEV_CHIP = { critical: "rb-chip--error", high: "rb-chip--error", medium: "rb-chip--warning", low: "", info: "rb-chip--info" };
-  var STATUS_CHIP = { PASS: "rb-chip--success", FAIL: "rb-chip--error", OBSERVED: "rb-chip--error", HYPOTHESIS: "rb-chip--warning", UNKNOWN: "" };
+  var STATUS_CHIP = { PASS: "rb-chip--success", FAIL: "rb-chip--error", OBSERVED: "rb-chip--error", HYPOTHESIS: "rb-chip--warning", UNKNOWN: "", "N/A": "rb-chip--info", BLOCKED: "rb-chip--warning" };
+  var STATUS_ORDER = ["PASS", "FAIL", "UNKNOWN", "N/A", "BLOCKED"];
 
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
@@ -175,23 +176,73 @@ ope audit https://example.com --html reports/audit.report.html</pre>
     }).join("") + "</div>";
   }
 
+  // A module can FAIL on a registry check that produced no legacy finding
+  // record, so the card reports failing checks alongside the finding count.
+  function moduleCheckTally(r, key) {
+    var checks = r.checks || {}, failed = 0, total = 0;
+    Object.keys(checks).forEach(function (id) {
+      if (id.indexOf(key + "-") !== 0) return;
+      total += 1;
+      if (checks[id].status === "FAIL") failed += 1;
+    });
+    return { failed: failed, total: total };
+  }
+
   function moduleGrid(r) {
     var keys = Object.keys(r.modules || {}).sort();
     return '<h2>MODULES</h2><div class="rb-grid rb-grid-4 rb-grid-6" style="margin-bottom:var(--rb-sp-5);">' +
       keys.map(function (k) {
-        var m = r.modules[k], n = (m.findings || []).length;
+        var m = r.modules[k], n = (m.findings || []).length, tally = moduleCheckTally(r, k);
+        var detail = tally.total
+          ? tally.failed + "/" + tally.total + " CHECKS FAILING"
+          : n + " FINDING" + (n === 1 ? "" : "S");
         return '<div style="border:var(--rb-border-thick);padding:8px;">' +
           '<div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE ' + esc(k) + '</div>' +
           chip(m.status, STATUS_CHIP[m.status] || "") +
-          ' <span class="rb-mono rb-tiny">' + n + ' FINDING' + (n === 1 ? "" : "S") + '</span></div>';
+          ' <span class="rb-mono rb-tiny">' + esc(detail) + '</span></div>';
       }).join("") + "</div>";
   }
 
+  // Inventory entries are no longer all scalars: robots, TLS, cookies,
+  // citability, run history and PageSpeed are nested objects, so a plain
+  // string cast would print [object Object].
+  function fmtValue(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v !== "object") return esc(v);
+    var json = JSON.stringify(v);
+    if (json.length <= 120) return '<code class="rb-mono rb-tiny">' + esc(json) + "</code>";
+    return "<details><summary class='rb-mono rb-tiny rb-uppercase'>" + (Array.isArray(v) ? v.length + " ITEMS" : "OBJECT") +
+      "</summary><pre style='margin-top:var(--rb-sp-2);'>" + esc(JSON.stringify(v, null, 2)) + "</pre></details>";
+  }
+
   function inventoryTable(r) {
-    var rows = Object.keys(r.inventory || {}).map(function (k) {
-      return "<tr><th>" + esc(k.replace(/_/g, " ")) + '</th><td>' + esc(r.inventory[k]) + "</td></tr>";
+    var rows = Object.keys(r.inventory || {}).sort().map(function (k) {
+      return "<tr><th>" + esc(k.replace(/_/g, " ")) + '</th><td>' + fmtValue(r.inventory[k]) + "</td></tr>";
     }).join("");
     return '<h2>INVENTORY</h2><table class="rb-table" style="margin-bottom:var(--rb-sp-5);">' + rows + "</table>";
+  }
+
+  function checkSection(r) {
+    var checks = r.checks || {};
+    var ids = Object.keys(checks);
+    if (!ids.length) return "";
+    var totals = {};
+    ids.forEach(function (id) { var s = checks[id].status; totals[s] = (totals[s] || 0) + 1; });
+    var cards = STATUS_ORDER.filter(function (s) { return totals[s]; }).map(function (s) {
+      return '<div class="rb-card" style="text-align:center;padding:var(--rb-sp-3);">' +
+        '<div class="rb-mono rb-tiny rb-uppercase">' + esc(s) + "</div>" +
+        '<div style="font-family:var(--rb-font-headline);font-size:40px;line-height:1.1;">' + totals[s] + "</div></div>";
+    }).join("");
+    var failing = ids.filter(function (id) { return checks[id].status === "FAIL"; }).sort().map(function (id) {
+      var c = checks[id];
+      var value = c.evidence && c.evidence.length ? c.evidence[0].value : null;
+      return "<tr><th style='white-space:nowrap;'>" + esc(id) + "</th><td>" + fmtValue(value) +
+        (c.reason ? '<div class="rb-mono rb-tiny">' + esc(c.reason) + "</div>" : "") + "</td></tr>";
+    }).join("");
+    return "<h2>CHECKS</h2>" +
+      '<p class="rb-small">' + ids.length + ' registry checks executed. A check with no bound evidence provider reports UNKNOWN rather than passing.</p>' +
+      '<div class="rb-grid rb-grid-3" style="margin-bottom:var(--rb-sp-5);">' + cards + "</div>" +
+      (failing ? '<h3 class="rb-uppercase">Failing checks</h3><table class="rb-table" style="margin-bottom:var(--rb-sp-5);">' + failing + "</table>" : "");
   }
 
   function findingCard(f) {
@@ -224,7 +275,7 @@ ope audit https://example.com --html reports/audit.report.html</pre>
       '<hr class="rb-rule"><h2>REPORT // ' + esc(r.run_id || "") + "</h2>" +
       '<div class="rb-card rb-card--inverted" style="margin-bottom:var(--rb-sp-5);">' +
       '<p class="rb-mono rb-tiny" style="margin:0;">TARGET</p><h3 style="margin:0;word-break:break-all;">' + esc(r.target) + "</h3></div>" +
-      summaryCards(r) + moduleGrid(r) + inventoryTable(r) +
+      summaryCards(r) + moduleGrid(r) + checkSection(r) + inventoryTable(r) +
       "<h2>FINDINGS</h2><hr class='rb-rule'>" +
       ((r.findings || []).slice().sort(function (a, b) { return b.priority - a.priority; }).map(findingCard).join("") || "<p>No findings.</p>");
     if (scroll) mount.scrollIntoView({ behavior: "smooth", block: "start" });
