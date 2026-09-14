@@ -5,7 +5,7 @@ BOUND = {
     "02-infrastructure.hosting.availability",
     "03-code.head_metadata",
     "05-index.canonicalization",
-    "06-semantics.structured_data",
+    "03-code.structured_data",
     "13-ux.mobile_usability",
     "14-accessibility.alt_text",
     "17-language.language_declaration",

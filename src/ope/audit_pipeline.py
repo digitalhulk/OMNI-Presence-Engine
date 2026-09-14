@@ -11,7 +11,7 @@ AUDIT_BINDINGS = (
     "02-infrastructure.hosting.availability",
     "03-code.head_metadata",
     "05-index.canonicalization",
-    "06-semantics.structured_data",
+    "03-code.structured_data",
     "13-ux.mobile_usability",
     "14-accessibility.alt_text",
     "17-language.language_declaration",
@@ -62,7 +62,7 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),
         "05-index.canonicalization": ("05-index", "05-INDEX-CAN-001", "canonical"),
-        "06-semantics.structured_data": ("06-semantics", "06-SEM-JSONLD-001", "json_ld_blocks"),
+        "03-code.structured_data": ("03-code", "06-SEM-JSONLD-001", "json_ld_blocks"),
         "13-ux.mobile_usability": ("13-ux", "13-UX-MOBILE-001", "viewport"),
         "14-accessibility.alt_text": ("14-accessibility", "14-A11Y-IMG-001", "images_missing_alt"),
         "17-language.language_declaration": ("17-language", "17-LANG-001", "lang"),
