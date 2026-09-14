@@ -42,6 +42,21 @@ BOUND = {
     "07-content.freshness",
     "18-analytics.measurement_coverage",
     "19-conversion.lead_capture",
+    "06-semantics.taxonomy",
+    "06-semantics.knowledge_consistency",
+    "11-authority.reviews",
+    "11-authority.expert_signals",
+    "11-authority.consistency",
+    "01-entity.identifiers",
+    "01-entity.relationships",
+    "01-entity.consistency",
+    "12-local.local_pages",
+    "12-local.hours",
+    "12-local.maps_presence",
+    "12-local.gbp_presence",
+    "12-local.service_area",
+    "12-local.reviews",
+    "09-search.local_visibility",
 }
 
 PAGESPEED_SOURCED = {
@@ -94,9 +109,24 @@ def _audit_result():
                 "average_citability_score": 70.0,
                 "grade_distribution": {"A": 1, "B": 1, "C": 1, "D": 0, "F": 0},
             },
-            "entity_types": ["organization"],
+            "entity_types": ["organization", "restaurant"],
             "has_entity_type": True,
             "has_nap": True,
+            "is_local_business": True,
+            "has_address": True,
+            "has_geo": True,
+            "has_opening_hours": True,
+            "has_service_area": True,
+            "has_google_profile": True,
+            "local_visibility_ready": True,
+            "has_review": True,
+            "has_author": True,
+            "has_identifiers": True,
+            "has_relationships": True,
+            "has_social_profiles": True,
+            "has_breadcrumb": True,
+            "name_matches_title": True,
+            "description_matches": True,
             "images": 2,
             "images_missing_dimensions": 0,
             "images_missing_srcset": 0,
@@ -362,3 +392,60 @@ def test_no_forms_makes_lead_capture_check_unknown():
     audit["inventory"]["forms"] = 0
     result = execute_audit_checks(audit)
     assert result["checks"]["19-conversion.lead_capture"]["status"] == "UNKNOWN"
+
+
+def test_absent_structured_data_signals_fail_presence_checks():
+    audit = _audit_result()
+    audit["inventory"].update({"has_breadcrumb": False, "has_review": False, "has_author": False, "has_social_profiles": False})
+    result = execute_audit_checks(audit)
+    for check_id in ("06-semantics.taxonomy", "11-authority.reviews", "11-authority.expert_signals", "11-authority.consistency"):
+        assert result["checks"][check_id]["status"] == "FAIL"
+
+
+def test_non_local_site_makes_local_detail_checks_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["is_local_business"] = False
+    result = execute_audit_checks(audit)
+    for check_id in ("12-local.hours", "12-local.maps_presence", "12-local.gbp_presence", "12-local.service_area", "12-local.local_pages", "12-local.reviews", "09-search.local_visibility"):
+        assert result["checks"][check_id]["status"] == "N/A"
+
+
+def test_local_site_missing_details_fails_local_detail_checks():
+    audit = _audit_result()
+    audit["inventory"].update({"has_opening_hours": False, "has_geo": False, "has_google_profile": False, "local_visibility_ready": False})
+    result = execute_audit_checks(audit)
+    for check_id in ("12-local.hours", "12-local.maps_presence", "12-local.gbp_presence", "09-search.local_visibility"):
+        assert result["checks"][check_id]["status"] == "FAIL"
+
+
+def test_no_entity_markup_makes_entity_detail_checks_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["has_entity_type"] = False
+    result = execute_audit_checks(audit)
+    for check_id in ("01-entity.identifiers", "01-entity.relationships", "01-entity.consistency", "06-semantics.knowledge_consistency"):
+        assert result["checks"][check_id]["status"] == "N/A"
+
+
+def test_unpublished_comparison_values_are_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["name_matches_title"] = None
+    audit["inventory"]["description_matches"] = None
+    result = execute_audit_checks(audit)
+    assert result["checks"]["01-entity.consistency"]["status"] == "N/A"
+    assert result["checks"]["06-semantics.knowledge_consistency"]["status"] == "N/A"
+
+
+def test_mismatched_entity_name_fails_consistency_check():
+    audit = _audit_result()
+    audit["inventory"]["name_matches_title"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["01-entity.consistency"]["status"] == "FAIL"
+
+
+def test_missing_structured_data_observation_is_unknown():
+    audit = _audit_result()
+    del audit["inventory"]["has_breadcrumb"]
+    del audit["inventory"]["is_local_business"]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["06-semantics.taxonomy"]["status"] == "UNKNOWN"
+    assert result["checks"]["12-local.hours"]["status"] == "UNKNOWN"

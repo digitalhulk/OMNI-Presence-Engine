@@ -48,7 +48,52 @@ AUDIT_BINDINGS = (
     "07-content.freshness",
     "18-analytics.measurement_coverage",
     "19-conversion.lead_capture",
+    "06-semantics.taxonomy",
+    "06-semantics.knowledge_consistency",
+    "11-authority.reviews",
+    "11-authority.expert_signals",
+    "11-authority.consistency",
+    "01-entity.identifiers",
+    "01-entity.relationships",
+    "01-entity.consistency",
+    "12-local.local_pages",
+    "12-local.hours",
+    "12-local.maps_presence",
+    "12-local.gbp_presence",
+    "12-local.service_area",
+    "12-local.reviews",
+    "09-search.local_visibility",
 )
+
+# Structured-data checks, split by what absence of the signal actually means.
+#
+# Presence checks answer "is this signal published at all?", so an absent
+# signal is a FAIL (matching the existing structured_data/hreflang bindings).
+# Detail checks describe markup that only exists in context — the details of
+# a declared entity, or of a declared local business — so when that parent
+# markup is absent there is nothing to evaluate and the result is N/A rather
+# than a pile-on FAIL for sites the check does not apply to.
+_SD_PRESENCE_CHECKS = {
+    "06-semantics.taxonomy": ("06-semantics", "has_breadcrumb"),
+    "11-authority.reviews": ("11-authority", "has_review"),
+    "11-authority.expert_signals": ("11-authority", "has_author"),
+    "11-authority.consistency": ("11-authority", "has_social_profiles"),
+}
+_SD_ENTITY_DETAIL_CHECKS = {
+    "01-entity.identifiers": ("01-entity", "has_identifiers"),
+    "01-entity.relationships": ("01-entity", "has_relationships"),
+    "01-entity.consistency": ("01-entity", "name_matches_title"),
+    "06-semantics.knowledge_consistency": ("06-semantics", "description_matches"),
+}
+_SD_LOCAL_DETAIL_CHECKS = {
+    "12-local.local_pages": ("12-local", "has_address"),
+    "12-local.hours": ("12-local", "has_opening_hours"),
+    "12-local.maps_presence": ("12-local", "has_geo"),
+    "12-local.gbp_presence": ("12-local", "has_google_profile"),
+    "12-local.service_area": ("12-local", "has_service_area"),
+    "12-local.reviews": ("12-local", "has_review"),
+    "09-search.local_visibility": ("09-search", "local_visibility_ready"),
+}
 
 # Deterministic performance/citability thresholds. These are widely cited
 # industry budgets (Core Web Vitals "good" thresholds; DNS/TTFB latency
@@ -245,6 +290,26 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "has_analytics" not in inventory:
             return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
         return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id in _SD_PRESENCE_CHECKS:
+        module, key = _SD_PRESENCE_CHECKS[check_id]
+        if key not in inventory:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Structured-data observation is missing")
+        return _check(check_id, module, bool(inventory.get(key)), target, {key: inventory.get(key)})
+
+    if check_id in _SD_ENTITY_DETAIL_CHECKS or check_id in _SD_LOCAL_DETAIL_CHECKS:
+        entity_detail = check_id in _SD_ENTITY_DETAIL_CHECKS
+        module, key = (_SD_ENTITY_DETAIL_CHECKS if entity_detail else _SD_LOCAL_DETAIL_CHECKS)[check_id]
+        parent_key = "has_entity_type" if entity_detail else "is_local_business"
+        if parent_key not in inventory or key not in inventory:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Structured-data observation is missing")
+        if not inventory.get(parent_key):
+            reason = "No entity markup is published, so this detail has nothing to evaluate" if entity_detail else "The page declares no local business, so local detail checks do not apply"
+            return CheckResult(check_id, module, ExecutionStatus.NA, reason=reason)
+        value = inventory.get(key)
+        if value is None:
+            return CheckResult(check_id, module, ExecutionStatus.NA, reason="The markup publishes no comparable value for this check")
+        return _check(check_id, module, bool(value), target, {key: value})
 
     if check_id == "19-conversion.lead_capture":
         if inventory.get("forms", 0) == 0:

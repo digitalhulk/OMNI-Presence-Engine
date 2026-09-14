@@ -1,5 +1,5 @@
 import ope.audit as audit_module
-from ope.audit import PageParser, _finding, _json_ld_entities, _link_locality, audit
+from ope.audit import PageParser, _finding, _json_ld_summary, _link_locality, audit
 
 
 def test_parser_extracts_core_signals():
@@ -49,16 +49,52 @@ def test_parser_extracts_json_ld_content_images_and_forms():
     assert p.script_srcs == ["https://www.googletagmanager.com/gtag/js?id=G-XXXX"]
 
 
-def test_json_ld_entities_extracts_types_and_skips_malformed_blocks():
-    result = _json_ld_entities(['{"@type": "Organization"}', "not json", '{"@type": ["LocalBusiness"], "address": "1 Main St", "telephone": "555-0100"}'])
+def test_json_ld_summary_extracts_types_and_skips_malformed_blocks():
+    result = _json_ld_summary(['{"@type": "Organization"}', "not json", '{"@type": ["LocalBusiness"], "address": "1 Main St", "telephone": "555-0100"}'])
     assert result["types"] == ["localbusiness", "organization"]
     assert result["has_entity_type"] is True
     assert result["has_nap"] is True
+    assert result["is_local_business"] is True
 
 
-def test_json_ld_entities_without_nap_fields_is_false():
-    result = _json_ld_entities(['{"@type": "LocalBusiness"}'])
+def test_json_ld_summary_without_nap_fields_is_false():
+    result = _json_ld_summary(['{"@type": "LocalBusiness"}'])
     assert result["has_nap"] is False
+    assert result["has_address"] is False
+
+
+def test_json_ld_summary_recognises_local_subtypes_and_details():
+    result = _json_ld_summary([
+        '{"@type": "Restaurant", "address": {"@type": "PostalAddress", "streetAddress": "1 Main St"},'
+        ' "telephone": "555-0100", "geo": {"latitude": 1.0, "longitude": 2.0},'
+        ' "openingHours": "Mo-Fr 09:00-17:00", "areaServed": "Mumbai",'
+        ' "sameAs": ["https://g.page/acme", "https://linkedin.com/company/acme", "https://instagram.com/acme"],'
+        ' "aggregateRating": {"@type": "AggregateRating", "ratingValue": 4.5}}'
+    ])
+    assert result["is_local_business"] is True
+    assert result["has_geo"] is True
+    assert result["has_opening_hours"] is True
+    assert result["has_service_area"] is True
+    assert result["has_google_profile"] is True
+    assert result["has_social_profiles"] is True
+    assert result["has_review"] is True
+    assert result["local_visibility_ready"] is True
+
+
+def test_json_ld_summary_walks_nested_graph_documents():
+    result = _json_ld_summary(['{"@graph": [{"@type": "BreadcrumbList"}, {"@type": "Organization", "author": {"@type": "Person", "name": "A"}}]}'])
+    assert result["has_breadcrumb"] is True
+    assert result["has_author"] is True
+    assert result["has_entity_type"] is True
+
+
+def test_json_ld_summary_consistency_is_none_without_comparable_values():
+    result = _json_ld_summary(['{"@type": "Organization"}'], title="Acme", description="Desc")
+    assert result["name_matches_title"] is None
+    assert result["description_matches"] is None
+    matched = _json_ld_summary(['{"@type": "Organization", "name": "Acme", "description": "Desc"}'], title="Acme — Home", description="Desc")
+    assert matched["name_matches_title"] is True
+    assert matched["description_matches"] is True
 
 
 def test_link_locality_splits_internal_and_external():

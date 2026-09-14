@@ -148,31 +148,101 @@ def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], byt
 
 _ENTITY_TYPES = {"organization", "person", "localbusiness", "corporation", "ngo", "educationalorganization", "governmentorganization"}
 _ANALYTICS_MARKERS = ("googletagmanager.com", "google-analytics.com", "gtag/js")
+# schema.org's documented direct LocalBusiness subtypes, so a Restaurant or
+# Dentist is recognised as a local entity without declaring LocalBusiness.
+_LOCAL_TYPES = {
+    "localbusiness", "animalshelter", "archiveorganization", "automotivebusiness", "childcare",
+    "dentist", "drycleaningorlaundry", "emergencyservice", "employmentagency",
+    "entertainmentbusiness", "financialservice", "foodestablishment", "restaurant",
+    "governmentoffice", "healthandbeautybusiness", "homeandconstructionbusiness",
+    "insuranceagency", "legalservice", "library", "lodgingbusiness", "hotel",
+    "medicalbusiness", "physician", "professionalservice", "radiostation", "realestateagent",
+    "recyclingcenter", "selfstorage", "shoppingcenter", "sportsactivitylocation", "store",
+    "televisionstation", "touristinformationcenter", "travelagency",
+}
+_SOCIAL_PROFILE_HOSTS = ("linkedin.com", "facebook.com", "instagram.com", "x.com", "twitter.com", "youtube.com", "github.com", "wikipedia.org", "crunchbase.com", "pinterest.com", "tiktok.com")
+_GOOGLE_PROFILE_MARKERS = ("google.com/maps", "business.google.com", "maps.app.goo.gl", "goo.gl/maps", "g.page")
+_JSON_LD_MAX_NODES = 500
+_REVIEW_TYPES = {"review", "aggregaterating", "userreview", "criticreview"}
 
 
-def _json_ld_entities(raw_blocks: list[str]) -> dict[str, Any]:
-    """Parse JSON-LD blocks already present in the page for entity/NAP signals.
+def _json_ld_nodes(raw_blocks: list[str]) -> list[dict[str, Any]]:
+    """Flatten every object in the page's JSON-LD into a node list.
 
-    Malformed JSON-LD is common and is skipped rather than treated as an
-    error; only what successfully parses is reported as evidence.
+    The walk is iterative and node-capped so nested @graph documents are
+    covered without unbounded recursion. Malformed JSON-LD is common and
+    is skipped rather than treated as an error.
     """
-    types: set[str] = set()
-    has_nap = False
+    nodes: list[dict[str, Any]] = []
     for raw in raw_blocks:
         try:
             parsed = json.loads(raw)
         except ValueError:
             continue
-        candidates = parsed if isinstance(parsed, list) else [parsed]
-        for node in candidates:
-            if not isinstance(node, dict):
-                continue
-            node_type = node.get("@type")
-            node_types = {str(t).lower() for t in (node_type if isinstance(node_type, list) else [node_type]) if t}
-            types |= node_types
-            if node_types & {"localbusiness"} and node.get("address") and node.get("telephone"):
-                has_nap = True
-    return {"types": sorted(types), "has_entity_type": bool(types & _ENTITY_TYPES), "has_nap": has_nap}
+        stack: list[Any] = [parsed]
+        while stack and len(nodes) < _JSON_LD_MAX_NODES:
+            current = stack.pop()
+            if isinstance(current, dict):
+                nodes.append(current)
+                stack.extend(current.values())
+            elif isinstance(current, list):
+                stack.extend(current)
+    return nodes
+
+
+def _node_types(node: dict[str, Any]) -> set[str]:
+    raw = node.get("@type")
+    return {str(t).lower() for t in (raw if isinstance(raw, list) else [raw]) if t}
+
+
+def _flatten_urls(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [str(value.get("@id") or value.get("url") or "")]
+    if isinstance(value, list):
+        return [url for item in value for url in _flatten_urls(item)]
+    return []
+
+
+def _json_ld_summary(raw_blocks: list[str], title: str = "", description: str = "") -> dict[str, Any]:
+    """Derive deterministic structured-data signals from the page's JSON-LD.
+
+    Only what is actually published on the page is reported. Fields the
+    page does not declare are reported as absent (or None where the
+    comparison has no basis), never inferred.
+    """
+    nodes = _json_ld_nodes(raw_blocks)
+    types: set[str] = set()
+    for node in nodes:
+        types |= _node_types(node)
+    present = lambda *keys: any(node.get(key) for node in nodes for key in keys)
+    local_nodes = [node for node in nodes if _node_types(node) & _LOCAL_TYPES]
+    same_as = [url.lower() for node in nodes for url in _flatten_urls(node.get("sameAs")) if url]
+    names = [str(node["name"]) for node in nodes if isinstance(node.get("name"), str)]
+    descriptions = [str(node["description"]) for node in nodes if isinstance(node.get("description"), str)]
+    has_address = bool(local_nodes) and any(node.get("address") for node in local_nodes)
+    has_geo = bool(local_nodes) and any(node.get("geo") for node in local_nodes)
+    return {
+        "types": sorted(types),
+        "has_entity_type": bool(types & _ENTITY_TYPES),
+        "has_nap": any(node.get("address") and node.get("telephone") for node in local_nodes),
+        "is_local_business": bool(local_nodes),
+        "has_address": has_address,
+        "has_geo": has_geo,
+        "has_opening_hours": bool(local_nodes) and any(node.get("openingHours") or node.get("openingHoursSpecification") for node in local_nodes),
+        "has_service_area": bool(local_nodes) and any(node.get("areaServed") or node.get("serviceArea") for node in local_nodes),
+        "has_google_profile": any(marker in url for url in same_as for marker in _GOOGLE_PROFILE_MARKERS),
+        "local_visibility_ready": has_address and has_geo,
+        "has_review": bool(types & _REVIEW_TYPES) or present("aggregateRating", "review"),
+        "has_author": present("author", "creator"),
+        "has_identifiers": present("sameAs", "identifier", "vatID", "taxID", "duns", "leiCode"),
+        "has_relationships": present("parentOrganization", "subOrganization", "memberOf", "brand", "worksFor", "affiliation", "isPartOf"),
+        "has_social_profiles": sum(any(host in url for host in _SOCIAL_PROFILE_HOSTS) for url in same_as) >= 2,
+        "has_breadcrumb": "breadcrumblist" in types,
+        "name_matches_title": None if not (names and title) else any(name.lower() in title.lower() or title.lower() in name.lower() for name in names),
+        "description_matches": None if not (descriptions and description) else any(desc.strip().lower() == description.strip().lower() for desc in descriptions),
+    }
 
 
 def _link_locality(links: list[str], final_url: str) -> dict[str, int]:
@@ -204,7 +274,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     robots = crawler.fetch_robots(final_url, timeout=timeout)
     citability_report = citability.analyze_blocks(citability.extract_content_blocks(html))
     pagespeed_vitals = fetch_vitals(final_url)
-    entities = _json_ld_entities(p.json_ld_raw)
+    entities = _json_ld_summary(p.json_ld_raw, p.title.strip(), p.description)
     link_locality = _link_locality(p.links, final_url)
     has_analytics = any(marker in html for marker in _ANALYTICS_MARKERS)
     now = datetime.now(timezone.utc).isoformat()
@@ -243,7 +313,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], "has_entity_type": entities["has_entity_type"], "has_nap": entities["has_nap"], "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:
