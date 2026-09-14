@@ -97,6 +97,47 @@ def test_json_ld_summary_consistency_is_none_without_comparable_values():
     assert matched["description_matches"] is True
 
 
+def test_parser_resolves_input_labels_declared_after_the_input():
+    p = PageParser()
+    p.feed(
+        "<form>"
+        '<input type="text" id="named">'
+        '<label for="named">Named</label>'
+        '<label>Wrapped <input type="text"></label>'
+        '<input type="text" aria-label="Aria">'
+        '<input type="text" id="orphan">'
+        '<input type="hidden" name="csrf">'
+        "</form>"
+    )
+    p.close()
+    assert p.inputs == 4
+    assert p.unlabelled_inputs == 1
+
+
+def test_parser_extracts_structure_media_and_interaction_signals():
+    p = PageParser()
+    p.feed(
+        "<!DOCTYPE html><html><head><title>T</title><meta charset=\"utf-8\"></head>"
+        "<body><h1>Main</h1><h2>How does it work?</h2><h2>Pricing</h2>"
+        '<video src="v.mp4"></video><video src="w.mp4" poster="p.jpg" width="4" height="3"><track kind="captions" src="c.vtt"></video>'
+        '<a href="/privacy">Privacy policy</a><a href="/x">Book a demo</a>'
+        '<button aria-label="Close"></button><button></button>'
+        '<div tabindex="3">trap</div>'
+        "</body></html>"
+    )
+    p.close()
+    assert p.doctype.lower() == "doctype html"
+    assert p.charset == "utf-8"
+    assert p.title_count == 1
+    assert p.structure == {"html", "head", "body"}
+    assert p.heading_texts == ["Main", "How does it work?", "Pricing"]
+    assert p.videos == 2 and p.videos_missing_metadata == 1
+    assert p.media_elements == 2 and p.caption_tracks == 1
+    assert p.link_texts == ["Privacy policy", "Book a demo"]
+    assert p.buttons == 2 and p.buttons_without_text == 1
+    assert p.positive_tabindex == 1
+
+
 def test_cookie_profile_flags_missing_attributes_without_recording_values():
     profile = audit_module._cookie_profile([
         "session=secret-value; Path=/; Secure; HttpOnly; SameSite=Lax",

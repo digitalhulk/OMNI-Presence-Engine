@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -70,7 +71,41 @@ AUDIT_BINDINGS = (
     "16-security.waf",
     "02-infrastructure.cdn.configuration",
     "02-infrastructure.server_reachability",
+    "14-accessibility.forms",
+    "14-accessibility.semantics",
+    "14-accessibility.captions",
+    "14-accessibility.keyboard",
+    "08-media.captions_transcripts",
+    "08-media.video_metadata",
+    "05-index.status_codes",
+    "05-index.duplication",
+    "17-language.locale",
+    "17-language.unicode",
+    "03-code.html.validity",
+    "03-code.forms",
+    "13-ux.trust_visibility",
+    "13-ux.interaction_clarity",
+    "19-conversion.cta_clarity",
+    "07-content.completeness",
+    "06-semantics.topic_coverage",
+    "06-semantics.query_intent",
 )
+
+# Checks that compare a "how many are broken" count against the population
+# they belong to: N/A when the page contains none of that element at all,
+# PASS when none are broken, FAIL otherwise.
+_DEFECT_COUNT_CHECKS = {
+    "14-accessibility.forms": ("14-accessibility", "inputs", "unlabelled_inputs", "The page has no labelable form inputs"),
+    "14-accessibility.keyboard": ("14-accessibility", None, "positive_tabindex", ""),
+    "08-media.video_metadata": ("08-media", "videos", "videos_missing_metadata", "The page embeds no video elements"),
+    "13-ux.interaction_clarity": ("13-ux", "buttons", "buttons_without_text", "The page has no button elements"),
+    "03-code.forms": ("03-code", "forms", "forms_missing_action", "The page has no forms"),
+}
+# Checks that pass when a boolean signal is published on the page.
+_BOOLEAN_SIGNAL_CHECKS = {
+    "13-ux.trust_visibility": ("13-ux", "has_trust_links"),
+    "19-conversion.cta_clarity": ("19-conversion", "has_cta"),
+}
 
 # Structured-data checks, split by what absence of the signal actually means.
 #
@@ -118,6 +153,8 @@ _PSI_VITALS = {
 _CITABILITY_SCORE_BUDGET = 50.0
 _MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
 _CERT_EXPIRY_WARNING_DAYS = 14
+_LOCALE_PATTERN = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+_CONTENT_WORD_BUDGET = 300
 
 
 def _evidence(target: str, value: Any, source: str = "ope-audit") -> list[dict[str, Any]]:
@@ -299,6 +336,103 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "has_analytics" not in inventory:
             return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
         return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id in _DEFECT_COUNT_CHECKS:
+        module, population_key, defect_key, empty_reason = _DEFECT_COUNT_CHECKS[check_id]
+        defects = inventory.get(defect_key)
+        if not isinstance(defects, int):
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"'{defect_key}' observation is missing")
+        if population_key is not None:
+            population = inventory.get(population_key)
+            if not isinstance(population, int):
+                return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"'{population_key}' observation is missing")
+            if population == 0:
+                return CheckResult(check_id, module, ExecutionStatus.NA, reason=empty_reason)
+            return _check(check_id, module, defects == 0, target, {defect_key: defects, population_key: population})
+        return _check(check_id, module, defects == 0, target, {defect_key: defects})
+
+    if check_id in _BOOLEAN_SIGNAL_CHECKS:
+        module, key = _BOOLEAN_SIGNAL_CHECKS[check_id]
+        if key not in inventory:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=f"'{key}' observation is missing")
+        return _check(check_id, module, bool(inventory.get(key)), target, {key: inventory.get(key)})
+
+    if check_id == "14-accessibility.semantics":
+        landmarks = inventory.get("landmarks")
+        if landmarks is None:
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.UNKNOWN, reason="Landmark observation is missing")
+        landmarks = list(landmarks)
+        return _check(check_id, "14-accessibility", {"header", "main", "footer"}.issubset(landmarks), target, {"landmarks": landmarks})
+
+    if check_id in {"14-accessibility.captions", "08-media.captions_transcripts"}:
+        module = check_id.split(".", 1)[0]
+        media = inventory.get("media_elements")
+        tracks = inventory.get("caption_tracks")
+        if not isinstance(media, int) or not isinstance(tracks, int):
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Media observation is missing")
+        if media == 0:
+            return CheckResult(check_id, module, ExecutionStatus.NA, reason="The page embeds no audio or video elements")
+        return _check(check_id, module, tracks >= media, target, {"media_elements": media, "caption_tracks": tracks})
+
+    if check_id == "05-index.status_codes":
+        status = inventory.get("status")
+        if not isinstance(status, int):
+            return CheckResult(check_id, "05-index", ExecutionStatus.UNKNOWN, reason="HTTP status observation is missing")
+        return _check(check_id, "05-index", status == 200, target, {"status": status})
+
+    if check_id == "05-index.duplication":
+        if "canonical_is_self" not in inventory:
+            return CheckResult(check_id, "05-index", ExecutionStatus.UNKNOWN, reason="Canonical observation is missing")
+        canonical_is_self = inventory.get("canonical_is_self")
+        if canonical_is_self is None:
+            return CheckResult(check_id, "05-index", ExecutionStatus.NA, reason="The page declares no canonical URL to compare against")
+        return _check(check_id, "05-index", bool(canonical_is_self), target, {"canonical": inventory.get("canonical"), "canonical_is_self": canonical_is_self})
+
+    if check_id == "17-language.locale":
+        if "lang" not in inventory:
+            return CheckResult(check_id, "17-language", ExecutionStatus.UNKNOWN, reason="Language observation is missing")
+        lang = str(inventory.get("lang") or "").strip()
+        if not lang:
+            return CheckResult(check_id, "17-language", ExecutionStatus.NA, reason="No language is declared, so there is no locale tag to validate")
+        return _check(check_id, "17-language", bool(_LOCALE_PATTERN.match(lang)), target, {"lang": lang})
+
+    if check_id == "17-language.unicode":
+        if "declared_charset" not in inventory:
+            return CheckResult(check_id, "17-language", ExecutionStatus.UNKNOWN, reason="Charset observation is missing")
+        charset = str(inventory.get("declared_charset") or "").lower()
+        return _check(check_id, "17-language", charset.replace("-", "") == "utf8", target, {"declared_charset": charset})
+
+    if check_id == "03-code.html.validity":
+        if "structure" not in inventory or "doctype" not in inventory:
+            return CheckResult(check_id, "03-code", ExecutionStatus.UNKNOWN, reason="Document structure observation is missing")
+        structure = set(inventory.get("structure") or [])
+        doctype = str(inventory.get("doctype") or "").lower()
+        title_count = inventory.get("title_count", 0)
+        defects = []
+        if not doctype.startswith("doctype html"): defects.append("missing or non-HTML5 doctype")
+        for element in ("html", "head", "body"):
+            if element not in structure: defects.append(f"missing <{element}>")
+        if title_count != 1: defects.append(f"expected exactly one <title>, found {title_count}")
+        return _check(check_id, "03-code", not defects, target, {"defects": defects})
+
+    if check_id == "07-content.completeness":
+        word_count = inventory.get("word_count")
+        if not isinstance(word_count, int):
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Content word-count observation is missing")
+        return _check(check_id, "07-content", word_count >= _CONTENT_WORD_BUDGET, target, {"word_count": word_count, "budget": _CONTENT_WORD_BUDGET})
+
+    if check_id == "06-semantics.topic_coverage":
+        h1 = inventory.get("h1")
+        subheadings = inventory.get("subheadings")
+        if not isinstance(h1, int) or not isinstance(subheadings, int):
+            return CheckResult(check_id, "06-semantics", ExecutionStatus.UNKNOWN, reason="Heading observation is missing")
+        return _check(check_id, "06-semantics", h1 >= 1 and subheadings >= 2, target, {"h1": h1, "subheadings": subheadings})
+
+    if check_id == "06-semantics.query_intent":
+        question_headings = inventory.get("question_headings")
+        if not isinstance(question_headings, int):
+            return CheckResult(check_id, "06-semantics", ExecutionStatus.UNKNOWN, reason="Heading-text observation is missing")
+        return _check(check_id, "06-semantics", question_headings > 0, target, {"question_headings": question_headings})
 
     if check_id == "16-security.tls":
         tls = inventory.get("tls")

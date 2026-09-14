@@ -64,6 +64,24 @@ BOUND = {
     "16-security.waf",
     "02-infrastructure.cdn.configuration",
     "02-infrastructure.server_reachability",
+    "14-accessibility.forms",
+    "14-accessibility.semantics",
+    "14-accessibility.captions",
+    "14-accessibility.keyboard",
+    "08-media.captions_transcripts",
+    "08-media.video_metadata",
+    "05-index.status_codes",
+    "05-index.duplication",
+    "17-language.locale",
+    "17-language.unicode",
+    "03-code.html.validity",
+    "03-code.forms",
+    "13-ux.trust_visibility",
+    "13-ux.interaction_clarity",
+    "19-conversion.cta_clarity",
+    "07-content.completeness",
+    "06-semantics.topic_coverage",
+    "06-semantics.query_intent",
 }
 
 PAGESPEED_SOURCED = {
@@ -150,6 +168,26 @@ def _audit_result():
             "exposed_secrets": [],
             "cdn_markers": ["cf-ray"],
             "waf_markers": ["cf-ray"],
+            "doctype": "doctype html",
+            "declared_charset": "utf-8",
+            "title_count": 1,
+            "structure": ["body", "head", "html"],
+            "word_count": 850,
+            "inputs": 2,
+            "unlabelled_inputs": 0,
+            "buttons": 2,
+            "buttons_without_text": 0,
+            "videos": 1,
+            "videos_missing_metadata": 0,
+            "media_elements": 1,
+            "caption_tracks": 1,
+            "positive_tabindex": 0,
+            "forms_missing_action": 0,
+            "has_trust_links": True,
+            "has_cta": True,
+            "question_headings": 2,
+            "subheadings": 4,
+            "canonical_is_self": True,
         },
         "findings": [],
     }
@@ -453,6 +491,79 @@ def test_mismatched_entity_name_fails_consistency_check():
     audit["inventory"]["name_matches_title"] = False
     result = execute_audit_checks(audit)
     assert result["checks"]["01-entity.consistency"]["status"] == "FAIL"
+
+
+def test_defect_counts_fail_and_empty_populations_are_not_applicable():
+    audit = _audit_result()
+    audit["inventory"].update({"unlabelled_inputs": 1, "positive_tabindex": 2, "videos_missing_metadata": 1, "buttons_without_text": 1, "forms_missing_action": 1})
+    result = execute_audit_checks(audit)
+    for check_id in ("14-accessibility.forms", "14-accessibility.keyboard", "08-media.video_metadata", "13-ux.interaction_clarity", "03-code.forms"):
+        assert result["checks"][check_id]["status"] == "FAIL"
+
+    empty = _audit_result()
+    empty["inventory"].update({"inputs": 0, "videos": 0, "buttons": 0, "forms": 0})
+    result = execute_audit_checks(empty)
+    for check_id in ("14-accessibility.forms", "08-media.video_metadata", "13-ux.interaction_clarity", "03-code.forms"):
+        assert result["checks"][check_id]["status"] == "N/A"
+
+
+def test_uncaptioned_media_fails_and_no_media_is_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["caption_tracks"] = 0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["14-accessibility.captions"]["status"] == "FAIL"
+    assert result["checks"]["08-media.captions_transcripts"]["status"] == "FAIL"
+
+    audit["inventory"]["media_elements"] = 0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["14-accessibility.captions"]["status"] == "N/A"
+
+
+def test_non_200_status_fails_status_codes_check():
+    audit = _audit_result()
+    audit["inventory"]["status"] = 301
+    assert execute_audit_checks(audit)["checks"]["05-index.status_codes"]["status"] == "FAIL"
+
+
+def test_cross_canonical_fails_duplication_and_absent_canonical_is_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["canonical_is_self"] = False
+    assert execute_audit_checks(audit)["checks"]["05-index.duplication"]["status"] == "FAIL"
+    audit["inventory"]["canonical_is_self"] = None
+    assert execute_audit_checks(audit)["checks"]["05-index.duplication"]["status"] == "N/A"
+
+
+def test_locale_and_charset_validation():
+    audit = _audit_result()
+    audit["inventory"]["lang"] = "english!"
+    audit["inventory"]["declared_charset"] = "iso-8859-1"
+    result = execute_audit_checks(audit)
+    assert result["checks"]["17-language.locale"]["status"] == "FAIL"
+    assert result["checks"]["17-language.unicode"]["status"] == "FAIL"
+
+    audit["inventory"]["lang"] = "en-IN"
+    audit["inventory"]["declared_charset"] = "UTF-8"
+    result = execute_audit_checks(audit)
+    assert result["checks"]["17-language.locale"]["status"] == "PASS"
+    assert result["checks"]["17-language.unicode"]["status"] == "PASS"
+
+
+def test_structural_defects_fail_html_validity_check():
+    audit = _audit_result()
+    audit["inventory"]["doctype"] = ""
+    audit["inventory"]["title_count"] = 2
+    result = execute_audit_checks(audit)
+    check = result["checks"]["03-code.html.validity"]
+    assert check["status"] == "FAIL"
+    assert len(check["evidence"][0]["value"]["defects"]) == 2
+
+
+def test_thin_content_and_flat_headings_fail_their_checks():
+    audit = _audit_result()
+    audit["inventory"].update({"word_count": 40, "subheadings": 0, "question_headings": 0, "has_trust_links": False, "has_cta": False})
+    result = execute_audit_checks(audit)
+    for check_id in ("07-content.completeness", "06-semantics.topic_coverage", "06-semantics.query_intent", "13-ux.trust_visibility", "19-conversion.cta_clarity"):
+        assert result["checks"][check_id]["status"] == "FAIL"
 
 
 def test_outdated_tls_or_expiring_certificate_fails_tls_check():

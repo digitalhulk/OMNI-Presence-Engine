@@ -32,22 +32,65 @@ class PageParser(HTMLParser):
         self.meta_robots = ""; self.hreflang_count = 0; self.landmarks: set[str] = set()
         self.article_modified = ""; self.contact_input = False; self.script_srcs: list[str] = []
         self._in_json_ld = False; self._json_ld_buffer: list[str] = []
+        self.doctype = ""; self.charset = ""; self.title_count = 0; self.structure: set[str] = set()
+        self.heading_texts: list[str] = []; self.link_texts: list[str] = []
+        self.inputs = 0; self.unlabelled_inputs = 0; self.buttons = 0; self.buttons_without_text = 0
+        self.videos = 0; self.videos_missing_metadata = 0; self.media_elements = 0; self.caption_tracks = 0
+        self.positive_tabindex = 0; self.forms_missing_action = 0
+        self._label_for: set[str] = set(); self._input_ids: list[str] = []
+        self._label_depth = 0; self._heading_buffer: list[str] = []; self._in_heading = False
+        self._link_buffer: list[str] = []; self._in_link = False
+        self._button_buffer: list[str] = []; self._in_button = False; self._button_labelled = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
         if tag == "html": self.lang = a.get("lang", "") or ""
-        if tag == "title": self._in_title = True
-        if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}: self.headings.append(tag)
+        if tag in {"html", "head", "body"}: self.structure.add(tag)
+        if tag == "title": self._in_title = True; self.title_count += 1
+        if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+            self.headings.append(tag); self._in_heading = True; self._heading_buffer = []
         if tag == "h1": self.h1_count += 1
         if tag in {"header", "nav", "main", "footer"}: self.landmarks.add(tag)
-        if tag == "a" and a.get("href"): self.links.append(a["href"] or "")
+        if tag == "a" and a.get("href"):
+            self.links.append(a["href"] or ""); self._in_link = True; self._link_buffer = []
+        if tag == "label":
+            self._label_depth += 1
+            if a.get("for"): self._label_for.add(a["for"] or "")
+        if tag == "button":
+            self.buttons += 1
+            self._in_button = True
+            self._button_buffer = []
+            self._button_labelled = bool((a.get("aria-label") or "").strip() or a.get("aria-labelledby"))
+        if tag in {"video", "audio"}:
+            self.media_elements += 1
+            if tag == "video":
+                self.videos += 1
+                if not (a.get("poster") and a.get("width") and a.get("height")): self.videos_missing_metadata += 1
+        if tag == "track" and (a.get("kind") or "").lower() in {"captions", "subtitles"}: self.caption_tracks += 1
+        try:
+            if int(a.get("tabindex") or 0) > 0: self.positive_tabindex += 1
+        except ValueError:
+            pass
         if tag == "img":
             self.images += 1
             if not (a.get("alt") or "").strip(): self.images_missing_alt += 1
             if not (a.get("width") and a.get("height")): self.images_missing_dimensions += 1
             if not a.get("srcset"): self.images_missing_srcset += 1
-        if tag == "input" and (a.get("type") or "").lower() in {"email", "tel"}: self.contact_input = True
-        if tag == "form": self.forms += 1
+        if tag == "input":
+            input_type = (a.get("type") or "text").lower()
+            if input_type in {"email", "tel"}: self.contact_input = True
+            if input_type not in {"hidden", "submit", "button", "reset", "image"}:
+                self.inputs += 1
+                labelled = bool((a.get("aria-label") or "").strip() or a.get("aria-labelledby")) or self._label_depth > 0
+                if labelled:
+                    pass
+                elif a.get("id"):
+                    self._input_ids.append(a["id"] or "")
+                else:
+                    self.unlabelled_inputs += 1
+        if tag == "form":
+            self.forms += 1
+            if not a.get("action"): self.forms_missing_action += 1
         if tag == "link":
             rel = (a.get("rel") or "").lower().split()
             if "canonical" in rel: self.canonical = a.get("href", "") or ""
@@ -55,6 +98,7 @@ class PageParser(HTMLParser):
         if tag == "meta":
             name = (a.get("name") or "").lower()
             prop = (a.get("property") or "").lower()
+            if a.get("charset"): self.charset = a["charset"] or ""
             if name == "viewport": self.viewport = a.get("content", "") or ""
             if name == "description": self.description = a.get("content", "") or ""
             if name == "robots": self.meta_robots = a.get("content", "") or ""
@@ -71,10 +115,35 @@ class PageParser(HTMLParser):
         if tag == "script" and self._in_json_ld:
             self.json_ld_raw.append("".join(self._json_ld_buffer))
             self._in_json_ld = False
+        if tag in {"h1", "h2", "h3", "h4", "h5", "h6"} and self._in_heading:
+            self.heading_texts.append(" ".join("".join(self._heading_buffer).split()))
+            self._in_heading = False
+        if tag == "a" and self._in_link:
+            self.link_texts.append(" ".join("".join(self._link_buffer).split()))
+            self._in_link = False
+        if tag == "label" and self._label_depth:
+            self._label_depth -= 1
+        if tag == "button" and self._in_button:
+            if not (self._button_labelled or "".join(self._button_buffer).strip()):
+                self.buttons_without_text += 1
+            self._in_button = False
+
+    def handle_decl(self, decl: str) -> None:
+        self.doctype = decl.strip()
 
     def handle_data(self, data: str) -> None:
         if self._in_title: self.title += data.strip()
         if self._in_json_ld: self._json_ld_buffer.append(data)
+        if self._in_heading: self._heading_buffer.append(data)
+        if self._in_link: self._link_buffer.append(data)
+        if self._in_button: self._button_buffer.append(data)
+
+    def close(self) -> None:
+        super().close()
+        # label[for=...] can appear after the input it labels, so id-based
+        # association is resolved once the whole document has been seen.
+        self.unlabelled_inputs += sum(1 for input_id in self._input_ids if input_id not in self._label_for)
+        self._input_ids = []
 
 
 @dataclass
@@ -295,6 +364,11 @@ _SECRET_PATTERNS = (
     ("stripe_live_secret", re.compile(r"sk_live_[0-9A-Za-z]{16,}")),
     ("github_token", re.compile(r"gh[pousr]_[0-9A-Za-z]{36}")),
 )
+_TRUST_PATH_MARKERS = ("privacy", "terms", "contact", "about", "refund", "imprint", "impressum", "legal", "disclaimer")
+_CTA_PATTERN = re.compile(r"\b(get|start|book|buy|contact|sign\s?up|subscribe|request|call|order|download|demo|quote|register|apply|join|schedule|enquire|inquire)\b", re.IGNORECASE)
+_QUESTION_PATTERN = re.compile(r"^(how|what|why|when|where|which|who|can|do|does|is|are|should)\b", re.IGNORECASE)
+_LOCALE_PATTERN = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+_CONTENT_WORD_BUDGET = 300
 _CDN_HEADER_MARKERS = ("cf-ray", "x-amz-cf-id", "x-akamai-transformed", "x-vercel-id", "x-served-by", "x-cache", "x-fastly-request-id", "x-cdn", "cdn-cache")
 _WAF_MARKERS = ("cf-ray", "x-sucuri-id", "x-iinfo", "x-akamai-transformed", "x-waf-status", "x-sitelock-id")
 
@@ -374,9 +448,11 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     final_url, status, headers, body = response.final_url, response.status, response.headers, response.body
     dns_ms, ttfb_ms = response.dns_ms, response.ttfb_ms
     html = body.decode(response.charset, errors="replace")
-    p = PageParser(); p.feed(html)
+    p = PageParser(); p.feed(html); p.close()
     robots = crawler.fetch_robots(final_url, timeout=timeout)
-    citability_report = citability.analyze_blocks(citability.extract_content_blocks(html))
+    content_blocks = citability.extract_content_blocks(html)
+    word_count = sum(len(str(block.get("content", "")).split()) for block in content_blocks)
+    citability_report = citability.analyze_blocks(content_blocks)
     pagespeed_vitals = fetch_vitals(final_url)
     entities = _json_ld_summary(p.json_ld_raw, p.title.strip(), p.description)
     link_locality = _link_locality(p.links, final_url)
@@ -387,6 +463,11 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     exposed_secrets = _scan_secrets(html)
     cdn_markers = _edge_markers(headers, _CDN_HEADER_MARKERS)
     waf_markers = _edge_markers(headers, _WAF_MARKERS)
+    declared_charset = (p.charset or response.charset or "").lower()
+    has_trust_links = any(marker in (href + " " + text).lower() for href, text in zip(p.links, p.link_texts + [""] * len(p.links)) for marker in _TRUST_PATH_MARKERS)
+    has_cta = p.buttons > 0 or any(_CTA_PATTERN.search(text) for text in p.link_texts)
+    question_headings = sum(1 for text in p.heading_texts if text.endswith("?") or _QUESTION_PATTERN.match(text))
+    canonical_is_self = None if not p.canonical else urllib.parse.urljoin(final_url, p.canonical).rstrip("/") == final_url.rstrip("/")
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -423,7 +504,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:
