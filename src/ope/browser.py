@@ -4,7 +4,14 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import Any
+
+try:
+    _OPE_VERSION = _package_version("omni-presence-engine")
+except PackageNotFoundError:
+    _OPE_VERSION = "0.0.0"
 
 
 class BrowserStatus(str, Enum):
@@ -24,14 +31,14 @@ class DeviceProfile(str, Enum):
 DEVICE_CONFIGS: dict[DeviceProfile, dict[str, Any]] = {
     DeviceProfile.DESKTOP: {
         "viewport": {"width": 1920, "height": 1080},
-        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPE-Audit/0.3",
+        "user_agent": f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPE-Audit/{_OPE_VERSION}",
         "device_scale_factor": 1,
         "is_mobile": False,
         "has_touch": False,
     },
     DeviceProfile.MOBILE: {
         "viewport": {"width": 412, "height": 915},
-        "user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 OPE-Audit/0.3",
+        "user_agent": f"Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 OPE-Audit/{_OPE_VERSION}",
         "device_scale_factor": 2.625,
         "is_mobile": True,
         "has_touch": True,

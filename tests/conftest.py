@@ -13,7 +13,7 @@ def minimal_audit_result() -> dict[str, Any]:
         "target": "https://example.com",
         "run_id": "test-001",
         "started_at": 1700000000,
-        "version": "0.5.0",
+        "version": "0.6.0",
         "engine_contract": "evidence-diagnostic-v1",
         "status": "COMPLETED",
         "inventory": {"status": 200, "url": "https://example.com"},

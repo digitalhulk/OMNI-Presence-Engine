@@ -80,33 +80,13 @@ def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str
     return scores
 
 
-def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
-    """Attach the stable evidence/diagnostic contract to an audit result."""
-    output = deepcopy(result) if isinstance(result, dict) else {}
-    output["engine_contract"] = "evidence-diagnostic-v1"
-
-    raw_findings = output.get("findings")
-    findings = raw_findings if isinstance(raw_findings, list) else []
-    output["findings"] = [normalize_finding(finding) for finding in findings]
-
-    # Execute the deterministic registry against the evidence already collected
-    # by audit.py. No new evidence is invented here.
+def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> None:
+    """Execute registry checks, reconcile module statuses, and compute scores."""
     execution = execute_audit_checks(output)
     checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
     if not isinstance(checks, dict):
         checks = {}
-    # Publish the executed checks. Reconciliation alone discarded them, which
-    # left the report without its check-level evidence and handed the optional
-    # reasoning layer an empty deterministic_checks context.
     output["checks"] = checks
-
-    # Reconcile only the existing module status field. Inventory, findings and
-    # other report keys are preserved exactly; partial registry coverage is
-    # explicitly UNKNOWN rather than a false PASS.
-    modules = output.get("modules")
-    if not isinstance(modules, dict):
-        modules = {}
-        output["modules"] = modules
 
     for module_number, module in modules.items():
         if not isinstance(module, dict):
@@ -134,6 +114,33 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     scores = _compute_scores(modules, checks)
     output["health"] = global_health(scores)
 
+
+def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Create a fresh 20-module dict and populate findings into matching modules."""
+    modules: dict[str, dict[str, Any]] = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
+    for f in findings:
+        module_key = str(f.get("module", "")).split("-")[0]
+        if module_key in modules:
+            modules[module_key]["findings"].append(f.get("id", ""))
+            modules[module_key]["status"] = "FAIL"
+    return modules
+
+
+def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Attach the stable evidence/diagnostic contract to an audit result."""
+    output = deepcopy(result) if isinstance(result, dict) else {}
+    output["engine_contract"] = "evidence-diagnostic-v1"
+
+    raw_findings = output.get("findings")
+    findings = raw_findings if isinstance(raw_findings, list) else []
+    output["findings"] = [normalize_finding(finding) for finding in findings]
+
+    modules = output.get("modules")
+    if not isinstance(modules, dict):
+        modules = {}
+        output["modules"] = modules
+
+    _reconcile_and_score(output, modules)
     return output
 
 
@@ -160,43 +167,10 @@ def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
     inject_site_evidence(inventory, output)
     output["inventory"] = inventory
 
-    modules: dict[str, dict[str, Any]] = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
-    for f in output["findings"]:
-        module_key = str(f.get("module", "")).split("-")[0]
-        if module_key in modules:
-            modules[module_key]["findings"].append(f.get("id", ""))
-            modules[module_key]["status"] = "FAIL"
+    modules = _init_modules_from_findings(output["findings"])
     output["modules"] = modules
 
-    execution = execute_audit_checks(output)
-    checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
-    if not isinstance(checks, dict):
-        checks = {}
-    output["checks"] = checks
-
-    for module_number, module in modules.items():
-        module_code = str(module_number)
-        module_id = next(
-            (
-                str(value.get("module"))
-                for value in checks.values()
-                if isinstance(value, dict)
-                and str(value.get("module", "")).startswith(module_code + "-")
-            ),
-            module_code,
-        )
-        check_ids = checks_for_module(module_id)
-        statuses = [
-            str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
-            if isinstance(checks.get(check_id), dict)
-            else ExecutionStatus.UNKNOWN.value
-            for check_id in check_ids
-        ]
-        module["status"] = _reconcile_module_status(module.get("status"), statuses)
-
-    scores = _compute_scores(modules, checks)
-    output["health"] = global_health(scores)
-
+    _reconcile_and_score(output, modules)
     return output
 
 
@@ -221,45 +195,10 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
     inject_performance_evidence(inventory, output)
     output["inventory"] = inventory
 
-    modules: dict[str, dict[str, Any]] = {
-        f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)
-    }
-    for f in output["findings"]:
-        module_key = str(f.get("module", "")).split("-")[0]
-        if module_key in modules:
-            modules[module_key]["findings"].append(f.get("id", ""))
-            modules[module_key]["status"] = "FAIL"
+    modules = _init_modules_from_findings(output["findings"])
     output["modules"] = modules
 
-    execution = execute_audit_checks(output)
-    checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
-    if not isinstance(checks, dict):
-        checks = {}
-    output["checks"] = checks
-
-    for module_number, module in modules.items():
-        module_code = str(module_number)
-        module_id = next(
-            (
-                str(value.get("module"))
-                for value in checks.values()
-                if isinstance(value, dict)
-                and str(value.get("module", "")).startswith(module_code + "-")
-            ),
-            module_code,
-        )
-        check_ids = checks_for_module(module_id)
-        statuses = [
-            str(checks[check_id].get("status", ExecutionStatus.UNKNOWN.value))
-            if isinstance(checks.get(check_id), dict)
-            else ExecutionStatus.UNKNOWN.value
-            for check_id in check_ids
-        ]
-        module["status"] = _reconcile_module_status(module.get("status"), statuses)
-
-    scores = _compute_scores(modules, checks)
-    output["health"] = global_health(scores)
-
+    _reconcile_and_score(output, modules)
     return output
 
 

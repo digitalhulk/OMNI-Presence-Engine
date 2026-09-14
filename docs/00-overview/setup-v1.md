@@ -30,6 +30,10 @@ ope-audit https://example.com --markdown
 | `--timeout SECONDS` | Per-request timeout (default 15) |
 | `--no-subresources` | Skip fetching linked CSS/JS. Faster, but the CSS cost, third-party, motion and focus checks report `UNKNOWN` |
 | `--no-history` | Do not read or write the local run history, so regression comparison is skipped |
+| `--browser` | Run browser-based performance audit alongside HTTP audit |
+| `--browser-timeout SECONDS` | Browser timeout (default 30) |
+| `--browser-desktop-only` | Browser audit: skip mobile profile |
+| `--browser-mobile-only` | Browser audit: skip desktop profile |
 
 ## Site audit
 
@@ -49,6 +53,8 @@ cross-page findings under the `evidence-diagnostic-v1` contract.
 | `--html PATH` | Write a standalone RawBlock HTML report |
 | `--no-history` | Skip local run history |
 | `--no-sitemaps` | Skip sitemap discovery |
+| `--no-robots` | Skip robots.txt fetch |
+| `--allow-subdomains` | Include subdomains in the crawl scope |
 
 ## Performance audit
 
@@ -66,6 +72,8 @@ analysis, DOM analysis, render analysis) and produces findings under the
 | `--markdown` | Markdown output with CWV table and prioritized findings |
 | `--html PATH` | Write a standalone RawBlock HTML report |
 | `--desktop-only` | Skip mobile profile |
+| `--mobile-only` | Skip desktop profile |
+| `--no-screenshot` | Skip screenshot capture |
 
 ## Run history
 

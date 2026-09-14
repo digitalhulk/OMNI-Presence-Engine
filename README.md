@@ -420,8 +420,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.5.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound  
+**Version:** `0.6.0`  
+**Stage:** Evidence-driven executable foundation — 136/136 checks bound, scoring integrated  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**
