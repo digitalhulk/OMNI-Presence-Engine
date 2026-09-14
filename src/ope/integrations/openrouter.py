@@ -31,6 +31,9 @@ class OpenRouterError(RuntimeError):
     pass
 
 
+MAX_RESPONSE_BYTES = 1_048_576  # 1 MiB — bound the response body to prevent unbounded reads
+
+
 class OpenRouterClient:
     """Minimal stdlib-only OpenRouter chat client.
 
@@ -63,7 +66,11 @@ class OpenRouterClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=max(1, min(self.config.timeout, 120))) as response:
-                body = response.read()
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise OpenRouterError(
+                        f"OpenRouter response exceeds {MAX_RESPONSE_BYTES}-byte safety limit"
+                    )
         except urllib.error.HTTPError as exc:
             detail = exc.read(2048).decode("utf-8", errors="replace")
             raise OpenRouterError(f"OpenRouter HTTP {exc.code}: {detail}") from exc

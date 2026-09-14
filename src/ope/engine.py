@@ -8,7 +8,7 @@ from .dependency_graph import cascade_blocked, find_root_causes
 from .module_runner import ExecutionStatus
 from .performance_evidence import inject_performance_evidence
 from .registry import checks_for_module
-from .scoring import global_health, module_score
+from .scoring import health_basis, module_score_basis
 from .site_evidence import inject_site_evidence
 
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
@@ -65,7 +65,7 @@ def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
 
 
 def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str, float | None]:
-    """Compute per-module scores and attach them to each module dict."""
+    """Compute per-module scores and attach score + score_basis to each module."""
     scores: dict[str, float | None] = {}
     for module_number, module in modules.items():
         if not isinstance(module, dict):
@@ -75,9 +75,10 @@ def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str
         for check_id, check_data in checks.items():
             if isinstance(check_data, dict) and str(check_data.get("module", "")).startswith(module_code + "-"):
                 module_checks[check_id] = check_data
-        score = module_score(module, module_checks=module_checks or None)
-        module["score"] = score
-        scores[module_number] = score
+        basis = module_score_basis(module, module_checks=module_checks or None)
+        module["score"] = basis["score"]
+        module["score_basis"] = basis
+        scores[module_number] = basis["score"]
     return scores
 
 
@@ -129,7 +130,9 @@ def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> Non
         output["dependency_root_causes"] = root_cause_map
 
     scores = _compute_scores(modules, checks)
-    output["health"] = global_health(scores)
+    basis = health_basis(scores)
+    output["health"] = basis["health"]
+    output["health_basis"] = basis
 
 
 def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:

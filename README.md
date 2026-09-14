@@ -100,6 +100,7 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Dependency-aware `ModuleRunner`** executing the 136-check, 20-module registry.
 - **Executable dependency graph** — the 20-module dependency graph from `schemas/dependency-graph-v1.md` is encoded in `dependency_graph.py` with topological ordering, BLOCKED cascade propagation (FAIL/BLOCKED upstream blocks downstream; UNKNOWN does not), and graph-based root-cause traversal that traces each BLOCKED module back to the upstream FAIL modules that caused it.
 - **Graph-based scoring** — `global_health()` traverses the dependency graph in topological order so parallel branches (Content/Media, Search/AI, Authority/Local, UX tier) do not penalize each other. BLOCKED modules return `None` scores.
+- **Score explainability** — every module carries a `score_basis` (derivation method, check tallies, evidence-weighted pass/total, and `blocked_by` root causes for BLOCKED modules) and the output carries a `health_basis` (the per-module topological rollup with upstream confidence). Scores are never opaque numbers — the number and its provenance come from a single computation and can never disagree.
 - **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
@@ -422,8 +423,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.9.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound, dependency graph active, scoring integrated  
+**Version:** `0.10.0`  
+**Stage:** Evidence-driven executable foundation — 136/136 checks bound, dependency graph active, explainable scoring integrated  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**

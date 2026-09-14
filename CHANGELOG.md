@@ -4,6 +4,49 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.10.0
+
+Score explainability and provenance: every module score and the global
+health score now carry a deterministic basis explaining how they were
+derived. OpenRouter response-body size hardening.
+
+### Added
+
+- **`scoring.module_score_basis()`**: returns a structured explanation of a
+  module's score — the derivation `method` (`evidence-weighted-coverage`,
+  `status-derived`, `blocked`, or `no-evidence`), check tallies
+  (passed/failed/unknown/na), and the evidence-weighted pass/total. For
+  BLOCKED modules it names the `blocked_by` root causes. `module_score()`
+  now returns this basis's `score`, so the number and its explanation can
+  never disagree.
+- **`scoring.health_basis()`**: returns the topological rollup behind the
+  global health score — per scored module, the upstream confidence applied,
+  the limiting upstream module, and the adjusted contribution.
+  `global_health()` returns this basis's `health`.
+- **Engine wiring**: each module dict now carries a `score_basis` key and
+  the output carries a top-level `health_basis` key, attached by the three
+  normalizers via `engine._compute_scores()` / `_reconcile_and_score()`.
+- **Score-basis and health-basis tests**: `TestModuleScoreBasis` (7 tests)
+  and `TestHealthBasis` (5 tests) verifying basis/score agreement, check
+  tallies, BLOCKED root-cause naming, topological ordering, and determinism.
+- **OpenRouter body-bounding tests**: oversized responses are rejected and
+  bounded responses are parsed.
+
+### Changed
+
+- **`scoring.module_score()` / `global_health()`**: refactored to delegate
+  to the new basis functions — a single source of computation, so the
+  score and its provenance are always consistent. External behavior and
+  golden values are unchanged.
+
+### Fixed
+
+- **OpenRouter unbounded read**: `OpenRouterClient.chat_json()` now bounds
+  the success response body to 1 MiB (`MAX_RESPONSE_BYTES`), matching the
+  bound already enforced on the audit HTTP path. Previously the success
+  path called `response.read()` with no size limit while only the error
+  path was bounded.
+
 ## 0.9.0
 
 Executable dependency graph, BLOCKED cascade propagation, graph-based
