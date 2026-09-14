@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import ipaddress
-import socket
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
+
+from . import USER_AGENT
+from .url import validate_url_strict
 
 AI_CRAWLERS = (
     "GPTBot",
@@ -35,24 +36,8 @@ class RobotsRule:
     line: int
 
 
-def _safe_url(url: str) -> str:
-    parsed = urllib.parse.urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("OPE accepts only absolute HTTP(S) URLs with a hostname")
-    host = parsed.hostname.rstrip(".")
-    try:
-        addresses = {ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
-    except socket.gaierror as exc:
-        raise ValueError(f"DNS resolution failed for target: {host}") from exc
-    if not addresses:
-        raise ValueError(f"No address resolved for target: {host}")
-    if any(a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified for a in addresses):
-        raise ValueError("Robots target resolves to a restricted network address")
-    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.params, parsed.query, ""))
-
-
 def robots_url(page_url: str) -> str:
-    parsed = urllib.parse.urlparse(_safe_url(page_url))
+    parsed = urllib.parse.urlparse(validate_url_strict(page_url))
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, "/robots.txt", "", "", ""))
 
 
@@ -103,7 +88,7 @@ def analyze_robots(text: str, path: str = "/") -> dict[str, Any]:
 
 def fetch_robots(page_url: str, timeout: int = 10) -> dict[str, Any]:
     target = robots_url(page_url)
-    request = urllib.request.Request(target, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+    request = urllib.request.Request(target, headers={"User-Agent": USER_AGENT}, method="GET")
     try:
         with urllib.request.urlopen(request, timeout=max(1, min(timeout, 30))) as response:
             body = response.read(MAX_ROBOTS_BYTES + 1)

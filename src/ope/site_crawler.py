@@ -12,6 +12,7 @@ from enum import Enum
 from html.parser import HTMLParser
 from typing import Any
 
+from . import USER_AGENT
 from .url import (
     normalize_url,
     resolve_url,
@@ -47,7 +48,7 @@ class CrawlConfig:
     delay: float = DEFAULT_DELAY
     max_retries: int = MAX_RETRIES
     allow_subdomains: bool = False
-    user_agent: str = "OPE-Audit/0.1"
+    user_agent: str = USER_AGENT
     respect_robots: bool = True
 
 

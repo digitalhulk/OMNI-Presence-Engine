@@ -8,6 +8,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
+from .. import USER_AGENT
+
 
 @dataclass(frozen=True)
 class PageSpeedConfig:
@@ -43,7 +45,7 @@ class PageSpeedClient:
             params["key"] = self.config.api_key
         request = urllib.request.Request(
             f"{self.config.base_url}?{urllib.parse.urlencode(params)}",
-            headers={"User-Agent": "OPE-Audit/0.1"},
+            headers={"User-Agent": USER_AGENT},
             method="GET",
         )
         try:

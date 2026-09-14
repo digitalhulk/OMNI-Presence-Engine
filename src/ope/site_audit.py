@@ -6,6 +6,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import USER_AGENT
 from . import crawler as robots_mod
 from .crawlability import analyze_site_crawlability
 from .indexability import analyze_indexability, find_duplicate_candidates
@@ -26,7 +27,7 @@ class SiteAuditConfig:
     fetch_sitemaps: bool = True
     fetch_robots: bool = True
     max_retries: int = 2
-    user_agent: str = "OPE-Audit/0.1"
+    user_agent: str = USER_AGENT
 
 
 @dataclass
