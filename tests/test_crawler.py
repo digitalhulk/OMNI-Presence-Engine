@@ -20,3 +20,19 @@ def test_specific_agent_overrides_wildcard():
     result = analyze_robots("User-agent: *\nDisallow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n")
     assert result["ai_crawlers"]["OAI-SearchBot"] == "ALLOW"
     assert result["ai_crawlers"]["ClaudeBot"] == "BLOCK"
+
+
+def test_equal_length_allow_disallow_tie_favors_allow():
+    # RFC 9309 / Google's published robots.txt precedence: when two rules
+    # match with exactly the same path length, Allow wins the tie. This is
+    # not documented in docs/AI_CRAWLER_INTELLIGENCE.md (which only covers
+    # agent-specificity and longest-match), so this pins the tie-break
+    # behavior explicitly rather than leaving it implicit.
+    rules = parse_robots("User-agent: GPTBot\nDisallow: /private/\nAllow: /private/\n")
+    assert effective_access(rules, "GPTBot", "/private/") == "ALLOW"
+
+
+def test_longer_disallow_beats_shorter_allow():
+    rules = parse_robots("User-agent: GPTBot\nAllow: /blog\nDisallow: /blog/private\n")
+    assert effective_access(rules, "GPTBot", "/blog/private") == "BLOCK"
+    assert effective_access(rules, "GPTBot", "/blog/public") == "ALLOW"
