@@ -28,7 +28,33 @@ AUDIT_BINDINGS = (
     "03-code.semantic_html",
     "17-language.hreflang",
     "09-search.snippets",
+    "02-infrastructure.dns.resolution",
+    "15-performance.dns",
+    "15-performance.ttfb",
+    "15-performance.page_weight",
+    "15-performance.lcp",
+    "15-performance.fcp",
+    "15-performance.cls",
+    "15-performance.tbt",
+    "15-performance.inp",
+    "10-ai-search.answer_eligibility",
+    "10-ai-search.citation_presence",
 )
+
+# Deterministic performance/citability thresholds. These are widely cited
+# industry budgets (Core Web Vitals "good" thresholds; DNS/TTFB latency
+# guidance), not fabricated data — the underlying measurements are real.
+_DNS_MS_BUDGET = 100.0
+_TTFB_MS_BUDGET = 800.0
+_PAGE_WEIGHT_BYTES_BUDGET = 100_000
+_PSI_VITALS = {
+    "15-performance.lcp": ("lcp_ms", 2500.0),
+    "15-performance.fcp": ("fcp_ms", 1800.0),
+    "15-performance.cls": ("cls", 0.1),
+    "15-performance.tbt": ("tbt_ms", 200.0),
+    "15-performance.inp": ("inp_ms", 200.0),
+}
+_CITABILITY_SCORE_BUDGET = 50.0
 
 
 def _evidence(target: str, value: Any, source: str = "ope-audit") -> list[dict[str, Any]]:
@@ -123,6 +149,55 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
             return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Meta description observation is missing")
         length = len(str(inventory.get("description") or "").strip())
         return _check(check_id, "09-search", 50 <= length <= 160, target, {"description_length": length})
+
+    if check_id == "02-infrastructure.dns.resolution":
+        dns_ms = inventory.get("dns_ms")
+        if not isinstance(dns_ms, (int, float)):
+            return CheckResult(check_id, "02-infrastructure", ExecutionStatus.UNKNOWN, reason="DNS timing observation is missing")
+        return _check(check_id, "02-infrastructure", True, target, {"dns_ms": dns_ms})
+
+    if check_id == "15-performance.dns":
+        dns_ms = inventory.get("dns_ms")
+        if not isinstance(dns_ms, (int, float)):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="DNS timing observation is missing")
+        return _check(check_id, "15-performance", dns_ms <= _DNS_MS_BUDGET, target, {"dns_ms": dns_ms, "budget_ms": _DNS_MS_BUDGET})
+
+    if check_id == "15-performance.ttfb":
+        ttfb_ms = inventory.get("ttfb_ms")
+        if not isinstance(ttfb_ms, (int, float)):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="TTFB timing observation is missing")
+        return _check(check_id, "15-performance", ttfb_ms <= _TTFB_MS_BUDGET, target, {"ttfb_ms": ttfb_ms, "budget_ms": _TTFB_MS_BUDGET})
+
+    if check_id == "15-performance.page_weight":
+        doc_bytes = inventory.get("bytes")
+        if not isinstance(doc_bytes, int):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Response size observation is missing")
+        result = _check(check_id, "15-performance", doc_bytes <= _PAGE_WEIGHT_BYTES_BUDGET, target, {"html_bytes": doc_bytes, "budget_bytes": _PAGE_WEIGHT_BYTES_BUDGET})
+        result.reason = "Measures the main HTML document only; excludes images, CSS, and JavaScript payload."
+        return result
+
+    if check_id in _PSI_VITALS:
+        vitals = inventory.get("pagespeed")
+        if not isinstance(vitals, dict):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="PageSpeed Insights evidence is not configured or unavailable")
+        key, budget = _PSI_VITALS[check_id]
+        value = vitals.get(key)
+        if not isinstance(value, (int, float)):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason=f"PageSpeed Insights did not report '{key}'")
+        return _check(check_id, "15-performance", value <= budget, target, {key: value, "budget": budget}, source="pagespeed-insights")
+
+    if check_id in {"10-ai-search.answer_eligibility", "10-ai-search.citation_presence"}:
+        report = inventory.get("citability")
+        if not isinstance(report, dict) or not report.get("total_blocks_analyzed"):
+            return CheckResult(check_id, "10-ai-search", ExecutionStatus.UNKNOWN, reason="Citability observation is missing or has no analyzable content blocks")
+        if check_id == "10-ai-search.answer_eligibility":
+            score = report.get("average_citability_score")
+            if not isinstance(score, (int, float)):
+                return CheckResult(check_id, "10-ai-search", ExecutionStatus.UNKNOWN, reason="Citability score is missing")
+            return _check(check_id, "10-ai-search", score >= _CITABILITY_SCORE_BUDGET, target, {"average_citability_score": score})
+        distribution = report.get("grade_distribution") or {}
+        strong = int(distribution.get("A", 0)) + int(distribution.get("B", 0))
+        return _check(check_id, "10-ai-search", strong > 0, target, {"grade_distribution": distribution})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),

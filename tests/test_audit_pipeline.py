@@ -22,6 +22,25 @@ BOUND = {
     "03-code.semantic_html",
     "17-language.hreflang",
     "09-search.snippets",
+    "02-infrastructure.dns.resolution",
+    "15-performance.dns",
+    "15-performance.ttfb",
+    "15-performance.page_weight",
+    "15-performance.lcp",
+    "15-performance.fcp",
+    "15-performance.cls",
+    "15-performance.tbt",
+    "15-performance.inp",
+    "10-ai-search.answer_eligibility",
+    "10-ai-search.citation_presence",
+}
+
+PAGESPEED_SOURCED = {
+    "15-performance.lcp",
+    "15-performance.fcp",
+    "15-performance.cls",
+    "15-performance.tbt",
+    "15-performance.inp",
 }
 
 
@@ -57,6 +76,15 @@ def _audit_result():
                 "allowed_ai_crawlers": ["GPTBot", "OAI-SearchBot"],
                 "sitemaps": ["https://example.com/sitemap.xml"],
             },
+            "dns_ms": 42.0,
+            "ttfb_ms": 300.0,
+            "bytes": 5000,
+            "pagespeed": {"lcp_ms": 2000.0, "fcp_ms": 1200.0, "cls": 0.05, "tbt_ms": 100.0, "inp_ms": 150.0},
+            "citability": {
+                "total_blocks_analyzed": 3,
+                "average_citability_score": 70.0,
+                "grade_distribution": {"A": 1, "B": 1, "C": 1, "D": 0, "F": 0},
+            },
         },
         "findings": [],
     }
@@ -68,8 +96,9 @@ def test_bound_audit_checks_produce_schema_complete_evidence():
         check = result["checks"][check_id]
         assert check["status"] == "PASS"
         assert check["evidence"]
+        expected_source = "pagespeed-insights" if check_id in PAGESPEED_SOURCED else "ope-audit"
         for evidence in check["evidence"]:
-            assert evidence["source"] == "ope-audit"
+            assert evidence["source"] == expected_source
             assert evidence["observed_at"]
 
 
@@ -182,3 +211,56 @@ def test_short_description_fails_snippet_check():
     audit["inventory"]["description"] = "Too short."
     result = execute_audit_checks(audit)
     assert result["checks"]["09-search.snippets"]["status"] == "FAIL"
+
+
+def test_slow_dns_and_ttfb_fail_performance_budgets():
+    audit = _audit_result()
+    audit["inventory"]["dns_ms"] = 500.0
+    audit["inventory"]["ttfb_ms"] = 2000.0
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.dns"]["status"] == "FAIL"
+    assert result["checks"]["15-performance.ttfb"]["status"] == "FAIL"
+    assert result["checks"]["02-infrastructure.dns.resolution"]["status"] == "PASS"
+
+
+def test_heavy_document_fails_page_weight_budget():
+    audit = _audit_result()
+    audit["inventory"]["bytes"] = 500_000
+    result = execute_audit_checks(audit)
+    assert result["checks"]["15-performance.page_weight"]["status"] == "FAIL"
+
+
+def test_missing_pagespeed_evidence_is_unknown():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = None
+    result = execute_audit_checks(audit)
+    for check_id in ("15-performance.lcp", "15-performance.fcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
+        assert result["checks"][check_id]["status"] == "UNKNOWN"
+
+
+def test_poor_web_vitals_fail_their_checks():
+    audit = _audit_result()
+    audit["inventory"]["pagespeed"] = {"lcp_ms": 5000.0, "fcp_ms": 3000.0, "cls": 0.4, "tbt_ms": 600.0, "inp_ms": 600.0}
+    result = execute_audit_checks(audit)
+    for check_id in ("15-performance.lcp", "15-performance.fcp", "15-performance.cls", "15-performance.tbt", "15-performance.inp"):
+        assert result["checks"][check_id]["status"] == "FAIL"
+
+
+def test_missing_citability_observation_is_unknown():
+    audit = _audit_result()
+    audit["inventory"]["citability"] = {"total_blocks_analyzed": 0, "average_citability_score": 0.0, "grade_distribution": {}}
+    result = execute_audit_checks(audit)
+    assert result["checks"]["10-ai-search.answer_eligibility"]["status"] == "UNKNOWN"
+    assert result["checks"]["10-ai-search.citation_presence"]["status"] == "UNKNOWN"
+
+
+def test_weak_citability_fails_ai_search_checks():
+    audit = _audit_result()
+    audit["inventory"]["citability"] = {
+        "total_blocks_analyzed": 4,
+        "average_citability_score": 20.0,
+        "grade_distribution": {"A": 0, "B": 0, "C": 1, "D": 1, "F": 2},
+    }
+    result = execute_audit_checks(audit)
+    assert result["checks"]["10-ai-search.answer_eligibility"]["status"] == "FAIL"
+    assert result["checks"]["10-ai-search.citation_presence"]["status"] == "FAIL"

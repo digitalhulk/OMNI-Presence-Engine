@@ -41,7 +41,7 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
             "<body><header></header><nav></nav><main><h1>Hi</h1></main><footer></footer></body></html>"
         )
         headers = {"Strict-Transport-Security": "max-age=1", "X-Content-Type-Options": "nosniff"}
-        return "https://example.com/", 200, headers, html.encode(), "utf-8"
+        return "https://example.com/", 200, headers, html.encode(), "utf-8", 12.3, 250.0
 
     fake_robots = {
         "url": "https://example.com/robots.txt", "status": 200, "error": None, "rule_count": 0,
@@ -59,3 +59,7 @@ def test_audit_wires_robots_and_new_inventory_signals(monkeypatch):
     assert inventory["hsts"] is True
     assert inventory["csp"] is False
     assert inventory["h1"] == 1
+    assert inventory["dns_ms"] == 12.3
+    assert inventory["ttfb_ms"] == 250.0
+    assert inventory["citability"]["total_blocks_analyzed"] == 0
+    assert inventory["pagespeed"] is None

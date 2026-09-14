@@ -14,7 +14,8 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from typing import Any
 
-from . import crawler
+from . import citability, crawler
+from .integrations.pagespeed import fetch_vitals
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
@@ -105,13 +106,19 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, safe)
 
 
-def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], bytes, str]:
+def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], bytes, str, float, float]:
     safe_url = _validate_url(url)
+    hostname = urllib.parse.urlparse(safe_url).hostname or ""
+    dns_start = time.perf_counter()
+    socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
+    dns_ms = round((time.perf_counter() - dns_start) * 1000, 1)
     req = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
     ctx = ssl.create_default_context()
     opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
     opener.max_redirections = MAX_REDIRECTS
+    ttfb_start = time.perf_counter()
     with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
+        ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
         content_type = (r.headers.get("Content-Type") or "").lower()
         if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
             raise ValueError(f"Unsupported target content type: {content_type}")
@@ -119,7 +126,7 @@ def _request(url: str, timeout: int = 15) -> tuple[str, int, dict[str, str], byt
         if len(body) > MAX_RESPONSE_BYTES:
             raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
         final_url = _validate_url(r.geturl())
-        return final_url, r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8"
+        return final_url, r.status, dict(r.headers.items()), body, r.headers.get_content_charset() or "utf-8", dns_ms, ttfb_ms
 
 
 def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[Evidence], remediation: list[str], validation: list[str], impact: float = .5, urgency: float = .5, fixability: float = .8) -> Finding:
@@ -131,10 +138,12 @@ def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[
 def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     started = time.time()
     normalized = url if urllib.parse.urlparse(url).scheme else "https://" + url
-    final_url, status, headers, body, charset = _request(normalized, timeout)
+    final_url, status, headers, body, charset, dns_ms, ttfb_ms = _request(normalized, timeout)
     html = body.decode(charset, errors="replace")
     p = PageParser(); p.feed(html)
     robots = crawler.fetch_robots(final_url, timeout=timeout)
+    citability_report = citability.analyze_blocks(citability.extract_content_blocks(html))
+    pagespeed_vitals = fetch_vitals(final_url)
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -171,7 +180,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:
