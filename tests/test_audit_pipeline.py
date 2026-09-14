@@ -88,6 +88,10 @@ BOUND = {
     "15-performance.network",
     "14-accessibility.reduced_motion",
     "14-accessibility.focus",
+    "20-continuous-optimization.monitoring",
+    "20-continuous-optimization.anomaly_detection",
+    "20-continuous-optimization.regression_guards",
+    "20-continuous-optimization.update_pipeline",
 }
 
 PAGESPEED_SOURCED = {
@@ -205,6 +209,15 @@ def _audit_result():
             "respects_reduced_motion": True,
             "suppresses_focus_outline": False,
             "has_focus_visible": True,
+            "history": {
+                "store_writable": True,
+                "runs_recorded": 3,
+                "baseline_run_id": "ope-100",
+                "baseline_recorded_at": "2026-01-01T00:00:00+00:00",
+                "metric_regressions": [],
+                "new_findings": [],
+                "resolved_findings": [],
+            },
         },
         "findings": [],
     }
@@ -509,6 +522,54 @@ def test_mismatched_entity_name_fails_consistency_check():
     audit["inventory"]["name_matches_title"] = False
     result = execute_audit_checks(audit)
     assert result["checks"]["01-entity.consistency"]["status"] == "FAIL"
+
+
+def test_first_run_has_no_baseline_so_history_checks_are_not_applicable():
+    audit = _audit_result()
+    audit["inventory"]["history"] = {"store_writable": True, "runs_recorded": 0, "baseline_run_id": None, "metric_regressions": None, "new_findings": None, "resolved_findings": None}
+    result = execute_audit_checks(audit)
+    assert result["checks"]["20-continuous-optimization.monitoring"]["status"] == "N/A"
+    assert result["checks"]["20-continuous-optimization.anomaly_detection"]["status"] == "N/A"
+    assert result["checks"]["20-continuous-optimization.regression_guards"]["status"] == "N/A"
+    assert result["checks"]["20-continuous-optimization.update_pipeline"]["status"] == "PASS"
+
+
+def test_regressions_against_the_baseline_fail_their_checks():
+    audit = _audit_result()
+    audit["inventory"]["history"].update({"metric_regressions": [{"metric": "ttfb_ms", "before": 100, "after": 900}], "new_findings": ["13-UX-MOBILE-001"]})
+    result = execute_audit_checks(audit)
+    assert result["checks"]["20-continuous-optimization.anomaly_detection"]["status"] == "FAIL"
+    assert result["checks"]["20-continuous-optimization.regression_guards"]["status"] == "FAIL"
+
+
+def test_unwritable_history_store_fails_update_pipeline_check():
+    audit = _audit_result()
+    audit["inventory"]["history"]["store_writable"] = False
+    assert execute_audit_checks(audit)["checks"]["20-continuous-optimization.update_pipeline"]["status"] == "FAIL"
+
+
+def test_history_checks_are_unknown_when_history_is_disabled():
+    audit = _audit_result()
+    del audit["inventory"]["history"]
+    result = execute_audit_checks(audit)
+    for check_id in ("20-continuous-optimization.monitoring", "20-continuous-optimization.anomaly_detection", "20-continuous-optimization.regression_guards", "20-continuous-optimization.update_pipeline"):
+        assert result["checks"][check_id]["status"] == "UNKNOWN"
+
+
+def test_finding_record_quality_checks_read_this_run_s_findings():
+    audit = _audit_result()
+    result = execute_audit_checks(audit)
+    for check_id in ("20-continuous-optimization.root_cause", "20-continuous-optimization.prioritization", "20-continuous-optimization.validation"):
+        assert result["checks"][check_id]["status"] == "N/A"
+
+    audit["findings"] = [
+        {"id": "A-1", "status": "HYPOTHESIS", "root_cause": "", "priority": 10, "validation": ["step"]},
+        {"id": "A-2", "status": "OBSERVED", "root_cause": "Server misconfiguration", "priority": 20, "validation": []},
+    ]
+    result = execute_audit_checks(audit)
+    assert result["checks"]["20-continuous-optimization.root_cause"]["status"] == "FAIL"
+    assert result["checks"]["20-continuous-optimization.prioritization"]["status"] == "PASS"
+    assert result["checks"]["20-continuous-optimization.validation"]["status"] == "FAIL"
 
 
 def test_oversized_subresources_and_request_counts_fail():

@@ -75,6 +75,10 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     checks = execution.get("checks", {}) if isinstance(execution, dict) else {}
     if not isinstance(checks, dict):
         checks = {}
+    # Publish the executed checks. Reconciliation alone discarded them, which
+    # left the report without its check-level evidence and handed the optional
+    # reasoning layer an empty deterministic_checks context.
+    output["checks"] = checks
 
     # Reconcile only the existing module status field. Inventory, findings and
     # other report keys are preserved exactly; partial registry coverage is

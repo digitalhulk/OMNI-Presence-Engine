@@ -95,7 +95,22 @@ AUDIT_BINDINGS = (
     "15-performance.network",
     "14-accessibility.reduced_motion",
     "14-accessibility.focus",
+    "20-continuous-optimization.monitoring",
+    "20-continuous-optimization.anomaly_detection",
+    "20-continuous-optimization.regression_guards",
+    "20-continuous-optimization.update_pipeline",
+    "20-continuous-optimization.root_cause",
+    "20-continuous-optimization.prioritization",
+    "20-continuous-optimization.validation",
 )
+
+# Finding-record quality checks: they read the engine's own output for this
+# run, so they are N/A when the run produced no findings to describe.
+_FINDING_RECORD_CHECKS = {
+    "20-continuous-optimization.root_cause": "root_cause",
+    "20-continuous-optimization.prioritization": "prioritization",
+    "20-continuous-optimization.validation": "validation",
+}
 
 # Measured subresource budgets, in transferred bytes.
 _SUBRESOURCE_BUDGETS = {
@@ -356,6 +371,43 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "has_analytics" not in inventory:
             return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
         return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id.startswith("20-continuous-optimization."):
+        module = "20-continuous-optimization"
+        if check_id in _FINDING_RECORD_CHECKS:
+            findings = [item for item in audit_result.get("findings") or [] if isinstance(item, dict)]
+            if not findings:
+                return CheckResult(check_id, module, ExecutionStatus.NA, reason="This run produced no findings to record")
+            dimension = _FINDING_RECORD_CHECKS[check_id]
+            if dimension == "root_cause":
+                # normalize_finding marks a finding HYPOTHESIS when it has no
+                # established root cause, so unresolved diagnosis is visible here.
+                unresolved = [str(item.get("id")) for item in findings if str(item.get("status")) == "HYPOTHESIS" or not item.get("root_cause")]
+                return _check(check_id, module, not unresolved, target, {"findings": len(findings), "without_established_root_cause": unresolved})
+            if dimension == "prioritization":
+                unranked = [str(item.get("id")) for item in findings if not isinstance(item.get("priority"), (int, float)) or item.get("priority") is None]
+                return _check(check_id, module, not unranked, target, {"findings": len(findings), "unranked": unranked})
+            unvalidated = [str(item.get("id")) for item in findings if not item.get("validation")]
+            return _check(check_id, module, not unvalidated, target, {"findings": len(findings), "without_validation_steps": unvalidated})
+
+        history = inventory.get("history")
+        if not isinstance(history, dict):
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Run-history evidence is not available; run the audit with history enabled")
+        if check_id == "20-continuous-optimization.update_pipeline":
+            return _check(check_id, module, bool(history.get("store_writable")), target, {"store_writable": history.get("store_writable")})
+        if check_id == "20-continuous-optimization.monitoring":
+            recorded = history.get("runs_recorded")
+            if not isinstance(recorded, int):
+                return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Run-history evidence is incomplete")
+            if recorded == 0:
+                return CheckResult(check_id, module, ExecutionStatus.NA, reason="This is the first recorded run for the target, so there is no monitoring history yet")
+            return _check(check_id, module, True, target, {"runs_recorded": recorded, "baseline_run_id": history.get("baseline_run_id")})
+        key = "metric_regressions" if check_id == "20-continuous-optimization.anomaly_detection" else "new_findings"
+        observed = history.get(key)
+        if observed is None:
+            return CheckResult(check_id, module, ExecutionStatus.NA, reason="No previous run is stored for this target, so there is no baseline to compare against")
+        observed = list(observed)
+        return _check(check_id, module, not observed, target, {key: observed, "baseline_run_id": history.get("baseline_run_id")})
 
     if check_id in _SUBRESOURCE_BUDGETS:
         module, key, budget = _SUBRESOURCE_BUDGETS[check_id]

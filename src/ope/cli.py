@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import history
 from .audit import audit, markdown_report
 from .engine import normalize_result
 from .report_html import write_html_report
@@ -46,7 +47,12 @@ def setup_project() -> int:
 
 def audit_command(args: argparse.Namespace) -> int:
     try:
-        result = normalize_result(audit(args.url, timeout=args.timeout, fetch_subresources=not args.no_subresources))
+        raw = audit(args.url, timeout=args.timeout, fetch_subresources=not args.no_subresources)
+        if not args.no_history:
+            history.attach_baseline(raw)
+        result = normalize_result(raw)
+        if not args.no_history:
+            history.save_run(result)
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
@@ -72,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML audit report")
     audit_parser.add_argument("--timeout", type=int, default=15)
     audit_parser.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS (faster; leaves cost and stylesheet checks UNKNOWN)")
+    audit_parser.add_argument("--no-history", action="store_true", help="do not read or write the local run history used for regression comparison")
     audit_parser.set_defaults(handler=audit_command)
     return parser
 
