@@ -106,12 +106,30 @@ class ModuleRunner:
         return self._build_output(results)
 
     @staticmethod
+    def _has_valid_evidence(evidence: list[Any]) -> bool:
+        """Check that evidence is not just present, but structurally valid.
+
+        Per schemas/audit/finding-v1.yaml, evidence requires 'source' and
+        'observed_at'. A non-empty list of malformed entries (missing these
+        fields, or not even dicts) must not be sufficient to justify PASS --
+        that would let 'evidence exists' silently substitute for 'evidence is
+        trustworthy', which is exactly the gap this contract exists to close.
+        """
+        if not evidence:
+            return False
+        return all(
+            isinstance(entry, dict) and bool(entry.get("source")) and bool(entry.get("observed_at"))
+            for entry in evidence
+        )
+
+    @staticmethod
     def _coerce(check: CheckSpec, raw: Any) -> CheckResult:
         if isinstance(raw, CheckResult):
             if raw.check_id != check.id or raw.module != check.module:
                 raise ValueError("CheckResult identity does not match CheckSpec")
-            if raw.status == ExecutionStatus.PASS and not raw.evidence:
-                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="PASS result has no evidence")
+            if raw.status == ExecutionStatus.PASS and not ModuleRunner._has_valid_evidence(raw.evidence):
+                reason = "PASS result has no evidence" if not raw.evidence else "PASS result has malformed evidence (missing source/observed_at)"
+                return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason=reason)
             return raw
         if raw is True:
             return CheckResult(check.id, check.module, ExecutionStatus.UNKNOWN, reason="check returned PASS without evidence")
@@ -122,9 +140,10 @@ class ModuleRunner:
         if isinstance(raw, dict):
             status = ExecutionStatus(str(raw.get("status", ExecutionStatus.UNKNOWN.value)))
             evidence = list(raw.get("evidence", []))
-            if status == ExecutionStatus.PASS and not evidence:
+            if status == ExecutionStatus.PASS and not ModuleRunner._has_valid_evidence(evidence):
                 status = ExecutionStatus.UNKNOWN
-                reason = str(raw.get("reason", "")) or "PASS result has no evidence"
+                default_reason = "PASS result has no evidence" if not evidence else "PASS result has malformed evidence (missing source/observed_at)"
+                reason = str(raw.get("reason", "")) or default_reason
             else:
                 reason = str(raw.get("reason", ""))
             return CheckResult(check.id, check.module, status, evidence, list(raw.get("findings", [])), reason)

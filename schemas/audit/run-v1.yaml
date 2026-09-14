@@ -15,11 +15,11 @@ fields:
   engine_version: string
 module_result:
   required: [module_id, status, checks]
-  status: [PASS, FAIL, UNKNOWN, BLOCKED, NOT_APPLICABLE]
+  status: [PASS, FAIL, UNKNOWN, BLOCKED, N/A]
   checks: array
 check_result:
   required: [check_id, status]
-  status: [PASS, FAIL, UNKNOWN, BLOCKED, NOT_APPLICABLE]
+  status: [PASS, FAIL, UNKNOWN, BLOCKED, N/A]
   evidence_refs: array
   finding_refs: array
   reason: string
