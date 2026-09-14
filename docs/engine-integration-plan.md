@@ -53,6 +53,10 @@ Partial coverage must remain `UNKNOWN`. This prevents a small set of passing che
 6. Add regression tests for pass, fail, partial coverage, and unbound checks.
 7. Wire the normalized engine into the CLI only after the core integration is stable and the shared CLI contract has been coordinated with Agent-A.
 
+## Current state (v0.3.0)
+
+All 136 registry checks across 20 modules are bound: 113 deterministic checks execute against observations, 3 finding-record checks return `N/A` when no findings exist, and 20 external-evidence checks return `UNKNOWN` with a specific reason naming the missing API or service.
+
 ## Explicit non-goals
 
 - No synthetic evidence.

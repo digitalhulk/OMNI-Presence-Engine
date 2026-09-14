@@ -5,11 +5,11 @@ window.OPE_SAMPLE_REPORT = {
   "checks": {
     "01-entity.consistency": {
       "check_id": "01-entity.consistency",
-      "duration_ms": 0.028,
+      "duration_ms": 0.035,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152470+00:00",
+          "observed_at": "2026-09-14T15:23:30.259831+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -29,7 +29,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152496+00:00",
+          "observed_at": "2026-09-14T15:23:30.259860+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -45,11 +45,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "01-entity.identity": {
       "check_id": "01-entity.identity",
-      "duration_ms": 0.008,
+      "duration_ms": 0.012,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152507+00:00",
+          "observed_at": "2026-09-14T15:23:30.259874+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -67,20 +67,34 @@ window.OPE_SAMPLE_REPORT = {
     },
     "01-entity.ownership": {
       "check_id": "01-entity.ownership",
-      "duration_ms": 0.007,
-      "evidence": [],
-      "findings": [],
-      "module": "01-entity",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "01-entity.relationships": {
-      "check_id": "01-entity.relationships",
-      "duration_ms": 0.009,
+      "duration_ms": 0.015,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152525+00:00",
+          "observed_at": "2026-09-14T15:23:30.259892+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "verification_tags": [
+              "google-site-verification",
+              "msvalidate.01"
+            ]
+          }
+        }
+      ],
+      "findings": [],
+      "module": "01-entity",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "01-entity.relationships": {
+      "check_id": "01-entity.relationships",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.259903+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -96,11 +110,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "02-infrastructure.cdn.configuration": {
       "check_id": "02-infrastructure.cdn.configuration",
-      "duration_ms": 0.012,
+      "duration_ms": 0.015,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152536+00:00",
+          "observed_at": "2026-09-14T15:23:30.259916+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -123,7 +137,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152547+00:00",
+          "observed_at": "2026-09-14T15:23:30.259927+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -139,11 +153,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "02-infrastructure.hosting.availability": {
       "check_id": "02-infrastructure.hosting.availability",
-      "duration_ms": 0.01,
+      "duration_ms": 0.049,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152557+00:00",
+          "observed_at": "2026-09-14T15:23:30.259975+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -159,11 +173,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "02-infrastructure.server_reachability": {
       "check_id": "02-infrastructure.server_reachability",
-      "duration_ms": 0.075,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152634+00:00",
+          "observed_at": "2026-09-14T15:23:30.259991+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -180,11 +194,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "02-infrastructure.tls.valid": {
       "check_id": "02-infrastructure.tls.valid",
-      "duration_ms": 0.008,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152648+00:00",
+          "observed_at": "2026-09-14T15:23:30.259999+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -200,11 +214,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.css_cost": {
       "check_id": "03-code.css_cost",
-      "duration_ms": 0.009,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152657+00:00",
+          "observed_at": "2026-09-14T15:23:30.260007+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -222,24 +236,24 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.forms": {
       "check_id": "03-code.forms",
-      "duration_ms": 0.008,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152668+00:00",
+          "observed_at": "2026-09-14T15:23:30.260017+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
             "forms": 1,
-            "forms_missing_action": 1
+            "forms_missing_action": 0
           }
         }
       ],
       "findings": [],
       "module": "03-code",
       "reason": "Direct audit observation",
-      "status": "FAIL"
+      "status": "PASS"
     },
     "03-code.head_metadata": {
       "check_id": "03-code.head_metadata",
@@ -247,7 +261,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152677+00:00",
+          "observed_at": "2026-09-14T15:23:30.260026+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -263,11 +277,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.html.validity": {
       "check_id": "03-code.html.validity",
-      "duration_ms": 0.009,
+      "duration_ms": 0.01,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152688+00:00",
+          "observed_at": "2026-09-14T15:23:30.260038+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -283,11 +297,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.js_cost": {
       "check_id": "03-code.js_cost",
-      "duration_ms": 0.013,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152695+00:00",
+          "observed_at": "2026-09-14T15:23:30.260045+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -305,11 +319,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.semantic_html": {
       "check_id": "03-code.semantic_html",
-      "duration_ms": 0.01,
+      "duration_ms": 0.013,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152713+00:00",
+          "observed_at": "2026-09-14T15:23:30.260071+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -330,11 +344,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.structured_data": {
       "check_id": "03-code.structured_data",
-      "duration_ms": 0.007,
+      "duration_ms": 0.012,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152721+00:00",
+          "observed_at": "2026-09-14T15:23:30.260086+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -350,11 +364,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03-code.third_party_code": {
       "check_id": "03-code.third_party_code",
-      "duration_ms": 0.006,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152729+00:00",
+          "observed_at": "2026-09-14T15:23:30.260095+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -371,11 +385,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "04-crawl.bot_access": {
       "check_id": "04-crawl.bot_access",
-      "duration_ms": 0.006,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152736+00:00",
+          "observed_at": "2026-09-14T15:23:30.260103+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -399,29 +413,53 @@ window.OPE_SAMPLE_REPORT = {
     },
     "04-crawl.crawl_budget_risk": {
       "check_id": "04-crawl.crawl_budget_risk",
-      "duration_ms": 0.002,
-      "evidence": [],
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260112+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "budget": 50,
+            "discovered_requests": 1
+          }
+        }
+      ],
       "findings": [],
       "module": "04-crawl",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "PASS"
     },
     "04-crawl.crawl_errors": {
       "check_id": "04-crawl.crawl_errors",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "04-crawl",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "04-crawl.robots_access": {
-      "check_id": "04-crawl.robots_access",
       "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152749+00:00",
+          "observed_at": "2026-09-14T15:23:30.260119+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "soft_404": false,
+            "status": 200
+          }
+        }
+      ],
+      "findings": [],
+      "module": "04-crawl",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "04-crawl.robots_access": {
+      "check_id": "04-crawl.robots_access",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260126+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -438,11 +476,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "04-crawl.sitemap_discovery": {
       "check_id": "04-crawl.sitemap_discovery",
-      "duration_ms": 0.005,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152756+00:00",
+          "observed_at": "2026-09-14T15:23:30.260132+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -460,11 +498,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "05-index.canonicalization": {
       "check_id": "05-index.canonicalization",
-      "duration_ms": 0.007,
+      "duration_ms": 0.01,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152764+00:00",
+          "observed_at": "2026-09-14T15:23:30.260143+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -484,7 +522,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152771+00:00",
+          "observed_at": "2026-09-14T15:23:30.260150+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -501,11 +539,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "05-index.indexability": {
       "check_id": "05-index.indexability",
-      "duration_ms": 0.006,
+      "duration_ms": 0.013,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152778+00:00",
+          "observed_at": "2026-09-14T15:23:30.260161+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -522,20 +560,32 @@ window.OPE_SAMPLE_REPORT = {
     },
     "05-index.rendering_indexability": {
       "check_id": "05-index.rendering_indexability",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "05-index",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "05-index.status_codes": {
-      "check_id": "05-index.status_codes",
-      "duration_ms": 0.008,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152787+00:00",
+          "observed_at": "2026-09-14T15:23:30.260171+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "noscript_content": true,
+            "word_count": 100
+          }
+        }
+      ],
+      "findings": [],
+      "module": "05-index",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "05-index.status_codes": {
+      "check_id": "05-index.status_codes",
+      "duration_ms": 0.01,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260177+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -551,11 +601,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "06-semantics.entity_markup": {
       "check_id": "06-semantics.entity_markup",
-      "duration_ms": 0.006,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152796+00:00",
+          "observed_at": "2026-09-14T15:23:30.260191+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -573,11 +623,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "06-semantics.knowledge_consistency": {
       "check_id": "06-semantics.knowledge_consistency",
-      "duration_ms": 0.007,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152804+00:00",
+          "observed_at": "2026-09-14T15:23:30.260200+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -593,11 +643,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "06-semantics.query_intent": {
       "check_id": "06-semantics.query_intent",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152811+00:00",
+          "observed_at": "2026-09-14T15:23:30.260206+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -613,12 +663,23 @@ window.OPE_SAMPLE_REPORT = {
     },
     "06-semantics.relationships": {
       "check_id": "06-semantics.relationships",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260213+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_relationships": false
+          }
+        }
+      ],
       "findings": [],
       "module": "06-semantics",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "FAIL"
     },
     "06-semantics.taxonomy": {
       "check_id": "06-semantics.taxonomy",
@@ -626,7 +687,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152821+00:00",
+          "observed_at": "2026-09-14T15:23:30.260222+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -642,11 +703,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "06-semantics.topic_coverage": {
       "check_id": "06-semantics.topic_coverage",
-      "duration_ms": 0.007,
+      "duration_ms": 0.042,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152828+00:00",
+          "observed_at": "2026-09-14T15:23:30.260264+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -667,13 +728,13 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152836+00:00",
+          "observed_at": "2026-09-14T15:23:30.260272+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
             "budget": 300,
-            "word_count": 97
+            "word_count": 100
           }
         }
       ],
@@ -684,29 +745,41 @@ window.OPE_SAMPLE_REPORT = {
     },
     "07-content.conversion_context": {
       "check_id": "07-content.conversion_context",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260279+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_cta": true,
+            "word_count": 100
+          }
+        }
+      ],
       "findings": [],
       "module": "07-content",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "FAIL"
     },
     "07-content.factual_accuracy": {
       "check_id": "07-content.factual_accuracy",
-      "duration_ms": 0.001,
+      "duration_ms": 0.009,
       "evidence": [],
       "findings": [],
       "module": "07-content",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Factual accuracy verification requires an external fact-checking service (not configured)",
       "status": "UNKNOWN"
     },
     "07-content.freshness": {
       "check_id": "07-content.freshness",
-      "duration_ms": 0.005,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152847+00:00",
+          "observed_at": "2026-09-14T15:23:30.260295+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -723,34 +796,58 @@ window.OPE_SAMPLE_REPORT = {
     },
     "07-content.helpfulness": {
       "check_id": "07-content.helpfulness",
-      "duration_ms": 0.002,
-      "evidence": [],
-      "findings": [],
-      "module": "07-content",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "07-content.intent_match": {
-      "check_id": "07-content.intent_match",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "07-content",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "07-content.internal_links": {
-      "check_id": "07-content.internal_links",
-      "duration_ms": 0.005,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152857+00:00",
+          "observed_at": "2026-09-14T15:23:30.260305+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "internal_links": 4
+            "lists": 1,
+            "subheadings": 2,
+            "word_count": 100
+          }
+        }
+      ],
+      "findings": [],
+      "module": "07-content",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "07-content.intent_match": {
+      "check_id": "07-content.intent_match",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260312+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "intent_aligned": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "07-content",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "07-content.internal_links": {
+      "check_id": "07-content.internal_links",
+      "duration_ms": 0.024,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260317+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "internal_links": 5
           }
         }
       ],
@@ -761,16 +858,16 @@ window.OPE_SAMPLE_REPORT = {
     },
     "07-content.originality": {
       "check_id": "07-content.originality",
-      "duration_ms": 0.001,
+      "duration_ms": 0.007,
       "evidence": [],
       "findings": [],
       "module": "07-content",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Originality assessment requires a content-comparison service (not configured)",
       "status": "UNKNOWN"
     },
     "08-media.captions_transcripts": {
       "check_id": "08-media.captions_transcripts",
-      "duration_ms": 0.055,
+      "duration_ms": 0.006,
       "evidence": [],
       "findings": [],
       "module": "08-media",
@@ -779,17 +876,17 @@ window.OPE_SAMPLE_REPORT = {
     },
     "08-media.image_metadata": {
       "check_id": "08-media.image_metadata",
-      "duration_ms": 0.006,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152923+00:00",
+          "observed_at": "2026-09-14T15:23:30.260363+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "images": 2,
-            "images_missing_dimensions": 2
+            "images": 3,
+            "images_missing_dimensions": 1
           }
         }
       ],
@@ -800,35 +897,47 @@ window.OPE_SAMPLE_REPORT = {
     },
     "08-media.image_quality": {
       "check_id": "08-media.image_quality",
-      "duration_ms": 0.001,
+      "duration_ms": 0.01,
       "evidence": [],
       "findings": [],
       "module": "08-media",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Image quality assessment requires rendered visual analysis (not available in headless mode)",
       "status": "UNKNOWN"
     },
     "08-media.media_performance": {
       "check_id": "08-media.media_performance",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "08-media",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "08-media.responsive_media": {
-      "check_id": "08-media.responsive_media",
-      "duration_ms": 0.008,
+      "duration_ms": 0.011,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152935+00:00",
+          "observed_at": "2026-09-14T15:23:30.260387+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "images": 2,
-            "images_missing_srcset": 2
+            "images": 3,
+            "lazy_images": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "08-media",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "08-media.responsive_media": {
+      "check_id": "08-media.responsive_media",
+      "duration_ms": 0.006,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260395+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images": 3,
+            "images_missing_srcset": 3
           }
         }
       ],
@@ -839,7 +948,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "08-media.video_metadata": {
       "check_id": "08-media.video_metadata",
-      "duration_ms": 0.004,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "08-media",
@@ -848,12 +957,25 @@ window.OPE_SAMPLE_REPORT = {
     },
     "09-search.image_visibility": {
       "check_id": "09-search.image_visibility",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260408+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "images": 3,
+            "images_missing_alt": 1,
+            "images_missing_dimensions": 1
+          }
+        }
+      ],
       "findings": [],
       "module": "09-search",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "FAIL"
     },
     "09-search.local_visibility": {
       "check_id": "09-search.local_visibility",
@@ -866,38 +988,65 @@ window.OPE_SAMPLE_REPORT = {
     },
     "09-search.query_visibility": {
       "check_id": "09-search.query_visibility",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "09-search",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Query visibility data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)",
       "status": "UNKNOWN"
     },
     "09-search.serp_eligibility": {
       "check_id": "09-search.serp_eligibility",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "09-search",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "09-search.sitelinks": {
-      "check_id": "09-search.sitelinks",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "09-search",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "09-search.snippets": {
-      "check_id": "09-search.snippets",
-      "duration_ms": 0.006,
+      "duration_ms": 0.011,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152963+00:00",
+          "observed_at": "2026-09-14T15:23:30.260424+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_canonical": true,
+            "has_description": true,
+            "has_title": true,
+            "noindex": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "09-search",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "09-search.sitelinks": {
+      "check_id": "09-search.sitelinks",
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260437+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_breadcrumb": false,
+            "has_nav": true,
+            "internal_links": 5
+          }
+        }
+      ],
+      "findings": [],
+      "module": "09-search",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "09-search.snippets": {
+      "check_id": "09-search.snippets",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260443+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -917,7 +1066,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152969+00:00",
+          "observed_at": "2026-09-14T15:23:30.260450+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -941,12 +1090,27 @@ window.OPE_SAMPLE_REPORT = {
     },
     "10-ai-search.ai_retrievability": {
       "check_id": "10-ai-search.ai_retrievability",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.014,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260465+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "average_citability_score": 38.8,
+            "blocked_ai_crawlers": [
+              "ClaudeBot"
+            ],
+            "budget": 50.0
+          }
+        }
+      ],
       "findings": [],
       "module": "10-ai-search",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "FAIL"
     },
     "10-ai-search.answer_eligibility": {
       "check_id": "10-ai-search.answer_eligibility",
@@ -954,7 +1118,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152981+00:00",
+          "observed_at": "2026-09-14T15:23:30.260474+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -974,7 +1138,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.152988+00:00",
+          "observed_at": "2026-09-14T15:23:30.260480+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -996,21 +1160,32 @@ window.OPE_SAMPLE_REPORT = {
     },
     "10-ai-search.factual_consistency": {
       "check_id": "10-ai-search.factual_consistency",
-      "duration_ms": 0.001,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "10-ai-search",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Factual consistency verification requires an external fact-checking service (not configured)",
       "status": "UNKNOWN"
     },
     "10-ai-search.source_grounding": {
       "check_id": "10-ai-search.source_grounding",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260491+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "external_links": 0
+          }
+        }
+      ],
       "findings": [],
       "module": "10-ai-search",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "FAIL"
     },
     "11-authority.backlinks": {
       "check_id": "11-authority.backlinks",
@@ -1018,34 +1193,45 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [],
       "findings": [],
       "module": "11-authority",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Backlink analysis requires a link-index API such as Ahrefs or Moz (OPE_BACKLINK_API_KEY not configured)",
       "status": "UNKNOWN"
     },
     "11-authority.brand_mentions": {
       "check_id": "11-authority.brand_mentions",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "11-authority",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Brand-mention monitoring requires an external brand-tracking API (not configured)",
       "status": "UNKNOWN"
     },
     "11-authority.citations": {
       "check_id": "11-authority.citations",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "11-authority",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "11-authority.consistency": {
-      "check_id": "11-authority.consistency",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153008+00:00",
+          "observed_at": "2026-09-14T15:23:30.260506+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "external_links": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "11-authority",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "11-authority.consistency": {
+      "check_id": "11-authority.consistency",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260512+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1065,7 +1251,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153015+00:00",
+          "observed_at": "2026-09-14T15:23:30.260519+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1081,20 +1267,20 @@ window.OPE_SAMPLE_REPORT = {
     },
     "11-authority.reputation": {
       "check_id": "11-authority.reputation",
-      "duration_ms": 0.001,
+      "duration_ms": 0.005,
       "evidence": [],
       "findings": [],
       "module": "11-authority",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Reputation assessment requires a review-aggregation or sentiment API (not configured)",
       "status": "UNKNOWN"
     },
     "11-authority.reviews": {
       "check_id": "11-authority.reviews",
-      "duration_ms": 0.006,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153024+00:00",
+          "observed_at": "2026-09-14T15:23:30.260531+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1119,7 +1305,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "12-local.hours": {
       "check_id": "12-local.hours",
-      "duration_ms": 0.004,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "12-local",
@@ -1128,7 +1314,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "12-local.local_pages": {
       "check_id": "12-local.local_pages",
-      "duration_ms": 0.004,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "12-local",
@@ -1146,11 +1332,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "12-local.nap_consistency": {
       "check_id": "12-local.nap_consistency",
-      "duration_ms": 0.006,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153051+00:00",
+          "observed_at": "2026-09-14T15:23:30.260556+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1187,20 +1373,33 @@ window.OPE_SAMPLE_REPORT = {
     },
     "13-ux.booking_friction": {
       "check_id": "13-ux.booking_friction",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "13-ux",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "13-ux.hierarchy": {
-      "check_id": "13-ux.hierarchy",
-      "duration_ms": 0.005,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153068+00:00",
+          "observed_at": "2026-09-14T15:23:30.260573+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "avg_inputs_per_form": 2.0,
+            "forms": 1,
+            "inputs": 2
+          }
+        }
+      ],
+      "findings": [],
+      "module": "13-ux",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "13-ux.hierarchy": {
+      "check_id": "13-ux.hierarchy",
+      "duration_ms": 0.004,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260579+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1216,11 +1415,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "13-ux.interaction_clarity": {
       "check_id": "13-ux.interaction_clarity",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153075+00:00",
+          "observed_at": "2026-09-14T15:23:30.260585+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1237,23 +1436,23 @@ window.OPE_SAMPLE_REPORT = {
     },
     "13-ux.mobile_usability": {
       "check_id": "13-ux.mobile_usability",
-      "duration_ms": 0.009,
+      "duration_ms": 0.014,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153082+00:00",
+          "observed_at": "2026-09-14T15:23:30.260598+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "viewport": ""
+            "viewport": "width=device-width, initial-scale=1"
           }
         }
       ],
       "findings": [],
       "module": "13-ux",
       "reason": "Direct audit observation",
-      "status": "FAIL"
+      "status": "PASS"
     },
     "13-ux.navigation": {
       "check_id": "13-ux.navigation",
@@ -1261,7 +1460,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153091+00:00",
+          "observed_at": "2026-09-14T15:23:30.260607+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1282,11 +1481,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "13-ux.trust_visibility": {
       "check_id": "13-ux.trust_visibility",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153098+00:00",
+          "observed_at": "2026-09-14T15:23:30.260612+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1302,11 +1501,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "14-accessibility.alt_text": {
       "check_id": "14-accessibility.alt_text",
-      "duration_ms": 0.007,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153106+00:00",
+          "observed_at": "2026-09-14T15:23:30.260619+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1322,7 +1521,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "14-accessibility.captions": {
       "check_id": "14-accessibility.captions",
-      "duration_ms": 0.003,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "14-accessibility",
@@ -1331,20 +1530,20 @@ window.OPE_SAMPLE_REPORT = {
     },
     "14-accessibility.contrast": {
       "check_id": "14-accessibility.contrast",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "14-accessibility",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Colour-contrast verification requires a rendered-page screenshot and WCAG analysis (not available in headless mode)",
       "status": "UNKNOWN"
     },
     "14-accessibility.focus": {
       "check_id": "14-accessibility.focus",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153119+00:00",
+          "observed_at": "2026-09-14T15:23:30.260637+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1365,28 +1564,28 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153126+00:00",
+          "observed_at": "2026-09-14T15:23:30.260643+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "inputs": 1,
-            "unlabelled_inputs": 1
+            "inputs": 2,
+            "unlabelled_inputs": 0
           }
         }
       ],
       "findings": [],
       "module": "14-accessibility",
       "reason": "Direct audit observation",
-      "status": "FAIL"
+      "status": "PASS"
     },
     "14-accessibility.keyboard": {
       "check_id": "14-accessibility.keyboard",
-      "duration_ms": 0.005,
+      "duration_ms": 0.004,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153132+00:00",
+          "observed_at": "2026-09-14T15:23:30.260649+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1402,11 +1601,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "14-accessibility.reduced_motion": {
       "check_id": "14-accessibility.reduced_motion",
-      "duration_ms": 0.005,
+      "duration_ms": 0.004,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153139+00:00",
+          "observed_at": "2026-09-14T15:23:30.260655+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1423,11 +1622,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "14-accessibility.semantics": {
       "check_id": "14-accessibility.semantics",
-      "duration_ms": 0.012,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153149+00:00",
+          "observed_at": "2026-09-14T15:23:30.260661+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1457,11 +1656,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "15-performance.dns": {
       "check_id": "15-performance.dns",
-      "duration_ms": 0.005,
+      "duration_ms": 0.004,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153162+00:00",
+          "observed_at": "2026-09-14T15:23:30.260671+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1487,11 +1686,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "15-performance.frame_cost": {
       "check_id": "15-performance.frame_cost",
-      "duration_ms": 0.004,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "15-performance",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Frame-cost measurement requires a browser-based paint profiler (not available in headless mode)",
       "status": "UNKNOWN"
     },
     "15-performance.inp": {
@@ -1514,11 +1713,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "15-performance.network": {
       "check_id": "15-performance.network",
-      "duration_ms": 0.005,
+      "duration_ms": 0.016,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153184+00:00",
+          "observed_at": "2026-09-14T15:23:30.260689+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1535,20 +1734,20 @@ window.OPE_SAMPLE_REPORT = {
     },
     "15-performance.page_weight": {
       "check_id": "15-performance.page_weight",
-      "duration_ms": 0.005,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153190+00:00",
+          "observed_at": "2026-09-14T15:23:30.260707+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
             "budget_bytes": 1000000,
             "css_bytes": 88412,
-            "html_bytes": 1741,
+            "html_bytes": 2731,
             "js_bytes": 0,
-            "page_weight_bytes": 90153
+            "page_weight_bytes": 91143
           }
         }
       ],
@@ -1559,11 +1758,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "15-performance.render_cost": {
       "check_id": "15-performance.render_cost",
-      "duration_ms": 0.001,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "15-performance",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Render-cost measurement requires a browser-based performance trace (not available in headless mode)",
       "status": "UNKNOWN"
     },
     "15-performance.tbt": {
@@ -1581,7 +1780,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153202+00:00",
+          "observed_at": "2026-09-14T15:23:30.260723+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1598,29 +1797,41 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.abuse_controls": {
       "check_id": "16-security.abuse_controls",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "16-security",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "16-security.auth": {
-      "check_id": "16-security.auth",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "16-security",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "16-security.cookies": {
-      "check_id": "16-security.cookies",
-      "duration_ms": 0.01,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153213+00:00",
+          "observed_at": "2026-09-14T15:23:30.260731+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_captcha": false,
+            "has_rate_limit_headers": false
+          }
+        }
+      ],
+      "findings": [],
+      "module": "16-security",
+      "reason": "Direct audit observation",
+      "status": "FAIL"
+    },
+    "16-security.auth": {
+      "check_id": "16-security.auth",
+      "duration_ms": 0.004,
+      "evidence": [],
+      "findings": [],
+      "module": "16-security",
+      "reason": "The page has no login form to evaluate",
+      "status": "N/A"
+    },
+    "16-security.cookies": {
+      "check_id": "16-security.cookies",
+      "duration_ms": 0.005,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260745+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1637,11 +1848,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.csp": {
       "check_id": "16-security.csp",
-      "duration_ms": 0.006,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153224+00:00",
+          "observed_at": "2026-09-14T15:23:30.260751+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1658,20 +1869,20 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.dependencies": {
       "check_id": "16-security.dependencies",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "16-security",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Dependency vulnerability scanning requires a CVE database or SCA tool (not configured)",
       "status": "UNKNOWN"
     },
     "16-security.https": {
       "check_id": "16-security.https",
-      "duration_ms": 0.008,
+      "duration_ms": 0.004,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153232+00:00",
+          "observed_at": "2026-09-14T15:23:30.260766+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1687,11 +1898,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.secrets": {
       "check_id": "16-security.secrets",
-      "duration_ms": 0.006,
+      "duration_ms": 0.005,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153242+00:00",
+          "observed_at": "2026-09-14T15:23:30.260771+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1707,18 +1918,18 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.security_headers": {
       "check_id": "16-security.security_headers",
-      "duration_ms": 0.011,
+      "duration_ms": 0.008,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153251+00:00",
+          "observed_at": "2026-09-14T15:23:30.260780+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
             "csp": false,
             "hsts": true,
-            "referrer_policy_header": false,
+            "referrer_policy_header": true,
             "x_content_type_options": true
           }
         }
@@ -1730,11 +1941,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.tls": {
       "check_id": "16-security.tls",
-      "duration_ms": 0.007,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153262+00:00",
+          "observed_at": "2026-09-14T15:23:30.260787+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1752,11 +1963,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16-security.waf": {
       "check_id": "16-security.waf",
-      "duration_ms": 0.007,
+      "duration_ms": 0.015,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153270+00:00",
+          "observed_at": "2026-09-14T15:23:30.260793+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1775,11 +1986,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "17-language.hreflang": {
       "check_id": "17-language.hreflang",
-      "duration_ms": 0.005,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153275+00:00",
+          "observed_at": "2026-09-14T15:23:30.260809+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1795,11 +2006,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "17-language.language_declaration": {
       "check_id": "17-language.language_declaration",
-      "duration_ms": 0.021,
+      "duration_ms": 0.014,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153297+00:00",
+          "observed_at": "2026-09-14T15:23:30.260823+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1815,11 +2026,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "17-language.locale": {
       "check_id": "17-language.locale",
-      "duration_ms": 0.011,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153308+00:00",
+          "observed_at": "2026-09-14T15:23:30.260836+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1835,38 +2046,38 @@ window.OPE_SAMPLE_REPORT = {
     },
     "17-language.regional_intent": {
       "check_id": "17-language.regional_intent",
-      "duration_ms": 0.001,
+      "duration_ms": 0.005,
       "evidence": [],
       "findings": [],
       "module": "17-language",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "The page does not target a specific region (no local business markup)",
+      "status": "N/A"
     },
     "17-language.translation_quality": {
       "check_id": "17-language.translation_quality",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "17-language",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Translation quality assessment requires multilingual NLP analysis (not configured)",
       "status": "UNKNOWN"
     },
     "17-language.transliteration": {
       "check_id": "17-language.transliteration",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "17-language",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Transliteration accuracy assessment requires script-conversion analysis (not configured)",
       "status": "UNKNOWN"
     },
     "17-language.unicode": {
       "check_id": "17-language.unicode",
-      "duration_ms": 0.007,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153324+00:00",
+          "observed_at": "2026-09-14T15:23:30.260855+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1882,94 +2093,129 @@ window.OPE_SAMPLE_REPORT = {
     },
     "18-analytics.ai_referrals": {
       "check_id": "18-analytics.ai_referrals",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "AI referral attribution requires analytics event-stream access (not available from a single-page audit)",
       "status": "UNKNOWN"
     },
     "18-analytics.attribution": {
       "check_id": "18-analytics.attribution",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "18-analytics.crm_linkage": {
-      "check_id": "18-analytics.crm_linkage",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "18-analytics.event_quality": {
-      "check_id": "18-analytics.event_quality",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "18-analytics.measurement_coverage": {
-      "check_id": "18-analytics.measurement_coverage",
-      "duration_ms": 0.005,
+      "duration_ms": 0.011,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153339+00:00",
+          "observed_at": "2026-09-14T15:23:30.260866+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "has_analytics": false
+            "has_attribution_code": true
           }
         }
       ],
       "findings": [],
       "module": "18-analytics",
       "reason": "Direct audit observation",
-      "status": "FAIL"
+      "status": "PASS"
     },
-    "18-analytics.search_data": {
-      "check_id": "18-analytics.search_data",
+    "18-analytics.crm_linkage": {
+      "check_id": "18-analytics.crm_linkage",
       "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "CRM linkage verification requires CRM API integration (not configured)",
+      "status": "UNKNOWN"
+    },
+    "18-analytics.event_quality": {
+      "check_id": "18-analytics.event_quality",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260884+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_event_tracking": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "18-analytics.measurement_coverage": {
+      "check_id": "18-analytics.measurement_coverage",
+      "duration_ms": 0.004,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260890+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_analytics": true
+          }
+        }
+      ],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "18-analytics.search_data": {
+      "check_id": "18-analytics.search_data",
+      "duration_ms": 0.003,
+      "evidence": [],
+      "findings": [],
+      "module": "18-analytics",
+      "reason": "Search performance data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)",
       "status": "UNKNOWN"
     },
     "18-analytics.server_logs": {
       "check_id": "18-analytics.server_logs",
-      "duration_ms": 0.001,
+      "duration_ms": 0.002,
       "evidence": [],
       "findings": [],
       "module": "18-analytics",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Server log analysis requires direct log access or a log-aggregation API (not configured)",
       "status": "UNKNOWN"
     },
     "19-conversion.booking_completion": {
       "check_id": "19-conversion.booking_completion",
-      "duration_ms": 0.001,
-      "evidence": [],
-      "findings": [],
-      "module": "19-conversion",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
-    },
-    "19-conversion.cta_clarity": {
-      "check_id": "19-conversion.cta_clarity",
-      "duration_ms": 0.005,
+      "duration_ms": 0.006,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153354+00:00",
+          "observed_at": "2026-09-14T15:23:30.260904+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "buttons": 1,
+            "forms": 1,
+            "forms_missing_action": 0
+          }
+        }
+      ],
+      "findings": [],
+      "module": "19-conversion",
+      "reason": "Direct audit observation",
+      "status": "PASS"
+    },
+    "19-conversion.cta_clarity": {
+      "check_id": "19-conversion.cta_clarity",
+      "duration_ms": 0.007,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260910+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -1985,20 +2231,20 @@ window.OPE_SAMPLE_REPORT = {
     },
     "19-conversion.funnel_dropoff": {
       "check_id": "19-conversion.funnel_dropoff",
-      "duration_ms": 0.001,
+      "duration_ms": 0.003,
       "evidence": [],
       "findings": [],
       "module": "19-conversion",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Funnel drop-off analysis requires analytics event data (not available from a single-page audit)",
       "status": "UNKNOWN"
     },
     "19-conversion.lead_capture": {
       "check_id": "19-conversion.lead_capture",
-      "duration_ms": 0.006,
+      "duration_ms": 0.007,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153363+00:00",
+          "observed_at": "2026-09-14T15:23:30.260924+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -2015,25 +2261,37 @@ window.OPE_SAMPLE_REPORT = {
     },
     "19-conversion.revenue_tracking": {
       "check_id": "19-conversion.revenue_tracking",
-      "duration_ms": 0.001,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "19-conversion",
-      "reason": "No evidence provider is bound for this check.",
+      "reason": "Revenue tracking verification requires payment-platform or analytics API integration (not configured)",
       "status": "UNKNOWN"
     },
     "19-conversion.trust_to_action": {
       "check_id": "19-conversion.trust_to_action",
-      "duration_ms": 0.001,
-      "evidence": [],
+      "duration_ms": 0.008,
+      "evidence": [
+        {
+          "confidence": 1.0,
+          "observed_at": "2026-09-14T15:23:30.260939+00:00",
+          "provenance": "direct",
+          "source": "ope-audit",
+          "target": "https://starbrand.example.com/",
+          "value": {
+            "has_cta": true,
+            "has_trust_links": true
+          }
+        }
+      ],
       "findings": [],
       "module": "19-conversion",
-      "reason": "No evidence provider is bound for this check.",
-      "status": "UNKNOWN"
+      "reason": "Direct audit observation",
+      "status": "PASS"
     },
     "20-continuous-optimization.anomaly_detection": {
       "check_id": "20-continuous-optimization.anomaly_detection",
-      "duration_ms": 0.009,
+      "duration_ms": 0.005,
       "evidence": [],
       "findings": [],
       "module": "20-continuous-optimization",
@@ -2042,7 +2300,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.monitoring": {
       "check_id": "20-continuous-optimization.monitoring",
-      "duration_ms": 0.035,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "20-continuous-optimization",
@@ -2051,16 +2309,16 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.prioritization": {
       "check_id": "20-continuous-optimization.prioritization",
-      "duration_ms": 0.015,
+      "duration_ms": 0.011,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153428+00:00",
+          "observed_at": "2026-09-14T15:23:30.260963+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "findings": 4,
+            "findings": 2,
             "unranked": []
           }
         }
@@ -2072,7 +2330,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.regression_guards": {
       "check_id": "20-continuous-optimization.regression_guards",
-      "duration_ms": 0.005,
+      "duration_ms": 0.004,
       "evidence": [],
       "findings": [],
       "module": "20-continuous-optimization",
@@ -2081,21 +2339,19 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.root_cause": {
       "check_id": "20-continuous-optimization.root_cause",
-      "duration_ms": 0.013,
+      "duration_ms": 0.009,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153452+00:00",
+          "observed_at": "2026-09-14T15:23:30.260978+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "findings": 4,
+            "findings": 2,
             "without_established_root_cause": [
-              "13-UX-MOBILE-001",
               "14-A11Y-IMG-001",
-              "16-SEC-CONTENT-SECURITY-POLICY",
-              "16-SEC-REFERRER-POLICY"
+              "16-SEC-CONTENT-SECURITY-POLICY"
             ]
           }
         }
@@ -2107,11 +2363,11 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.update_pipeline": {
       "check_id": "20-continuous-optimization.update_pipeline",
-      "duration_ms": 0.006,
+      "duration_ms": 0.212,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153464+00:00",
+          "observed_at": "2026-09-14T15:23:30.260986+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
@@ -2127,16 +2383,16 @@ window.OPE_SAMPLE_REPORT = {
     },
     "20-continuous-optimization.validation": {
       "check_id": "20-continuous-optimization.validation",
-      "duration_ms": 0.007,
+      "duration_ms": 0.025,
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.153472+00:00",
+          "observed_at": "2026-09-14T15:23:30.261216+00:00",
           "provenance": "direct",
           "source": "ope-audit",
           "target": "https://starbrand.example.com/",
           "value": {
-            "findings": 4,
+            "findings": 2,
             "without_validation_steps": []
           }
         }
@@ -2153,50 +2409,17 @@ window.OPE_SAMPLE_REPORT = {
   "final_url": "https://starbrand.example.com/",
   "findings": [
     {
-      "affected_layer": "13-ux",
-      "confidence": 1.0,
-      "dependency": "",
-      "evidence": [
-        {
-          "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.150685+00:00",
-          "source": "html-parser",
-          "target": "https://starbrand.example.com/",
-          "value": {
-            "viewport": ""
-          }
-        }
-      ],
-      "evidence_status": "HYPOTHESIS",
-      "execution_status": "FAIL",
-      "id": "13-UX-MOBILE-001",
-      "impact": "",
-      "module": "13-ux",
-      "priority": 1.0,
-      "regression_guard": [],
-      "remediation": [
-        "Add an appropriate responsive viewport declaration."
-      ],
-      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
-      "severity": "medium",
-      "status": "HYPOTHESIS",
-      "symptom": "Viewport metadata is missing",
-      "validation": [
-        "Validate mobile rendering across representative devices."
-      ]
-    },
-    {
       "affected_layer": "14-accessibility",
       "confidence": 1.0,
       "dependency": "",
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "observed_at": "2026-09-14T15:23:30.257629+00:00",
           "source": "html-parser",
           "target": "https://starbrand.example.com/",
           "value": {
-            "images": 2,
+            "images": 3,
             "missing_alt": 1
           }
         }
@@ -2214,7 +2437,7 @@ window.OPE_SAMPLE_REPORT = {
       "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
       "severity": "medium",
       "status": "HYPOTHESIS",
-      "symptom": "1 of 2 images lack useful alt text",
+      "symptom": "1 of 3 images lack useful alt text",
       "validation": [
         "Re-run accessibility checks and inspect representative images."
       ]
@@ -2226,7 +2449,7 @@ window.OPE_SAMPLE_REPORT = {
       "evidence": [
         {
           "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.150685+00:00",
+          "observed_at": "2026-09-14T15:23:30.257629+00:00",
           "source": "http-headers",
           "target": "https://starbrand.example.com/",
           "value": {
@@ -2251,44 +2474,12 @@ window.OPE_SAMPLE_REPORT = {
       "validation": [
         "Re-fetch response headers and verify content-security-policy."
       ]
-    },
-    {
-      "affected_layer": "16-security",
-      "confidence": 1.0,
-      "dependency": "",
-      "evidence": [
-        {
-          "confidence": 1.0,
-          "observed_at": "2026-09-14T05:46:50.150685+00:00",
-          "source": "http-headers",
-          "target": "https://starbrand.example.com/",
-          "value": {
-            "referrer-policy": null
-          }
-        }
-      ],
-      "evidence_status": "HYPOTHESIS",
-      "execution_status": "FAIL",
-      "id": "16-SEC-REFERRER-POLICY",
-      "impact": "",
-      "module": "16-security",
-      "priority": 1.0,
-      "regression_guard": [],
-      "remediation": [
-        "Review and configure referrer-policy according to the application's threat model."
-      ],
-      "root_cause": "Not yet established; additional evidence or dependency analysis is required.",
-      "severity": "low",
-      "status": "HYPOTHESIS",
-      "symptom": "Recommended security header not observed: referrer-policy",
-      "validation": [
-        "Re-fetch response headers and verify referrer-policy."
-      ]
     }
   ],
   "headers": {
     "cf-ray": "8a1b2c3d4e5f",
     "content-type": "text/html; charset=utf-8",
+    "referrer-policy": "strict-origin-when-cross-origin",
     "server": "cloudflare",
     "strict-transport-security": "max-age=31536000",
     "x-content-type-options": "nosniff"
@@ -2297,7 +2488,7 @@ window.OPE_SAMPLE_REPORT = {
     "article_modified": "",
     "buttons": 1,
     "buttons_without_text": 0,
-    "bytes": 1741,
+    "bytes": 2731,
     "canonical": "https://starbrand.example.com/",
     "canonical_is_self": true,
     "caption_tracks": 0,
@@ -2320,7 +2511,7 @@ window.OPE_SAMPLE_REPORT = {
           "heading": "",
           "label": "Poor Citability",
           "total_score": 24,
-          "word_count": 6
+          "word_count": 7
         },
         {
           "breakdown": {
@@ -2334,7 +2525,7 @@ window.OPE_SAMPLE_REPORT = {
           "heading": "How does the audit work?",
           "label": "Poor Citability",
           "total_score": 34,
-          "word_count": 5
+          "word_count": 7
         },
         {
           "breakdown": {
@@ -2414,7 +2605,7 @@ window.OPE_SAMPLE_REPORT = {
           "heading": "How does the audit work?",
           "label": "Poor Citability",
           "total_score": 34,
-          "word_count": 5
+          "word_count": 7
         },
         {
           "breakdown": {
@@ -2428,7 +2619,7 @@ window.OPE_SAMPLE_REPORT = {
           "heading": "",
           "label": "Poor Citability",
           "total_score": 24,
-          "word_count": 6
+          "word_count": 7
         }
       ],
       "total_blocks_analyzed": 4
@@ -2457,15 +2648,18 @@ window.OPE_SAMPLE_REPORT = {
     "external_links": 0,
     "fetched_requests": 1,
     "forms": 1,
-    "forms_missing_action": 1,
+    "forms_missing_action": 0,
     "h1": 1,
     "has_address": false,
-    "has_analytics": false,
+    "has_analytics": true,
+    "has_attribution_code": true,
     "has_author": false,
     "has_breadcrumb": false,
+    "has_captcha": false,
     "has_css": true,
     "has_cta": true,
     "has_entity_type": true,
+    "has_event_tracking": true,
     "has_focus_visible": false,
     "has_geo": false,
     "has_google_profile": false,
@@ -2473,6 +2667,8 @@ window.OPE_SAMPLE_REPORT = {
     "has_motion": true,
     "has_nap": false,
     "has_opening_hours": false,
+    "has_password_input": false,
+    "has_rate_limit_headers": false,
     "has_relationships": false,
     "has_review": false,
     "has_service_area": false,
@@ -2490,12 +2686,13 @@ window.OPE_SAMPLE_REPORT = {
     },
     "hreflang_count": 0,
     "hsts": true,
-    "images": 2,
+    "images": 3,
     "images_missing_alt": 1,
-    "images_missing_dimensions": 2,
-    "images_missing_srcset": 2,
-    "inputs": 1,
-    "internal_links": 4,
+    "images_missing_dimensions": 1,
+    "images_missing_srcset": 3,
+    "inputs": 2,
+    "intent_aligned": true,
+    "internal_links": 5,
     "is_local_business": false,
     "js_bytes": 0,
     "json_ld_blocks": 1,
@@ -2507,16 +2704,19 @@ window.OPE_SAMPLE_REPORT = {
     ],
     "lang": "en",
     "last_modified": null,
-    "links": 4,
+    "lazy_images": 2,
+    "links": 5,
+    "lists": 1,
     "local_visibility_ready": false,
     "media_elements": 0,
     "meta_robots": "",
     "name_matches_title": true,
-    "page_weight_bytes": 90153,
+    "noscript_content": true,
+    "page_weight_bytes": 91143,
     "pagespeed": null,
     "positive_tabindex": 0,
     "question_headings": 2,
-    "referrer_policy_header": false,
+    "referrer_policy_header": true,
     "respects_reduced_motion": false,
     "robots": {
       "ai_crawlers": {
@@ -2542,6 +2742,7 @@ window.OPE_SAMPLE_REPORT = {
       "status": 200,
       "url": "https://starbrand.example.com/robots.txt"
     },
+    "soft_404": false,
     "status": 200,
     "structure": [
       "body",
@@ -2550,6 +2751,7 @@ window.OPE_SAMPLE_REPORT = {
     ],
     "subheadings": 2,
     "suppresses_focus_outline": true,
+    "tables": 1,
     "third_party_hosts": [],
     "title": "StarBrand — Digital Presence",
     "title_count": 1,
@@ -2560,15 +2762,19 @@ window.OPE_SAMPLE_REPORT = {
       "protocol": "TLSv1.3"
     },
     "ttfb_ms": 236.0,
-    "unlabelled_inputs": 1,
+    "unlabelled_inputs": 0,
+    "verification_tags": [
+      "google-site-verification",
+      "msvalidate.01"
+    ],
     "videos": 0,
     "videos_missing_metadata": 0,
-    "viewport": "",
+    "viewport": "width=device-width, initial-scale=1",
     "waf_markers": [
       "cf-ray",
       "server: cloudflare"
     ],
-    "word_count": 97,
+    "word_count": 100,
     "x_content_type_options": true,
     "x_robots_tag": null
   },
@@ -2583,7 +2789,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "03": {
       "findings": [],
-      "status": "FAIL"
+      "status": "PASS"
     },
     "04": {
       "findings": [],
@@ -2591,7 +2797,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "05": {
       "findings": [],
-      "status": "UNKNOWN"
+      "status": "PASS"
     },
     "06": {
       "findings": [],
@@ -2607,7 +2813,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "09": {
       "findings": [],
-      "status": "UNKNOWN"
+      "status": "FAIL"
     },
     "10": {
       "findings": [],
@@ -2622,10 +2828,8 @@ window.OPE_SAMPLE_REPORT = {
       "status": "FAIL"
     },
     "13": {
-      "findings": [
-        "13-UX-MOBILE-001"
-      ],
-      "status": "FAIL"
+      "findings": [],
+      "status": "PASS"
     },
     "14": {
       "findings": [
@@ -2639,8 +2843,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "16": {
       "findings": [
-        "16-SEC-CONTENT-SECURITY-POLICY",
-        "16-SEC-REFERRER-POLICY"
+        "16-SEC-CONTENT-SECURITY-POLICY"
       ],
       "status": "FAIL"
     },
@@ -2650,7 +2853,7 @@ window.OPE_SAMPLE_REPORT = {
     },
     "18": {
       "findings": [],
-      "status": "FAIL"
+      "status": "UNKNOWN"
     },
     "19": {
       "findings": [],
@@ -2665,12 +2868,12 @@ window.OPE_SAMPLE_REPORT = {
   "started_at": 1726190400,
   "summary": {
     "critical": 0,
-    "finding_count": 4,
+    "finding_count": 2,
     "high": 0,
     "info": 0,
-    "low": 2,
-    "medium": 2
+    "low": 1,
+    "medium": 1
   },
   "target": "https://starbrand.example.com",
-  "version": "0.2.0"
+  "version": "0.3.0"
 };
