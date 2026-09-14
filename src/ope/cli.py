@@ -46,7 +46,7 @@ def setup_project() -> int:
 
 def audit_command(args: argparse.Namespace) -> int:
     try:
-        result = normalize_result(audit(args.url, timeout=args.timeout))
+        result = normalize_result(audit(args.url, timeout=args.timeout, fetch_subresources=not args.no_subresources))
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
@@ -71,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--markdown", action="store_true")
     audit_parser.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML audit report")
     audit_parser.add_argument("--timeout", type=int, default=15)
+    audit_parser.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS (faster; leaves cost and stylesheet checks UNKNOWN)")
     audit_parser.set_defaults(handler=audit_command)
     return parser
 

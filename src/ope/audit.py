@@ -30,7 +30,7 @@ class PageParser(HTMLParser):
         self.forms = 0; self.json_ld = 0; self.json_ld_raw: list[str] = []
         self.canonical = ""; self.viewport = ""; self.description = ""; self.h1_count = 0; self._in_title = False
         self.meta_robots = ""; self.hreflang_count = 0; self.landmarks: set[str] = set()
-        self.article_modified = ""; self.contact_input = False; self.script_srcs: list[str] = []
+        self.article_modified = ""; self.contact_input = False; self.script_srcs: list[str] = []; self.stylesheet_hrefs: list[str] = []
         self._in_json_ld = False; self._json_ld_buffer: list[str] = []
         self.doctype = ""; self.charset = ""; self.title_count = 0; self.structure: set[str] = set()
         self.heading_texts: list[str] = []; self.link_texts: list[str] = []
@@ -95,6 +95,7 @@ class PageParser(HTMLParser):
             rel = (a.get("rel") or "").lower().split()
             if "canonical" in rel: self.canonical = a.get("href", "") or ""
             if "alternate" in rel and a.get("hreflang"): self.hreflang_count += 1
+            if "stylesheet" in rel and a.get("href"): self.stylesheet_hrefs.append(a["href"] or "")
         if tag == "meta":
             name = (a.get("name") or "").lower()
             prop = (a.get("property") or "").lower()
@@ -373,6 +374,66 @@ _CDN_HEADER_MARKERS = ("cf-ray", "x-amz-cf-id", "x-akamai-transformed", "x-verce
 _WAF_MARKERS = ("cf-ray", "x-sucuri-id", "x-iinfo", "x-akamai-transformed", "x-waf-status", "x-sitelock-id")
 
 
+MAX_SUBRESOURCES = 12
+MAX_SUBRESOURCE_BYTES = 512 * 1024
+
+
+def _fetch_subresources(page_url: str, stylesheets: list[str], scripts: list[str], timeout: int = 10) -> dict[str, Any]:
+    """Measure the CSS/JS the page links, within strict fetch limits.
+
+    Every discovered resource is counted and classified from the markup;
+    only a capped subset is downloaded to measure bytes, so the reported
+    byte totals are explicitly a measured sample rather than a claim
+    about the full page.
+    """
+    origin = urllib.parse.urlparse(page_url).hostname or ""
+    discovered = [("css", href) for href in stylesheets] + [("js", src) for src in scripts]
+    third_party_hosts: set[str] = set()
+    resolved: list[tuple[str, str]] = []
+    for kind, reference in discovered:
+        absolute = urllib.parse.urljoin(page_url, reference)
+        host = urllib.parse.urlparse(absolute).hostname or ""
+        if host and host != origin:
+            third_party_hosts.add(host)
+        resolved.append((kind, absolute))
+
+    measured = {"css": 0, "js": 0}
+    fetched = 0
+    css_text: list[str] = []
+    for kind, absolute in resolved[:MAX_SUBRESOURCES]:
+        try:
+            safe_url = _validate_url(absolute)
+            request = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
+            with urllib.request.urlopen(request, timeout=max(1, min(timeout, 20))) as response:
+                payload = response.read(MAX_SUBRESOURCE_BYTES)
+        except Exception:
+            continue
+        fetched += 1
+        measured[kind] += len(payload)
+        if kind == "css":
+            css_text.append(payload.decode("utf-8", errors="replace"))
+    return {
+        "discovered_requests": len(discovered),
+        "fetched_requests": fetched,
+        "css_bytes": measured["css"],
+        "js_bytes": measured["js"],
+        "third_party_hosts": sorted(third_party_hosts),
+        "css_text": "\n".join(css_text),
+    }
+
+
+def _css_behaviour(css_text: str) -> dict[str, Any]:
+    """Read motion and focus handling out of the stylesheets actually served."""
+    lowered = css_text.lower()
+    return {
+        "has_css": bool(lowered.strip()),
+        "has_motion": "animation" in lowered or "transition" in lowered,
+        "respects_reduced_motion": "prefers-reduced-motion" in lowered,
+        "suppresses_focus_outline": bool(re.search(r"outline\s*:\s*(none|0)", lowered)),
+        "has_focus_visible": ":focus-visible" in lowered,
+    }
+
+
 def _tls_profile(url: str, timeout: int = 10) -> dict[str, Any]:
     """Inspect the live TLS handshake for protocol version and certificate life.
 
@@ -441,7 +502,7 @@ def _finding(fid: str, module: str, symptom: str, severity: str, evidence: list[
     return Finding(fid, module, symptom, "OBSERVED", severity, priority, [asdict(e) for e in evidence], remediation=remediation, validation=validation)
 
 
-def audit(url: str, timeout: int = 15) -> dict[str, Any]:
+def audit(url: str, timeout: int = 15, fetch_subresources: bool = True) -> dict[str, Any]:
     started = time.time()
     normalized = url if urllib.parse.urlparse(url).scheme else "https://" + url
     response = _request(normalized, timeout)
@@ -468,6 +529,9 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     has_cta = p.buttons > 0 or any(_CTA_PATTERN.search(text) for text in p.link_texts)
     question_headings = sum(1 for text in p.heading_texts if text.endswith("?") or _QUESTION_PATTERN.match(text))
     canonical_is_self = None if not p.canonical else urllib.parse.urljoin(final_url, p.canonical).rstrip("/") == final_url.rstrip("/")
+    subresources = _fetch_subresources(final_url, p.stylesheet_hrefs, p.script_srcs, timeout) if fetch_subresources else {}
+    css_behaviour = _css_behaviour(subresources.get("css_text", "")) if subresources else {}
+    page_weight_bytes = len(body) + subresources.get("css_bytes", 0) + subresources.get("js_bytes", 0) if subresources else None
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -504,7 +568,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:

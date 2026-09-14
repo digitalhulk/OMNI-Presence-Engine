@@ -164,6 +164,40 @@ def test_secret_scan_reports_labels_only_never_the_secret():
     assert audit_module._scan_secrets("<p>nothing sensitive here</p>") == []
 
 
+def test_css_behaviour_reads_motion_and_focus_handling():
+    assert audit_module._css_behaviour("") == {"has_css": False, "has_motion": False, "respects_reduced_motion": False, "suppresses_focus_outline": False, "has_focus_visible": False}
+    behaviour = audit_module._css_behaviour("a{transition:all .2s}@media (prefers-reduced-motion: reduce){a{transition:none}} button{outline: 0} button:focus-visible{outline:2px solid}")
+    assert behaviour == {"has_css": True, "has_motion": True, "respects_reduced_motion": True, "suppresses_focus_outline": True, "has_focus_visible": True}
+
+
+def test_subresource_fetch_classifies_third_party_hosts_and_survives_failures(monkeypatch):
+    monkeypatch.setattr(audit_module, "_validate_url", lambda url: url)
+
+    class _FakeResponse:
+        def __init__(self, payload): self._payload = payload
+        def read(self, _limit=None): return self._payload
+        def __enter__(self): return self
+        def __exit__(self, *_): return False
+
+    def fake_urlopen(request, timeout=10):
+        url = request.full_url
+        if "broken" in url:
+            raise OSError("unreachable")
+        return _FakeResponse(b"x" * 100 if url.endswith(".css") else b"y" * 250)
+
+    monkeypatch.setattr(audit_module.urllib.request, "urlopen", fake_urlopen)
+    result = audit_module._fetch_subresources(
+        "https://example.com/",
+        ["/site.css", "https://cdn.other.net/lib.css"],
+        ["/app.js", "https://cdn.other.net/broken.js"],
+    )
+    assert result["discovered_requests"] == 4
+    assert result["fetched_requests"] == 3
+    assert result["css_bytes"] == 200
+    assert result["js_bytes"] == 250
+    assert result["third_party_hosts"] == ["cdn.other.net"]
+
+
 def test_tls_profile_reports_error_instead_of_raising_for_plain_http():
     profile = audit_module._tls_profile("http://example.com/")
     assert profile["protocol"] is None

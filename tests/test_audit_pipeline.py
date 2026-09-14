@@ -82,6 +82,12 @@ BOUND = {
     "07-content.completeness",
     "06-semantics.topic_coverage",
     "06-semantics.query_intent",
+    "03-code.css_cost",
+    "03-code.js_cost",
+    "03-code.third_party_code",
+    "15-performance.network",
+    "14-accessibility.reduced_motion",
+    "14-accessibility.focus",
 }
 
 PAGESPEED_SOURCED = {
@@ -188,6 +194,17 @@ def _audit_result():
             "question_headings": 2,
             "subheadings": 4,
             "canonical_is_self": True,
+            "page_weight_bytes": 220_000,
+            "discovered_requests": 6,
+            "fetched_requests": 6,
+            "css_bytes": 40_000,
+            "js_bytes": 175_000,
+            "third_party_hosts": ["cdn.example.net"],
+            "has_css": True,
+            "has_motion": True,
+            "respects_reduced_motion": True,
+            "suppresses_focus_outline": False,
+            "has_focus_visible": True,
         },
         "findings": [],
     }
@@ -326,8 +343,9 @@ def test_slow_dns_and_ttfb_fail_performance_budgets():
     assert result["checks"]["02-infrastructure.dns.resolution"]["status"] == "PASS"
 
 
-def test_heavy_document_fails_page_weight_budget():
+def test_heavy_document_fails_page_weight_budget_without_subresource_data():
     audit = _audit_result()
+    audit["inventory"]["page_weight_bytes"] = None
     audit["inventory"]["bytes"] = 500_000
     result = execute_audit_checks(audit)
     assert result["checks"]["15-performance.page_weight"]["status"] == "FAIL"
@@ -491,6 +509,41 @@ def test_mismatched_entity_name_fails_consistency_check():
     audit["inventory"]["name_matches_title"] = False
     result = execute_audit_checks(audit)
     assert result["checks"]["01-entity.consistency"]["status"] == "FAIL"
+
+
+def test_oversized_subresources_and_request_counts_fail():
+    audit = _audit_result()
+    audit["inventory"].update({"css_bytes": 900_000, "js_bytes": 2_000_000, "third_party_hosts": [f"h{i}.example.net" for i in range(9)], "discovered_requests": 120, "page_weight_bytes": 4_000_000})
+    result = execute_audit_checks(audit)
+    for check_id in ("03-code.css_cost", "03-code.js_cost", "03-code.third_party_code", "15-performance.network", "15-performance.page_weight"):
+        assert result["checks"][check_id]["status"] == "FAIL"
+
+
+def test_page_weight_falls_back_to_html_only_without_subresource_data():
+    audit = _audit_result()
+    audit["inventory"]["page_weight_bytes"] = None
+    result = execute_audit_checks(audit)
+    check = result["checks"]["15-performance.page_weight"]
+    assert check["status"] == "PASS"
+    assert "HTML document only" in check["reason"]
+
+
+def test_motion_and_focus_checks_read_fetched_css():
+    audit = _audit_result()
+    audit["inventory"]["respects_reduced_motion"] = False
+    audit["inventory"]["suppresses_focus_outline"] = True
+    audit["inventory"]["has_focus_visible"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["14-accessibility.reduced_motion"]["status"] == "FAIL"
+    assert result["checks"]["14-accessibility.focus"]["status"] == "FAIL"
+
+    audit["inventory"]["has_motion"] = False
+    assert execute_audit_checks(audit)["checks"]["14-accessibility.reduced_motion"]["status"] == "N/A"
+
+    audit["inventory"]["has_css"] = False
+    result = execute_audit_checks(audit)
+    assert result["checks"]["14-accessibility.reduced_motion"]["status"] == "UNKNOWN"
+    assert result["checks"]["14-accessibility.focus"]["status"] == "UNKNOWN"
 
 
 def test_defect_counts_fail_and_empty_populations_are_not_applicable():

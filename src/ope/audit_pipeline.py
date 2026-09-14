@@ -89,7 +89,22 @@ AUDIT_BINDINGS = (
     "07-content.completeness",
     "06-semantics.topic_coverage",
     "06-semantics.query_intent",
+    "03-code.css_cost",
+    "03-code.js_cost",
+    "03-code.third_party_code",
+    "15-performance.network",
+    "14-accessibility.reduced_motion",
+    "14-accessibility.focus",
 )
+
+# Measured subresource budgets, in transferred bytes.
+_SUBRESOURCE_BUDGETS = {
+    "03-code.css_cost": ("03-code", "css_bytes", 150_000),
+    "03-code.js_cost": ("03-code", "js_bytes", 300_000),
+}
+_THIRD_PARTY_HOST_BUDGET = 5
+_REQUEST_COUNT_BUDGET = 50
+_PAGE_WEIGHT_BYTES_BUDGET_MEASURED = 1_000_000
 
 # Checks that compare a "how many are broken" count against the population
 # they belong to: N/A when the page contains none of that element at all,
@@ -269,11 +284,16 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         return _check(check_id, "15-performance", ttfb_ms <= _TTFB_MS_BUDGET, target, {"ttfb_ms": ttfb_ms, "budget_ms": _TTFB_MS_BUDGET})
 
     if check_id == "15-performance.page_weight":
+        measured = inventory.get("page_weight_bytes")
+        if isinstance(measured, int):
+            result = _check(check_id, "15-performance", measured <= _PAGE_WEIGHT_BYTES_BUDGET_MEASURED, target, {"page_weight_bytes": measured, "html_bytes": inventory.get("bytes"), "css_bytes": inventory.get("css_bytes"), "js_bytes": inventory.get("js_bytes"), "budget_bytes": _PAGE_WEIGHT_BYTES_BUDGET_MEASURED})
+            result.reason = "Document plus fetched CSS/JS; images, fonts and media are not counted."
+            return result
         doc_bytes = inventory.get("bytes")
         if not isinstance(doc_bytes, int):
             return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Response size observation is missing")
         result = _check(check_id, "15-performance", doc_bytes <= _PAGE_WEIGHT_BYTES_BUDGET, target, {"html_bytes": doc_bytes, "budget_bytes": _PAGE_WEIGHT_BYTES_BUDGET})
-        result.reason = "Measures the main HTML document only; excludes images, CSS, and JavaScript payload."
+        result.reason = "Subresources were not fetched, so this measures the main HTML document only."
         return result
 
     if check_id in _PSI_VITALS:
@@ -336,6 +356,48 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "has_analytics" not in inventory:
             return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Analytics observation is missing")
         return _check(check_id, "18-analytics", bool(inventory.get("has_analytics")), target, {"has_analytics": inventory.get("has_analytics")})
+
+    if check_id in _SUBRESOURCE_BUDGETS:
+        module, key, budget = _SUBRESOURCE_BUDGETS[check_id]
+        measured = inventory.get(key)
+        if not isinstance(measured, int):
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Subresource measurement is unavailable")
+        result = _check(check_id, module, measured <= budget, target, {key: measured, "budget_bytes": budget, "fetched_requests": inventory.get("fetched_requests")})
+        result.reason = f"Measured from up to {inventory.get('fetched_requests')} fetched subresources; resources beyond the fetch cap are not counted."
+        return result
+
+    if check_id == "03-code.third_party_code":
+        hosts = inventory.get("third_party_hosts")
+        if hosts is None:
+            return CheckResult(check_id, "03-code", ExecutionStatus.UNKNOWN, reason="Subresource measurement is unavailable")
+        hosts = list(hosts)
+        return _check(check_id, "03-code", len(hosts) <= _THIRD_PARTY_HOST_BUDGET, target, {"third_party_hosts": hosts, "budget": _THIRD_PARTY_HOST_BUDGET})
+
+    if check_id == "15-performance.network":
+        discovered = inventory.get("discovered_requests")
+        if not isinstance(discovered, int):
+            return CheckResult(check_id, "15-performance", ExecutionStatus.UNKNOWN, reason="Request-count observation is unavailable")
+        # The document itself is one request on top of what it references.
+        total_requests = discovered + 1
+        return _check(check_id, "15-performance", total_requests <= _REQUEST_COUNT_BUDGET, target, {"requests": total_requests, "budget": _REQUEST_COUNT_BUDGET})
+
+    if check_id == "14-accessibility.reduced_motion":
+        if "has_css" not in inventory:
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.UNKNOWN, reason="Stylesheet evidence is unavailable")
+        if not inventory.get("has_css"):
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.UNKNOWN, reason="No stylesheet could be fetched to evaluate motion handling")
+        if not inventory.get("has_motion"):
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.NA, reason="The fetched stylesheets declare no animation or transition")
+        return _check(check_id, "14-accessibility", bool(inventory.get("respects_reduced_motion")), target, {"has_motion": True, "respects_reduced_motion": inventory.get("respects_reduced_motion")})
+
+    if check_id == "14-accessibility.focus":
+        if "has_css" not in inventory:
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.UNKNOWN, reason="Stylesheet evidence is unavailable")
+        if not inventory.get("has_css"):
+            return CheckResult(check_id, "14-accessibility", ExecutionStatus.UNKNOWN, reason="No stylesheet could be fetched to evaluate focus handling")
+        suppressed = bool(inventory.get("suppresses_focus_outline"))
+        restored = bool(inventory.get("has_focus_visible"))
+        return _check(check_id, "14-accessibility", not suppressed or restored, target, {"suppresses_focus_outline": suppressed, "has_focus_visible": restored})
 
     if check_id in _DEFECT_COUNT_CHECKS:
         module, population_key, defect_key, empty_reason = _DEFECT_COUNT_CHECKS[check_id]
