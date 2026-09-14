@@ -330,9 +330,9 @@ tests/         → executable contract coverage
 
 ---
 
-# 🔐 PRIVATE BY DESIGN
+# 🔐 PUBLIC REPOSITORY — SAFE BY DESIGN
 
-This repository is **PRIVATE**.
+This repository is **PUBLIC**.
 
 Never commit API keys, OAuth tokens, cookies, session credentials, customer secrets, private analytics exports or production credentials.
 
