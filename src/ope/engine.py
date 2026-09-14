@@ -23,6 +23,7 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
     raw_evidence = item.get("evidence")
     evidence = raw_evidence if isinstance(raw_evidence, list) else []
     valid_evidence = [entry for entry in evidence if isinstance(entry, dict)]
+    has_evidence = bool(valid_evidence)
     confidence = min(
         (_safe_float(entry.get("confidence", 0.2), 0.2) for entry in valid_evidence),
         default=0.2,
@@ -35,8 +36,18 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
     item.setdefault("execution_status", "FAIL")
     item.setdefault("evidence_status", item.get("status") or "OBSERVED")
     item["status"] = item.get("status") or "OBSERVED"
-    if not item.get("root_cause"):
+    root_cause_text = str(item.get("root_cause") or "").strip()
+    # A finding cannot claim a fact/observation-grade status (or a stated
+    # root cause) without evidence to back it -- that would let a caller
+    # assert "FACT" or "OBSERVED" as a bare unverified claim, which is
+    # exactly the hypothesis-presented-as-fact failure mode the engine
+    # exists to prevent. Whitespace-only root_cause text is treated as
+    # absent, not as a real explanation.
+    if not root_cause_text:
         item["root_cause"] = HYPOTHESIS_ROOT_CAUSE
+        item["status"] = "HYPOTHESIS"
+        item["evidence_status"] = "HYPOTHESIS"
+    elif not has_evidence and item["status"] in {"FACT", "OBSERVED"}:
         item["status"] = "HYPOTHESIS"
         item["evidence_status"] = "HYPOTHESIS"
     # priority is a 0-100 scale per schemas/audit/finding-v1.yaml and matches
