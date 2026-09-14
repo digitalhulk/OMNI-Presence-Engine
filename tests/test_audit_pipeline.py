@@ -1,6 +1,5 @@
 from ope.audit_pipeline import execute_audit_checks
 
-
 BOUND = {
     "02-infrastructure.hosting.availability",
     "03-code.head_metadata",
@@ -1009,7 +1008,7 @@ def test_missing_trust_or_cta_fails_trust_to_action():
 
 def test_all_136_checks_are_bound():
     from ope.registry import registered_check_ids
-    result = execute_audit_checks(_audit_result())
+    execute_audit_checks(_audit_result())
     all_ids = set(registered_check_ids())
     bound_and_external = BOUND | EXTERNAL_EVIDENCE | FINDING_RECORD_CHECKS
     assert bound_and_external == all_ids, f"Unbound: {all_ids - bound_and_external}"

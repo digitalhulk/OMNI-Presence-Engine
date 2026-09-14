@@ -238,7 +238,7 @@ def _request(url: str, timeout: int = 15) -> Response:
     req = urllib.request.Request(safe_url, headers={"User-Agent": "OPE-Audit/0.1"}, method="GET")
     ctx = ssl.create_default_context()
     opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
-    opener.max_redirections = MAX_REDIRECTS
+    opener.max_redirections = MAX_REDIRECTS  # type: ignore[attr-defined]
     ttfb_start = time.perf_counter()
     with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
         ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
@@ -332,7 +332,8 @@ def _json_ld_summary(raw_blocks: list[str], title: str = "", description: str = 
     types: set[str] = set()
     for node in nodes:
         types |= _node_types(node)
-    present = lambda *keys: any(node.get(key) for node in nodes for key in keys)
+    def present(*keys: str) -> bool:
+        return any(node.get(key) for node in nodes for key in keys)
     local_nodes = [node for node in nodes if _node_types(node) & _LOCAL_TYPES]
     same_as = [url.lower() for node in nodes for url in _flatten_urls(node.get("sameAs")) if url]
     names = [str(node["name"]) for node in nodes if isinstance(node.get("name"), str)]
@@ -478,7 +479,7 @@ def _tls_profile(url: str, timeout: int = 10) -> dict[str, Any]:
     not_after = certificate.get("notAfter")
     if not_after:
         try:
-            expires_at = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+            expires_at = datetime.strptime(str(not_after), "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
             days_until_expiry = (expires_at - datetime.now(timezone.utc)).days
         except ValueError:
             days_until_expiry = None
@@ -593,7 +594,7 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True) -> dict[
         if header not in security_headers:
             findings.append(_finding(f"16-SEC-{header.upper()}", "16-security", f"Recommended security header not observed: {header}", "low", [Evidence("http-headers", now, final_url, {header: None})], [f"Review and configure {header} according to the application's threat model."], [f"Re-fetch response headers and verify {header}."], .4, .4, .7))
 
-    modules = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
+    modules: dict[str, dict[str, Any]] = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
     for f in findings:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)

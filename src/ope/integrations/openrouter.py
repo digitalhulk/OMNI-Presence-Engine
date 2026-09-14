@@ -39,9 +39,10 @@ class OpenRouterClient:
     """
 
     def __init__(self, config: OpenRouterConfig | None = None) -> None:
-        self.config = config or OpenRouterConfig.from_env()
-        if self.config is None:
+        resolved = config or OpenRouterConfig.from_env()
+        if resolved is None:
             raise OpenRouterError("OPENROUTER_API_KEY is not configured")
+        self.config: OpenRouterConfig = resolved
 
     def chat_json(self, messages: list[dict[str, str]], *, temperature: float = 0.0) -> dict[str, Any]:
         payload = {

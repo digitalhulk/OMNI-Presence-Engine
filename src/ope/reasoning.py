@@ -5,7 +5,6 @@ from typing import Any
 
 from .integrations.openrouter import OpenRouterClient
 
-
 SYSTEM_PROMPT = """You are OPE's reasoning layer. Reason only from the deterministic audit evidence supplied by OPE.
 Do not invent observations, citations, measurements, rankings, customer facts, or evidence.
 Do not turn UNKNOWN into PASS. Do not change deterministic execution statuses.

@@ -4,7 +4,6 @@ import re
 from html.parser import HTMLParser
 from typing import Any, Iterable
 
-
 # Adapted from external GEO citability research as independent deterministic
 # signals. These are heuristics, not claims about any search engine ranking or
 # citation algorithm.

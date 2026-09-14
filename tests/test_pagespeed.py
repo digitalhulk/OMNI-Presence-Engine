@@ -1,4 +1,4 @@
-from ope.integrations.pagespeed import PageSpeedClient, PageSpeedConfig, PageSpeedError, extract_vitals, fetch_vitals
+from ope.integrations.pagespeed import PageSpeedConfig, PageSpeedError, extract_vitals, fetch_vitals
 
 
 def test_missing_api_key_short_circuits_without_network(monkeypatch):
