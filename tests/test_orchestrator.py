@@ -184,6 +184,38 @@ def test_cancellation_wins_over_finalization():
     assert engine.get_run(run.run_id).result is None
 
 
+def test_cancellation_after_normalization_skips_advisory_reasoning():
+    entered_normalize = Event()
+    release_normalize = Event()
+    reasoning_called = Event()
+
+    def fake_normalize(result):
+        entered_normalize.set()
+        assert release_normalize.wait(timeout=2)
+        return dict(result)
+
+    def fake_reason(_):
+        reasoning_called.set()
+        return {"provider": "test", "advisory": True}
+
+    engine = AuditOrchestrator(
+        lambda target: {"target": target, "modules": {}, "findings": [], "inventory": {}},
+        fake_normalize,
+        fake_reason,
+    )
+    run = engine.create_run("https://example.com")
+    worker = Thread(target=engine.execute, args=(run.run_id,))
+    worker.start()
+    assert entered_normalize.wait(timeout=2)
+    assert engine.cancel(run.run_id) is True
+    release_normalize.set()
+    worker.join(timeout=2)
+
+    assert engine.get_run(run.run_id).status == "CANCELLED"
+    assert engine.get_run(run.run_id).result is None
+    assert not reasoning_called.is_set()
+
+
 def test_explicit_empty_environment_is_not_process_environment():
     inventory = integration_inventory({})
     assert all(not item["configured"] for item in inventory["providers"].values())
