@@ -50,6 +50,8 @@ class PageParser(HTMLParser):
         self._label_depth = 0; self._heading_buffer: list[str] = []; self._in_heading = False
         self._link_buffer: list[str] = []; self._in_link = False
         self._button_buffer: list[str] = []; self._in_button = False; self._button_labelled = False
+        self.verification_tags: list[str] = []; self.lazy_images = 0; self.noscript_content = False; self.has_password_input = False
+        self.lists = 0; self.tables = 0; self._in_noscript = False; self._noscript_buffer: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
@@ -85,9 +87,11 @@ class PageParser(HTMLParser):
             if not (a.get("alt") or "").strip(): self.images_missing_alt += 1
             if not (a.get("width") and a.get("height")): self.images_missing_dimensions += 1
             if not a.get("srcset"): self.images_missing_srcset += 1
+            if (a.get("loading") or "").lower() == "lazy": self.lazy_images += 1
         if tag == "input":
             input_type = (a.get("type") or "text").lower()
             if input_type in {"email", "tel"}: self.contact_input = True
+            if input_type == "password": self.has_password_input = True
             if input_type not in {"hidden", "submit", "button", "reset", "image"}:
                 self.inputs += 1
                 labelled = bool((a.get("aria-label") or "").strip() or a.get("aria-labelledby")) or self._label_depth > 0
@@ -100,6 +104,9 @@ class PageParser(HTMLParser):
         if tag == "form":
             self.forms += 1
             if not a.get("action"): self.forms_missing_action += 1
+        if tag in ("ul", "ol"): self.lists += 1
+        if tag == "table": self.tables += 1
+        if tag == "noscript": self._in_noscript = True; self._noscript_buffer = []
         if tag == "link":
             rel = (a.get("rel") or "").lower().split()
             if "canonical" in rel: self.canonical = a.get("href", "") or ""
@@ -113,6 +120,8 @@ class PageParser(HTMLParser):
             if name == "description": self.description = a.get("content", "") or ""
             if name == "robots": self.meta_robots = a.get("content", "") or ""
             if prop == "article:modified_time": self.article_modified = a.get("content", "") or ""
+            for _vn in ("google-site-verification", "msvalidate.01", "yandex-verification", "p:domain_verify", "facebook-domain-verification"):
+                if name == _vn and a.get("content"): self.verification_tags.append(_vn)
         if tag == "script":
             if a.get("src"): self.script_srcs.append(a["src"] or "")
             if (a.get("type") or "").lower() == "application/ld+json":
@@ -137,6 +146,9 @@ class PageParser(HTMLParser):
             if not (self._button_labelled or "".join(self._button_buffer).strip()):
                 self.buttons_without_text += 1
             self._in_button = False
+        if tag == "noscript" and self._in_noscript:
+            if "".join(self._noscript_buffer).strip(): self.noscript_content = True
+            self._in_noscript = False
 
     def handle_decl(self, decl: str) -> None:
         self.doctype = decl.strip()
@@ -147,6 +159,7 @@ class PageParser(HTMLParser):
         if self._in_heading: self._heading_buffer.append(data)
         if self._in_link: self._link_buffer.append(data)
         if self._in_button: self._button_buffer.append(data)
+        if self._in_noscript: self._noscript_buffer.append(data)
 
     def close(self) -> None:
         super().close()
@@ -541,6 +554,14 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True) -> dict[
     subresources = _fetch_subresources(final_url, p.stylesheet_hrefs, p.script_srcs, timeout) if fetch_subresources else {}
     css_behaviour = _css_behaviour(subresources.get("css_text", "")) if subresources else {}
     page_weight_bytes = len(body) + subresources.get("css_bytes", 0) + subresources.get("js_bytes", 0) if subresources else None
+    has_captcha = any(marker in html.lower() for marker in ("recaptcha", "hcaptcha", "turnstile"))
+    has_event_tracking = any(marker in html for marker in ("dataLayer.push", "gtag(", "fbq(", "plausible(", "umami."))
+    has_attribution_code = "utm_" in html.lower()
+    soft_404 = status == 200 and any(phrase in (p.title.lower() + " " + " ".join(t.lower() for t in p.heading_texts)) for phrase in ("page not found", "404 not found", "404 error"))
+    has_rate_limit_headers = any(key.startswith("x-ratelimit") or key == "retry-after" for key in headers)
+    title_words = {w for w in p.title.lower().split() if len(w) > 3}
+    h1_raw = p.heading_texts[:p.h1_count]
+    intent_aligned = bool(title_words) and bool(h1_raw) and any(len(title_words & {w for w in h.lower().split() if len(w) > 3}) >= 2 for h in h1_raw)
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -577,7 +598,7 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True) -> dict[
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": ENGINE_VERSION, "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": ENGINE_VERSION, "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers, "verification_tags": p.verification_tags, "lazy_images": p.lazy_images, "noscript_content": p.noscript_content, "has_password_input": p.has_password_input, "lists": p.lists, "tables": p.tables, "has_captcha": has_captcha, "has_event_tracking": has_event_tracking, "has_attribution_code": has_attribution_code, "soft_404": soft_404, "has_rate_limit_headers": has_rate_limit_headers, "intent_aligned": intent_aligned}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:

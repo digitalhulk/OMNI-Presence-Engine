@@ -92,6 +92,58 @@ BOUND = {
     "20-continuous-optimization.anomaly_detection",
     "20-continuous-optimization.regression_guards",
     "20-continuous-optimization.update_pipeline",
+    "01-entity.ownership",
+    "04-crawl.crawl_errors",
+    "04-crawl.crawl_budget_risk",
+    "05-index.rendering_indexability",
+    "06-semantics.relationships",
+    "07-content.intent_match",
+    "07-content.helpfulness",
+    "07-content.conversion_context",
+    "08-media.media_performance",
+    "09-search.serp_eligibility",
+    "09-search.sitelinks",
+    "09-search.image_visibility",
+    "10-ai-search.ai_retrievability",
+    "10-ai-search.source_grounding",
+    "11-authority.citations",
+    "13-ux.booking_friction",
+    "16-security.auth",
+    "16-security.abuse_controls",
+    "17-language.regional_intent",
+    "18-analytics.event_quality",
+    "18-analytics.attribution",
+    "19-conversion.booking_completion",
+    "19-conversion.trust_to_action",
+}
+
+FINDING_RECORD_CHECKS = {
+    "20-continuous-optimization.root_cause",
+    "20-continuous-optimization.prioritization",
+    "20-continuous-optimization.validation",
+}
+
+EXTERNAL_EVIDENCE = {
+    "07-content.originality",
+    "07-content.factual_accuracy",
+    "08-media.image_quality",
+    "09-search.query_visibility",
+    "10-ai-search.factual_consistency",
+    "11-authority.brand_mentions",
+    "11-authority.backlinks",
+    "11-authority.reputation",
+    "14-accessibility.contrast",
+    "15-performance.render_cost",
+    "15-performance.frame_cost",
+    "16-security.dependencies",
+    "17-language.translation_quality",
+    "17-language.transliteration",
+    "18-analytics.search_data",
+    "18-analytics.server_logs",
+    "18-analytics.crm_linkage",
+    "18-analytics.ai_referrals",
+    "19-conversion.funnel_dropoff",
+    "19-conversion.revenue_tracking",
 }
 
 PAGESPEED_SOURCED = {
@@ -204,6 +256,18 @@ def _audit_result():
             "css_bytes": 40_000,
             "js_bytes": 175_000,
             "third_party_hosts": ["cdn.example.net"],
+            "verification_tags": ["google-site-verification"],
+            "lazy_images": 1,
+            "noscript_content": True,
+            "has_password_input": True,
+            "lists": 3,
+            "tables": 1,
+            "has_captcha": True,
+            "has_event_tracking": True,
+            "has_attribution_code": True,
+            "soft_404": False,
+            "has_rate_limit_headers": True,
+            "intent_aligned": True,
             "has_css": True,
             "has_motion": True,
             "respects_reduced_motion": True,
@@ -235,9 +299,12 @@ def test_bound_audit_checks_produce_schema_complete_evidence():
             assert evidence["observed_at"]
 
 
-def test_unbound_checks_remain_unknown():
+def test_external_evidence_checks_return_unknown_with_specific_reasons():
     result = execute_audit_checks(_audit_result())
-    assert result["checks"]["01-entity.ownership"]["status"] == "UNKNOWN"
+    for check_id in EXTERNAL_EVIDENCE:
+        check = result["checks"][check_id]
+        assert check["status"] == "UNKNOWN", f"{check_id} should be UNKNOWN"
+        assert "not configured" in check["reason"] or "not available" in check["reason"], f"{check_id} should explain what evidence source is needed"
 
 
 def test_missing_http_status_is_unknown():
@@ -740,3 +807,209 @@ def test_missing_structured_data_observation_is_unknown():
     result = execute_audit_checks(audit)
     assert result["checks"]["06-semantics.taxonomy"]["status"] == "UNKNOWN"
     assert result["checks"]["12-local.hours"]["status"] == "UNKNOWN"
+
+
+def test_no_verification_tags_fails_ownership_check():
+    audit = _audit_result()
+    audit["inventory"]["verification_tags"] = []
+    assert execute_audit_checks(audit)["checks"]["01-entity.ownership"]["status"] == "FAIL"
+
+
+def test_soft_404_fails_crawl_errors_check():
+    audit = _audit_result()
+    audit["inventory"]["soft_404"] = True
+    assert execute_audit_checks(audit)["checks"]["04-crawl.crawl_errors"]["status"] == "FAIL"
+
+
+def test_excessive_requests_fail_crawl_budget_risk():
+    audit = _audit_result()
+    audit["inventory"]["discovered_requests"] = 200
+    assert execute_audit_checks(audit)["checks"]["04-crawl.crawl_budget_risk"]["status"] == "FAIL"
+
+
+def test_js_only_page_fails_rendering_indexability():
+    audit = _audit_result()
+    audit["inventory"]["word_count"] = 10
+    audit["inventory"]["noscript_content"] = False
+    assert execute_audit_checks(audit)["checks"]["05-index.rendering_indexability"]["status"] == "FAIL"
+    audit["inventory"]["noscript_content"] = True
+    assert execute_audit_checks(audit)["checks"]["05-index.rendering_indexability"]["status"] == "PASS"
+
+
+def test_no_entity_makes_relationships_na():
+    audit = _audit_result()
+    audit["inventory"]["has_entity_type"] = False
+    assert execute_audit_checks(audit)["checks"]["06-semantics.relationships"]["status"] == "N/A"
+
+
+def test_missing_relationships_fail_check():
+    audit = _audit_result()
+    audit["inventory"]["has_relationships"] = False
+    assert execute_audit_checks(audit)["checks"]["06-semantics.relationships"]["status"] == "FAIL"
+
+
+def test_misaligned_intent_fails_intent_match():
+    audit = _audit_result()
+    audit["inventory"]["intent_aligned"] = False
+    assert execute_audit_checks(audit)["checks"]["07-content.intent_match"]["status"] == "FAIL"
+
+
+def test_thin_unstructured_content_fails_helpfulness():
+    audit = _audit_result()
+    audit["inventory"].update({"word_count": 40, "subheadings": 0, "lists": 0})
+    assert execute_audit_checks(audit)["checks"]["07-content.helpfulness"]["status"] == "FAIL"
+
+
+def test_no_cta_with_thin_content_fails_conversion_context():
+    audit = _audit_result()
+    audit["inventory"]["word_count"] = 40
+    assert execute_audit_checks(audit)["checks"]["07-content.conversion_context"]["status"] == "FAIL"
+
+
+def test_no_lazy_loading_fails_media_performance():
+    audit = _audit_result()
+    audit["inventory"].update({"images": 5, "lazy_images": 0})
+    assert execute_audit_checks(audit)["checks"]["08-media.media_performance"]["status"] == "FAIL"
+
+
+def test_few_images_without_lazy_passes_media_performance():
+    audit = _audit_result()
+    audit["inventory"].update({"images": 2, "lazy_images": 0})
+    assert execute_audit_checks(audit)["checks"]["08-media.media_performance"]["status"] == "PASS"
+
+
+def test_no_images_makes_media_performance_na():
+    audit = _audit_result()
+    audit["inventory"]["images"] = 0
+    assert execute_audit_checks(audit)["checks"]["08-media.media_performance"]["status"] == "N/A"
+
+
+def test_noindex_or_missing_meta_fails_serp_eligibility():
+    audit = _audit_result()
+    audit["inventory"]["meta_robots"] = "noindex"
+    assert execute_audit_checks(audit)["checks"]["09-search.serp_eligibility"]["status"] == "FAIL"
+    audit["inventory"]["meta_robots"] = ""
+    audit["inventory"]["description"] = ""
+    assert execute_audit_checks(audit)["checks"]["09-search.serp_eligibility"]["status"] == "FAIL"
+
+
+def test_weak_navigation_fails_sitelinks():
+    audit = _audit_result()
+    audit["inventory"]["has_breadcrumb"] = False
+    assert execute_audit_checks(audit)["checks"]["09-search.sitelinks"]["status"] == "FAIL"
+
+
+def test_images_missing_attributes_fail_image_visibility():
+    audit = _audit_result()
+    audit["inventory"]["images_missing_alt"] = 1
+    result = execute_audit_checks(audit)
+    assert result["checks"]["09-search.image_visibility"]["status"] == "FAIL"
+
+
+def test_no_images_makes_image_visibility_na():
+    audit = _audit_result()
+    audit["inventory"]["images"] = 0
+    assert execute_audit_checks(audit)["checks"]["09-search.image_visibility"]["status"] == "N/A"
+
+
+def test_blocked_crawlers_fail_ai_retrievability():
+    audit = _audit_result()
+    audit["inventory"]["robots"]["blocked_ai_crawlers"] = ["GPTBot"]
+    assert execute_audit_checks(audit)["checks"]["10-ai-search.ai_retrievability"]["status"] == "FAIL"
+
+
+def test_no_external_links_fail_source_grounding_and_citations():
+    audit = _audit_result()
+    audit["inventory"]["external_links"] = 0
+    assert execute_audit_checks(audit)["checks"]["10-ai-search.source_grounding"]["status"] == "FAIL"
+    assert execute_audit_checks(audit)["checks"]["11-authority.citations"]["status"] == "FAIL"
+
+
+def test_complex_forms_fail_booking_friction():
+    audit = _audit_result()
+    audit["inventory"].update({"forms": 1, "inputs": 15})
+    assert execute_audit_checks(audit)["checks"]["13-ux.booking_friction"]["status"] == "FAIL"
+
+
+def test_no_forms_makes_booking_friction_na():
+    audit = _audit_result()
+    audit["inventory"]["forms"] = 0
+    assert execute_audit_checks(audit)["checks"]["13-ux.booking_friction"]["status"] == "N/A"
+
+
+def test_login_form_over_http_fails_auth_check():
+    audit = _audit_result()
+    audit["final_url"] = "http://example.com"
+    audit["inventory"]["has_password_input"] = True
+    assert execute_audit_checks(audit)["checks"]["16-security.auth"]["status"] == "FAIL"
+
+
+def test_no_login_form_makes_auth_na():
+    audit = _audit_result()
+    audit["inventory"]["has_password_input"] = False
+    assert execute_audit_checks(audit)["checks"]["16-security.auth"]["status"] == "N/A"
+
+
+def test_no_abuse_controls_on_forms_fails():
+    audit = _audit_result()
+    audit["inventory"].update({"has_captcha": False, "has_rate_limit_headers": False})
+    assert execute_audit_checks(audit)["checks"]["16-security.abuse_controls"]["status"] == "FAIL"
+
+
+def test_no_forms_makes_abuse_controls_na():
+    audit = _audit_result()
+    audit["inventory"]["forms"] = 0
+    assert execute_audit_checks(audit)["checks"]["16-security.abuse_controls"]["status"] == "N/A"
+
+
+def test_non_local_site_makes_regional_intent_na():
+    audit = _audit_result()
+    audit["inventory"]["is_local_business"] = False
+    assert execute_audit_checks(audit)["checks"]["17-language.regional_intent"]["status"] == "N/A"
+
+
+def test_local_site_without_lang_fails_regional_intent():
+    audit = _audit_result()
+    audit["inventory"].update({"is_local_business": True, "has_address": True, "lang": "", "hreflang_count": 0})
+    assert execute_audit_checks(audit)["checks"]["17-language.regional_intent"]["status"] == "FAIL"
+
+
+def test_no_event_tracking_fails_event_quality():
+    audit = _audit_result()
+    audit["inventory"]["has_event_tracking"] = False
+    assert execute_audit_checks(audit)["checks"]["18-analytics.event_quality"]["status"] == "FAIL"
+
+
+def test_no_attribution_code_fails_attribution_check():
+    audit = _audit_result()
+    audit["inventory"]["has_attribution_code"] = False
+    assert execute_audit_checks(audit)["checks"]["18-analytics.attribution"]["status"] == "FAIL"
+
+
+def test_forms_missing_action_fail_booking_completion():
+    audit = _audit_result()
+    audit["inventory"].update({"forms": 1, "forms_missing_action": 1, "buttons": 0})
+    assert execute_audit_checks(audit)["checks"]["19-conversion.booking_completion"]["status"] == "FAIL"
+
+
+def test_no_forms_makes_booking_completion_na():
+    audit = _audit_result()
+    audit["inventory"]["forms"] = 0
+    assert execute_audit_checks(audit)["checks"]["19-conversion.booking_completion"]["status"] == "N/A"
+
+
+def test_missing_trust_or_cta_fails_trust_to_action():
+    audit = _audit_result()
+    audit["inventory"]["has_trust_links"] = False
+    assert execute_audit_checks(audit)["checks"]["19-conversion.trust_to_action"]["status"] == "FAIL"
+    audit["inventory"]["has_trust_links"] = True
+    audit["inventory"]["has_cta"] = False
+    assert execute_audit_checks(audit)["checks"]["19-conversion.trust_to_action"]["status"] == "FAIL"
+
+
+def test_all_136_checks_are_bound():
+    from ope.registry import registered_check_ids
+    result = execute_audit_checks(_audit_result())
+    all_ids = set(registered_check_ids())
+    bound_and_external = BOUND | EXTERNAL_EVIDENCE | FINDING_RECORD_CHECKS
+    assert bound_and_external == all_ids, f"Unbound: {all_ids - bound_and_external}"

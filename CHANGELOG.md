@@ -4,6 +4,40 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.3.0
+
+Full check-binding coverage: all 136 registry checks across 20 modules are now
+bound to evidence providers. The 43 previously unbound checks are split into
+23 deterministic checks (evaluated from the HTTP response, HTML, and page
+signals) and 20 external-evidence checks that return `UNKNOWN` with a specific
+reason naming the missing API or service, instead of a generic message.
+
+### Added
+
+- **PageParser signals**: verification meta tags (Google, Bing, Yandex,
+  Pinterest, Facebook), lazy-image counting, noscript content detection,
+  password-input detection, list/table counting.
+- **Computed audit signals**: CAPTCHA presence (reCAPTCHA, hCaptcha,
+  Turnstile), event-tracking detection (GTM, gtag, fbq, Plausible, Umami),
+  UTM attribution code, soft-404 detection, rate-limit header detection,
+  title/H1 intent alignment.
+- **23 new deterministic check handlers** covering ownership verification,
+  crawl errors, crawl budget risk, rendering indexability, entity
+  relationships, intent match, helpfulness, conversion context, media
+  performance, SERP eligibility, sitelinks readiness, image visibility,
+  AI retrievability, source grounding, citations, booking friction,
+  authentication security, abuse controls, regional intent, event quality,
+  attribution, booking completion, and trust-to-action.
+- **`_EXTERNAL_EVIDENCE_CHECKS` dict** (20 entries) for checks that need
+  external APIs (backlink index, Search Console, browser rendering, CVE
+  database, CRM, review aggregation, etc.). Each returns `UNKNOWN` with a
+  human-readable reason naming the missing integration instead of the old
+  generic "No evidence provider is bound" message.
+- **`N/A` semantics** for context-dependent checks: booking friction is N/A
+  when no forms exist, auth is N/A when no login form, regional intent is
+  N/A for non-local businesses, image visibility is N/A when no images, and
+  media performance is N/A when no images are present.
+
 ## 0.2.0
 
 Evidence-backed registry coverage went from 10 to 93 of 136 checks, and every

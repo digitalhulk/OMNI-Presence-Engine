@@ -102,6 +102,49 @@ AUDIT_BINDINGS = (
     "20-continuous-optimization.root_cause",
     "20-continuous-optimization.prioritization",
     "20-continuous-optimization.validation",
+    "01-entity.ownership",
+    "04-crawl.crawl_errors",
+    "04-crawl.crawl_budget_risk",
+    "05-index.rendering_indexability",
+    "06-semantics.relationships",
+    "07-content.intent_match",
+    "07-content.originality",
+    "07-content.factual_accuracy",
+    "07-content.helpfulness",
+    "07-content.conversion_context",
+    "08-media.image_quality",
+    "08-media.media_performance",
+    "09-search.query_visibility",
+    "09-search.serp_eligibility",
+    "09-search.sitelinks",
+    "09-search.image_visibility",
+    "10-ai-search.ai_retrievability",
+    "10-ai-search.source_grounding",
+    "10-ai-search.factual_consistency",
+    "11-authority.brand_mentions",
+    "11-authority.backlinks",
+    "11-authority.citations",
+    "11-authority.reputation",
+    "13-ux.booking_friction",
+    "14-accessibility.contrast",
+    "15-performance.render_cost",
+    "15-performance.frame_cost",
+    "16-security.auth",
+    "16-security.dependencies",
+    "16-security.abuse_controls",
+    "17-language.translation_quality",
+    "17-language.regional_intent",
+    "17-language.transliteration",
+    "18-analytics.event_quality",
+    "18-analytics.attribution",
+    "18-analytics.search_data",
+    "18-analytics.server_logs",
+    "18-analytics.crm_linkage",
+    "18-analytics.ai_referrals",
+    "19-conversion.booking_completion",
+    "19-conversion.trust_to_action",
+    "19-conversion.funnel_dropoff",
+    "19-conversion.revenue_tracking",
 )
 
 # Finding-record quality checks: they read the engine's own output for this
@@ -185,6 +228,33 @@ _MODERN_TLS = {"TLSv1.2", "TLSv1.3"}
 _CERT_EXPIRY_WARNING_DAYS = 14
 _LOCALE_PATTERN = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
 _CONTENT_WORD_BUDGET = 300
+_BOOKING_FRICTION_INPUT_BUDGET = 10
+
+# Checks whose evidence source is not available to the engine. They are bound
+# so they appear in the execution flow with a specific reason about what they
+# need, rather than the generic "No evidence provider is bound" message.
+_EXTERNAL_EVIDENCE_CHECKS: dict[str, tuple[str, str]] = {
+    "07-content.originality": ("07-content", "Originality assessment requires a content-comparison service (not configured)"),
+    "07-content.factual_accuracy": ("07-content", "Factual accuracy verification requires an external fact-checking service (not configured)"),
+    "08-media.image_quality": ("08-media", "Image quality assessment requires rendered visual analysis (not available in headless mode)"),
+    "09-search.query_visibility": ("09-search", "Query visibility data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)"),
+    "10-ai-search.factual_consistency": ("10-ai-search", "Factual consistency verification requires an external fact-checking service (not configured)"),
+    "11-authority.brand_mentions": ("11-authority", "Brand-mention monitoring requires an external brand-tracking API (not configured)"),
+    "11-authority.backlinks": ("11-authority", "Backlink analysis requires a link-index API such as Ahrefs or Moz (OPE_BACKLINK_API_KEY not configured)"),
+    "11-authority.reputation": ("11-authority", "Reputation assessment requires a review-aggregation or sentiment API (not configured)"),
+    "14-accessibility.contrast": ("14-accessibility", "Colour-contrast verification requires a rendered-page screenshot and WCAG analysis (not available in headless mode)"),
+    "15-performance.render_cost": ("15-performance", "Render-cost measurement requires a browser-based performance trace (not available in headless mode)"),
+    "15-performance.frame_cost": ("15-performance", "Frame-cost measurement requires a browser-based paint profiler (not available in headless mode)"),
+    "16-security.dependencies": ("16-security", "Dependency vulnerability scanning requires a CVE database or SCA tool (not configured)"),
+    "17-language.translation_quality": ("17-language", "Translation quality assessment requires multilingual NLP analysis (not configured)"),
+    "17-language.transliteration": ("17-language", "Transliteration accuracy assessment requires script-conversion analysis (not configured)"),
+    "18-analytics.search_data": ("18-analytics", "Search performance data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)"),
+    "18-analytics.server_logs": ("18-analytics", "Server log analysis requires direct log access or a log-aggregation API (not configured)"),
+    "18-analytics.crm_linkage": ("18-analytics", "CRM linkage verification requires CRM API integration (not configured)"),
+    "18-analytics.ai_referrals": ("18-analytics", "AI referral attribution requires analytics event-stream access (not available from a single-page audit)"),
+    "19-conversion.funnel_dropoff": ("19-conversion", "Funnel drop-off analysis requires analytics event data (not available from a single-page audit)"),
+    "19-conversion.revenue_tracking": ("19-conversion", "Revenue tracking verification requires payment-platform or analytics API integration (not configured)"),
+}
 
 
 def _evidence(target: str, value: Any, source: str = "ope-audit") -> list[dict[str, Any]]:
@@ -627,6 +697,203 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "contact_input" not in inventory:
             return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Contact-field observation is missing")
         return _check(check_id, "19-conversion", bool(inventory.get("contact_input")), target, {"contact_input": inventory.get("contact_input"), "forms": inventory.get("forms")})
+
+    if check_id in _EXTERNAL_EVIDENCE_CHECKS:
+        module, reason = _EXTERNAL_EVIDENCE_CHECKS[check_id]
+        return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason=reason)
+
+    if check_id == "01-entity.ownership":
+        tags = inventory.get("verification_tags")
+        if tags is None:
+            return CheckResult(check_id, "01-entity", ExecutionStatus.UNKNOWN, reason="Ownership verification observation is missing")
+        tags = list(tags)
+        return _check(check_id, "01-entity", bool(tags), target, {"verification_tags": tags})
+
+    if check_id == "04-crawl.crawl_errors":
+        status = inventory.get("status")
+        if not isinstance(status, int):
+            return CheckResult(check_id, "04-crawl", ExecutionStatus.UNKNOWN, reason="HTTP status observation is missing")
+        soft = inventory.get("soft_404", False)
+        return _check(check_id, "04-crawl", status < 400 and not soft, target, {"status": status, "soft_404": soft})
+
+    if check_id == "04-crawl.crawl_budget_risk":
+        discovered = inventory.get("discovered_requests")
+        if not isinstance(discovered, int):
+            return CheckResult(check_id, "04-crawl", ExecutionStatus.UNKNOWN, reason="Request-count observation is unavailable")
+        risk = discovered > _REQUEST_COUNT_BUDGET
+        return _check(check_id, "04-crawl", not risk, target, {"discovered_requests": discovered, "budget": _REQUEST_COUNT_BUDGET})
+
+    if check_id == "05-index.rendering_indexability":
+        word_count = inventory.get("word_count")
+        if not isinstance(word_count, int):
+            return CheckResult(check_id, "05-index", ExecutionStatus.UNKNOWN, reason="Word-count observation is missing")
+        noscript = inventory.get("noscript_content", False)
+        js_only = word_count < 50 and not noscript
+        return _check(check_id, "05-index", not js_only, target, {"word_count": word_count, "noscript_content": noscript})
+
+    if check_id == "06-semantics.relationships":
+        if "has_relationships" not in inventory:
+            return CheckResult(check_id, "06-semantics", ExecutionStatus.UNKNOWN, reason="Structured-data observation is missing")
+        if not inventory.get("has_entity_type"):
+            return CheckResult(check_id, "06-semantics", ExecutionStatus.NA, reason="No entity markup is published, so relationship detail has nothing to evaluate")
+        return _check(check_id, "06-semantics", bool(inventory.get("has_relationships")), target, {"has_relationships": inventory.get("has_relationships")})
+
+    if check_id == "07-content.intent_match":
+        if "intent_aligned" not in inventory:
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Intent alignment observation is missing")
+        return _check(check_id, "07-content", bool(inventory.get("intent_aligned")), target, {"intent_aligned": inventory.get("intent_aligned")})
+
+    if check_id == "07-content.helpfulness":
+        word_count = inventory.get("word_count")
+        subheadings = inventory.get("subheadings")
+        lists = inventory.get("lists")
+        if not isinstance(word_count, int) or not isinstance(subheadings, int):
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Content structure observation is missing")
+        lists_count = lists if isinstance(lists, int) else 0
+        helpful = word_count >= _CONTENT_WORD_BUDGET and (subheadings >= 2 or lists_count >= 1)
+        return _check(check_id, "07-content", helpful, target, {"word_count": word_count, "subheadings": subheadings, "lists": lists_count})
+
+    if check_id == "07-content.conversion_context":
+        word_count = inventory.get("word_count")
+        has_cta = inventory.get("has_cta")
+        if not isinstance(word_count, int) or has_cta is None:
+            return CheckResult(check_id, "07-content", ExecutionStatus.UNKNOWN, reason="Content or CTA observation is missing")
+        return _check(check_id, "07-content", word_count >= _CONTENT_WORD_BUDGET and bool(has_cta), target, {"word_count": word_count, "has_cta": has_cta})
+
+    if check_id == "08-media.media_performance":
+        images = inventory.get("images")
+        if not isinstance(images, int) or images == 0:
+            return CheckResult(check_id, "08-media", ExecutionStatus.NA, reason="The page has no images to evaluate for lazy loading")
+        lazy = inventory.get("lazy_images")
+        if not isinstance(lazy, int):
+            return CheckResult(check_id, "08-media", ExecutionStatus.UNKNOWN, reason="Lazy loading observation is missing")
+        threshold = max(0, images - 2)
+        passed = threshold == 0 or lazy > 0
+        return _check(check_id, "08-media", passed, target, {"images": images, "lazy_images": lazy})
+
+    if check_id == "09-search.serp_eligibility":
+        meta_robots = str(inventory.get("meta_robots") or "").lower()
+        noindex = "noindex" in meta_robots
+        title = inventory.get("title")
+        description = inventory.get("description")
+        canonical = inventory.get("canonical")
+        if title is None:
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Title observation is missing")
+        eligible = not noindex and bool(title) and bool(description) and bool(canonical)
+        return _check(check_id, "09-search", eligible, target, {"noindex": noindex, "has_title": bool(title), "has_description": bool(description), "has_canonical": bool(canonical)})
+
+    if check_id == "09-search.sitelinks":
+        landmarks = inventory.get("landmarks")
+        internal_links = inventory.get("internal_links")
+        has_breadcrumb = inventory.get("has_breadcrumb")
+        if landmarks is None or not isinstance(internal_links, int):
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Navigation structure observation is missing")
+        sitelink_ready = "nav" in list(landmarks) and internal_links >= 3 and bool(has_breadcrumb)
+        return _check(check_id, "09-search", sitelink_ready, target, {"has_nav": "nav" in list(landmarks), "internal_links": internal_links, "has_breadcrumb": has_breadcrumb})
+
+    if check_id == "09-search.image_visibility":
+        images = inventory.get("images")
+        if not isinstance(images, int) or images == 0:
+            return CheckResult(check_id, "09-search", ExecutionStatus.NA, reason="The page has no images to evaluate for search visibility")
+        missing_alt = inventory.get("images_missing_alt")
+        missing_dims = inventory.get("images_missing_dimensions")
+        if not isinstance(missing_alt, int) or not isinstance(missing_dims, int):
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Image attribute observations are missing")
+        return _check(check_id, "09-search", missing_alt == 0 and missing_dims == 0, target, {"images": images, "images_missing_alt": missing_alt, "images_missing_dimensions": missing_dims})
+
+    if check_id == "10-ai-search.ai_retrievability":
+        robots = inventory.get("robots")
+        citability_report = inventory.get("citability")
+        if not isinstance(robots, dict) or not isinstance(citability_report, dict):
+            return CheckResult(check_id, "10-ai-search", ExecutionStatus.UNKNOWN, reason="Robot access or citability observation is missing")
+        blocked = list(robots.get("blocked_ai_crawlers", []))
+        score = citability_report.get("average_citability_score")
+        retrievable = not blocked and isinstance(score, (int, float)) and score >= _CITABILITY_SCORE_BUDGET
+        return _check(check_id, "10-ai-search", retrievable, target, {"blocked_ai_crawlers": blocked, "average_citability_score": score, "budget": _CITABILITY_SCORE_BUDGET})
+
+    if check_id == "10-ai-search.source_grounding":
+        external_links = inventory.get("external_links")
+        if not isinstance(external_links, int):
+            return CheckResult(check_id, "10-ai-search", ExecutionStatus.UNKNOWN, reason="External link observation is missing")
+        return _check(check_id, "10-ai-search", external_links >= 1, target, {"external_links": external_links})
+
+    if check_id == "11-authority.citations":
+        external_links = inventory.get("external_links")
+        if not isinstance(external_links, int):
+            return CheckResult(check_id, "11-authority", ExecutionStatus.UNKNOWN, reason="External link observation is missing")
+        return _check(check_id, "11-authority", external_links >= 1, target, {"external_links": external_links})
+
+    if check_id == "13-ux.booking_friction":
+        forms = inventory.get("forms")
+        if not isinstance(forms, int):
+            return CheckResult(check_id, "13-ux", ExecutionStatus.UNKNOWN, reason="Form observation is missing")
+        if forms == 0:
+            return CheckResult(check_id, "13-ux", ExecutionStatus.NA, reason="The page has no forms to evaluate for booking friction")
+        inputs = inventory.get("inputs", 0)
+        avg_inputs = inputs / max(forms, 1)
+        return _check(check_id, "13-ux", avg_inputs <= _BOOKING_FRICTION_INPUT_BUDGET, target, {"forms": forms, "inputs": inputs, "avg_inputs_per_form": round(avg_inputs, 1)})
+
+    if check_id == "16-security.auth":
+        has_password = inventory.get("has_password_input")
+        if has_password is None:
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Login-form observation is missing")
+        if not has_password:
+            return CheckResult(check_id, "16-security", ExecutionStatus.NA, reason="The page has no login form to evaluate")
+        is_https = target.startswith("https://")
+        return _check(check_id, "16-security", is_https, target, {"has_password_input": True, "is_https": is_https})
+
+    if check_id == "16-security.abuse_controls":
+        has_captcha = inventory.get("has_captcha")
+        has_rate_limit = inventory.get("has_rate_limit_headers")
+        forms = inventory.get("forms", 0)
+        if has_captcha is None and has_rate_limit is None:
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Abuse control observation is missing")
+        if not forms:
+            return CheckResult(check_id, "16-security", ExecutionStatus.NA, reason="The page has no forms or interactive endpoints to protect")
+        has_protection = bool(has_captcha) or bool(has_rate_limit)
+        return _check(check_id, "16-security", has_protection, target, {"has_captcha": has_captcha, "has_rate_limit_headers": has_rate_limit})
+
+    if check_id == "17-language.regional_intent":
+        is_local = inventory.get("is_local_business")
+        has_address = inventory.get("has_address")
+        lang = str(inventory.get("lang") or "")
+        hreflang = inventory.get("hreflang_count", 0)
+        if is_local is None:
+            return CheckResult(check_id, "17-language", ExecutionStatus.UNKNOWN, reason="Regional content observation is missing")
+        if not is_local:
+            return CheckResult(check_id, "17-language", ExecutionStatus.NA, reason="The page does not target a specific region (no local business markup)")
+        regional_ready = bool(has_address) and (bool(lang) or isinstance(hreflang, int) and hreflang > 0)
+        return _check(check_id, "17-language", regional_ready, target, {"is_local_business": is_local, "has_address": has_address, "lang": lang, "hreflang_count": hreflang})
+
+    if check_id == "18-analytics.event_quality":
+        has_event = inventory.get("has_event_tracking")
+        if has_event is None:
+            return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Event tracking observation is missing")
+        return _check(check_id, "18-analytics", bool(has_event), target, {"has_event_tracking": has_event})
+
+    if check_id == "18-analytics.attribution":
+        has_attr = inventory.get("has_attribution_code")
+        if has_attr is None:
+            return CheckResult(check_id, "18-analytics", ExecutionStatus.UNKNOWN, reason="Attribution tracking observation is missing")
+        return _check(check_id, "18-analytics", bool(has_attr), target, {"has_attribution_code": has_attr})
+
+    if check_id == "19-conversion.booking_completion":
+        forms = inventory.get("forms")
+        if not isinstance(forms, int):
+            return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Form observation is missing")
+        if forms == 0:
+            return CheckResult(check_id, "19-conversion", ExecutionStatus.NA, reason="The page has no forms to evaluate for booking completion")
+        missing_action = inventory.get("forms_missing_action", 0)
+        buttons = inventory.get("buttons", 0)
+        complete = missing_action == 0 and buttons > 0
+        return _check(check_id, "19-conversion", complete, target, {"forms": forms, "forms_missing_action": missing_action, "buttons": buttons})
+
+    if check_id == "19-conversion.trust_to_action":
+        has_trust = inventory.get("has_trust_links")
+        has_cta = inventory.get("has_cta")
+        if has_trust is None or has_cta is None:
+            return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Trust or CTA observation is missing")
+        return _check(check_id, "19-conversion", bool(has_trust) and bool(has_cta), target, {"has_trust_links": has_trust, "has_cta": has_cta})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),
