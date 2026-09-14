@@ -18,6 +18,16 @@ AUDIT_BINDINGS = (
     "04-crawl.robots_access",
     "04-crawl.bot_access",
     "10-ai-search.agent_accessibility",
+    "04-crawl.sitemap_discovery",
+    "02-infrastructure.tls.valid",
+    "16-security.https",
+    "16-security.security_headers",
+    "05-index.indexability",
+    "13-ux.hierarchy",
+    "13-ux.navigation",
+    "03-code.semantic_html",
+    "17-language.hreflang",
+    "09-search.snippets",
 )
 
 
@@ -46,11 +56,16 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
             return CheckResult(check_id, "02-infrastructure", ExecutionStatus.UNKNOWN, reason="HTTP status observation is missing or invalid")
         return _check(check_id, "02-infrastructure", status < 400, target, {"status": status})
 
-    if check_id in {"04-crawl.robots_access", "04-crawl.bot_access", "10-ai-search.agent_accessibility"}:
+    if check_id in {"04-crawl.robots_access", "04-crawl.bot_access", "10-ai-search.agent_accessibility", "04-crawl.sitemap_discovery"}:
         robots = inventory.get("robots")
         if not isinstance(robots, dict):
             return CheckResult(check_id, check_id.split(".", 1)[0], ExecutionStatus.UNKNOWN, reason="robots.txt observation is missing")
-        if robots.get("error") or not isinstance(robots.get("ai_crawlers"), dict):
+        if robots.get("error"):
+            return CheckResult(check_id, check_id.split(".", 1)[0], ExecutionStatus.UNKNOWN, reason="robots.txt observation is unavailable")
+        if check_id == "04-crawl.sitemap_discovery":
+            sitemaps = list(robots.get("sitemaps", []))
+            return _check(check_id, "04-crawl", bool(sitemaps), target, {"sitemaps": sitemaps})
+        if not isinstance(robots.get("ai_crawlers"), dict):
             return CheckResult(check_id, check_id.split(".", 1)[0], ExecutionStatus.UNKNOWN, reason="robots.txt observation is unavailable")
         blocked = list(robots.get("blocked_ai_crawlers", []))
         if check_id == "04-crawl.robots_access":
@@ -58,6 +73,56 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if check_id == "04-crawl.bot_access":
             return _check(check_id, "04-crawl", not blocked, target, {"blocked_ai_crawlers": blocked, "ai_crawlers": robots["ai_crawlers"]})
         return _check(check_id, "10-ai-search", not blocked, target, {"blocked_ai_crawlers": blocked, "ai_crawlers": robots["ai_crawlers"]})
+
+    if check_id in {"02-infrastructure.tls.valid", "16-security.https"}:
+        module = check_id.split(".", 1)[0]
+        if not target:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Target URL observation is missing")
+        is_https = target.startswith("https://")
+        return _check(check_id, module, is_https, target, {"scheme": "https" if is_https else "http"})
+
+    if check_id == "16-security.security_headers":
+        required = ("hsts", "csp", "x_content_type_options", "referrer_policy_header")
+        if not all(key in inventory for key in required):
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason="Security header observation is missing")
+        present = {key: bool(inventory.get(key)) for key in required}
+        return _check(check_id, "16-security", all(present.values()), target, present)
+
+    if check_id == "05-index.indexability":
+        if "meta_robots" not in inventory and "x_robots_tag" not in inventory:
+            return CheckResult(check_id, "05-index", ExecutionStatus.UNKNOWN, reason="Indexability observation is missing")
+        meta_robots = str(inventory.get("meta_robots") or "").lower()
+        x_robots_tag = str(inventory.get("x_robots_tag") or "").lower()
+        noindex = "noindex" in meta_robots or "noindex" in x_robots_tag
+        return _check(check_id, "05-index", not noindex, target, {"meta_robots": meta_robots, "x_robots_tag": x_robots_tag})
+
+    if check_id == "13-ux.hierarchy":
+        h1 = inventory.get("h1")
+        if not isinstance(h1, int):
+            return CheckResult(check_id, "13-ux", ExecutionStatus.UNKNOWN, reason="Heading observation is missing or invalid")
+        return _check(check_id, "13-ux", h1 == 1, target, {"h1": h1})
+
+    if check_id in {"13-ux.navigation", "03-code.semantic_html"}:
+        module = check_id.split(".", 1)[0]
+        landmarks = inventory.get("landmarks")
+        if landmarks is None:
+            return CheckResult(check_id, module, ExecutionStatus.UNKNOWN, reason="Landmark observation is missing")
+        landmarks = list(landmarks)
+        if check_id == "13-ux.navigation":
+            return _check(check_id, module, "nav" in landmarks, target, {"landmarks": landmarks})
+        return _check(check_id, module, {"header", "main", "footer"}.issubset(landmarks), target, {"landmarks": landmarks})
+
+    if check_id == "17-language.hreflang":
+        count = inventory.get("hreflang_count")
+        if not isinstance(count, int):
+            return CheckResult(check_id, "17-language", ExecutionStatus.UNKNOWN, reason="Hreflang observation is missing or invalid")
+        return _check(check_id, "17-language", count > 0, target, {"hreflang_count": count})
+
+    if check_id == "09-search.snippets":
+        if "description" not in inventory:
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Meta description observation is missing")
+        length = len(str(inventory.get("description") or "").strip())
+        return _check(check_id, "09-search", 50 <= length <= 160, target, {"description_length": length})
 
     rules = {
         "03-code.head_metadata": ("03-code", "CODE-HTTP-001", "title"),

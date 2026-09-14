@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from typing import Any
 
+from . import crawler
+
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
 ALLOWED_SCHEMES = {"http", "https"}
@@ -25,6 +27,7 @@ class PageParser(HTMLParser):
         self.title = ""; self.lang = ""; self.headings: list[str] = []; self.links: list[str] = []
         self.images = 0; self.images_missing_alt = 0; self.forms = 0; self.json_ld = 0
         self.canonical = ""; self.viewport = ""; self.description = ""; self.h1_count = 0; self._in_title = False
+        self.meta_robots = ""; self.hreflang_count = 0; self.landmarks: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         a = dict(attrs)
@@ -32,16 +35,21 @@ class PageParser(HTMLParser):
         if tag == "title": self._in_title = True
         if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}: self.headings.append(tag)
         if tag == "h1": self.h1_count += 1
+        if tag in {"header", "nav", "main", "footer"}: self.landmarks.add(tag)
         if tag == "a" and a.get("href"): self.links.append(a["href"] or "")
         if tag == "img":
             self.images += 1
             if not (a.get("alt") or "").strip(): self.images_missing_alt += 1
         if tag == "form": self.forms += 1
-        if tag == "link" and "canonical" in (a.get("rel") or "").lower().split(): self.canonical = a.get("href", "") or ""
+        if tag == "link":
+            rel = (a.get("rel") or "").lower().split()
+            if "canonical" in rel: self.canonical = a.get("href", "") or ""
+            if "alternate" in rel and a.get("hreflang"): self.hreflang_count += 1
         if tag == "meta":
             name = (a.get("name") or "").lower()
             if name == "viewport": self.viewport = a.get("content", "") or ""
             if name == "description": self.description = a.get("content", "") or ""
+            if name == "robots": self.meta_robots = a.get("content", "") or ""
         if tag == "script" and (a.get("type") or "").lower() == "application/ld+json": self.json_ld += 1
 
     def handle_endtag(self, tag: str) -> None:
@@ -126,6 +134,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
     final_url, status, headers, body, charset = _request(normalized, timeout)
     html = body.decode(charset, errors="replace")
     p = PageParser(); p.feed(html)
+    robots = crawler.fetch_robots(final_url, timeout=timeout)
     now = datetime.now(timezone.utc).isoformat()
     evidence_base = Evidence("direct-http", now, final_url, {"status": status, "bytes": len(body)})
     findings: list[Finding] = []
@@ -147,6 +156,12 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
             findings.append(_finding(fid, module, symptom, severity, [Evidence("html-parser", now, final_url, value)], remediation, validation, impact, urgency))
 
     security_headers = {k.lower(): v for k, v in headers.items()}
+    inventory_security_headers = {
+        "hsts": "strict-transport-security" in security_headers,
+        "csp": "content-security-policy" in security_headers,
+        "x_content_type_options": "x-content-type-options" in security_headers,
+        "referrer_policy_header": "referrer-policy" in security_headers,
+    }
     for header in ("content-security-policy", "strict-transport-security", "x-content-type-options", "referrer-policy"):
         if header not in security_headers:
             findings.append(_finding(f"16-SEC-{header.upper()}", "16-security", f"Recommended security header not observed: {header}", "low", [Evidence("http-headers", now, final_url, {header: None})], [f"Review and configure {header} according to the application's threat model."], [f"Re-fetch response headers and verify {header}."], .4, .4, .7))
@@ -156,7 +171,7 @@ def audit(url: str, timeout: int = 15) -> dict[str, Any]:
         key = f.module.split("-")[0]
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
-    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
+    return {"engine": "ope", "version": "0.1.0", "run_id": f"ope-{int(started)}", "target": normalized, "final_url": final_url, "started_at": started, "completed_at": time.time(), "inventory": {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), **inventory_security_headers}, "headers": {k.lower(): v for k, v in headers.items()}, "modules": modules, "findings": [asdict(f) for f in findings], "summary": {"finding_count": len(findings), **{level: sum(f.severity == level for f in findings) for level in ("critical", "high", "medium", "low", "info")}}}
 
 
 def markdown_report(result: dict[str, Any]) -> str:
