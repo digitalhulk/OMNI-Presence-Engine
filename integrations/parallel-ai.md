@@ -34,9 +34,9 @@ It can feed Entity, Semantics, Content, Search, AI Search, Authority, Local and 
 
 Parallel web research must not be confused with first-party analytics, Google Search Console, Bing Webmaster data, or SEO vendor metrics. Those sources retain ownership of their own measurements.
 
-## ABC Taxis 247 reference
+## Generic reference policy
 
-ABC Taxis 247 can use Parallel for live competitor research, local market research, SERP/content discovery, current service information, citation/evidence collection, and change monitoring. The exact production prompts and credentials remain implementation-specific and must never be committed to this repository.
+OPE documentation and integrations use only generic, sanitized examples. Production prompts, customer mappings, credentials, private business data and client-specific implementation details remain outside this repository.
 
 ## Credential policy
 
