@@ -86,6 +86,34 @@ def site_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def performance_audit_command(args: argparse.Namespace) -> int:
+    from .browser import DeviceProfile
+    from .performance_audit import PerformanceAuditConfig
+    from .performance_audit import performance_audit as run_perf_audit
+
+    profiles: list[DeviceProfile] = []
+    if args.mobile_only:
+        profiles = [DeviceProfile.MOBILE]
+    elif args.desktop_only:
+        profiles = [DeviceProfile.DESKTOP]
+    else:
+        profiles = [DeviceProfile.DESKTOP, DeviceProfile.MOBILE]
+
+    cfg = PerformanceAuditConfig(
+        profiles=profiles,
+        timeout_ms=args.timeout * 1000,
+        navigation_timeout_ms=args.timeout * 1000,
+        capture_screenshot=not args.no_screenshot,
+    )
+    try:
+        result = run_perf_audit(args.url, config=cfg)
+    except Exception as exc:
+        print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
     sub = parser.add_subparsers(dest="command")
@@ -110,12 +138,19 @@ def build_parser() -> argparse.ArgumentParser:
     sa.add_argument("--no-sitemaps", action="store_true", help="skip sitemap discovery")
     sa.add_argument("--no-robots", action="store_true", help="skip robots.txt fetch")
     sa.set_defaults(handler=site_audit_command)
+    pa = sub.add_parser("performance-audit", help="run browser-based performance audit")
+    pa.add_argument("url")
+    pa.add_argument("--timeout", type=int, default=30, help="browser timeout in seconds")
+    pa.add_argument("--desktop-only", action="store_true", help="skip mobile profile")
+    pa.add_argument("--mobile-only", action="store_true", help="skip desktop profile")
+    pa.add_argument("--no-screenshot", action="store_true", help="skip screenshot capture")
+    pa.set_defaults(handler=performance_audit_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
