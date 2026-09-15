@@ -106,4 +106,8 @@ def test_fetch_robots_uses_dynamic_user_agent(monkeypatch):
     monkeypatch.setattr(crawler_module.urllib.request, "urlopen", fake_open)
     fetch_robots("https://example.com/")
     assert captured["ua"] == crawler_module.USER_AGENT
-    assert "0.1" not in captured["ua"]
+    # The UA is derived dynamically from the package version, not the old
+    # hardcoded "OPE-Audit/0.1". Guard against that exact stale value rather
+    # than a naive "0.1" substring, which collides with versions like 0.11.0.
+    assert captured["ua"] != "OPE-Audit/0.1"
+    assert captured["ua"].startswith("OPE-Audit/")
