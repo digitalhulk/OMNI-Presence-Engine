@@ -4,6 +4,46 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.4.0
+
+Completion pass: closed the actionable schema/scoring/history/entity gaps and
+added the one remaining externally-verifiable provider (dependency CVEs), all
+without fabricating any API, schema, or metric.
+
+### Added
+
+- **Dependency-CVE scan via OSV.dev** (`16-security.dependencies`): detects
+  client-side libraries whose exact version is embedded in a CDN URL and queries
+  OSV (free, keyless, stable). Opt-in via `OPE_DEPENDENCY_SCAN`; PASS/FAIL/UNKNOWN
+  with honest degradation and a stated client-side-only scope. Registered as the
+  `osv_dependencies` provider.
+- **Critical-severity cap on module health** (canonical scoring-v1 rule that was
+  specified but unimplemented): a module with an unresolved critical/high finding
+  is capped (20/40) with recorded provenance (`severity_cap`, `uncapped_score`).
+- **Structured entity record** (`result["entity"]`) materialized from the
+  JSON-LD signals the engine already extracts — a real producer for entity-v1's
+  observed-record layer, never a fabricated identity graph.
+
+### Changed
+
+- **Run history is scoped by audit scope** (page/site/performance) instead of
+  target only, fixing a latent cross-scope collision; performance audits now
+  record history (COMPLETED runs only), with `--no-history` for parity.
+
+### Docs / schema
+
+- Reconciled `run-v1` / `finding-v1` / `entity-v1` schemas to the stable
+  evidence-diagnostic-v1 emitted contract, with a no-YAML-dependency conformance
+  test binding them. Annotated module `weight` as illustrative (not consumed by
+  the scorer). Documented `--reason`, `OPE_DEPENDENCY_SCAN`, and corrected the
+  external-check counts (15 external, 118 executable).
+
+### Tests
+
+- OSV adapter (local transport + detection + consumption), severity cap,
+  history scoping + perf-history wiring, entity materialization, and a
+  machine-checkable dependency-graph integrity contract. 908 tests total.
+
 ## 1.3.0
 
 Surfaces the OpenRouter advisory reasoning layer, which shipped in the code but
