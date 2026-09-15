@@ -97,6 +97,9 @@ def site_audit_command(args: argparse.Namespace) -> int:
     try:
         raw = run_site_audit(args.url, config=cfg)
         raw_dict = raw.to_dict()
+        # Tag the scope before attach_baseline so site history is keyed in its
+        # own scope (never mixed with page or performance runs of the same URL).
+        raw_dict["engine_scope"] = "site"
         if not args.no_history:
             history.attach_baseline(raw_dict)
         result = normalize_site_result(raw_dict)
@@ -169,7 +172,17 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     )
     try:
         raw = run_perf_audit(args.url, config=cfg)
-        result = normalize_performance_result(raw.to_dict())
+        raw_dict = raw.to_dict()
+        # Performance runs record history in their own scope, and only when the
+        # run actually COMPLETED — a browser-unavailable run must not write an
+        # empty record that would corrupt later regression comparisons.
+        raw_dict["engine_scope"] = "performance"
+        record_history = not getattr(args, "no_history", False) and raw_dict.get("status") == "COMPLETED"
+        if record_history:
+            history.attach_baseline(raw_dict)
+        result = normalize_performance_result(raw_dict)
+        if record_history:
+            history.save_run(result)
         if args.html:
             path = write_performance_html_report(result, args.html)
             print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
@@ -319,6 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--no-screenshot", action="store_true", help="skip screenshot capture")
     pa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
     pa.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML performance-audit report")
+    pa.add_argument("--no-history", action="store_true", help="do not read or write the local run history (performance scope)")
     pa.set_defaults(handler=performance_audit_command)
     ma = sub.add_parser("multi-audit", help="audit multiple targets with bounded concurrency")
     ma.add_argument("urls", nargs="+", help="one or more target URLs")

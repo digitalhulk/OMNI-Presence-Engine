@@ -512,3 +512,41 @@ class TestReasonFlag:
             rc = args.handler(args)
         assert rc == 0
         assert "AI Reasoning" not in capsys.readouterr().out
+
+
+class TestPerformanceHistory:
+    def _run(self, status, no_history=False):
+        import ope.cli as cli_mod
+        import ope.engine as eng_mod
+        import ope.performance_audit as pa_mod
+
+        class _Raw:
+            def to_dict(self):
+                return {"target": "https://example.com", "status": status, "performance_report": {"findings": []}}
+
+        argv = ["performance-audit", "https://example.com"] + (["--no-history"] if no_history else [])
+        args = build_parser().parse_args(argv)
+        saved = []
+        with mock.patch.object(pa_mod, "performance_audit", return_value=_Raw()), \
+             mock.patch.object(eng_mod, "normalize_performance_result",
+                               side_effect=lambda d: {**d, "engine_scope": "performance", "modules": {}, "findings": [], "summary": {"finding_count": 0}, "inventory": {}}), \
+             mock.patch.object(cli_mod.history, "attach_baseline", side_effect=lambda d, *a, **k: d), \
+             mock.patch.object(cli_mod.history, "save_run", side_effect=lambda r, *a, **k: saved.append(r)):
+            rc = args.handler(args)
+        return rc, saved
+
+    def test_completed_run_is_recorded_in_performance_scope(self):
+        rc, saved = self._run("COMPLETED")
+        assert rc == 0
+        assert len(saved) == 1
+        assert saved[0]["engine_scope"] == "performance"
+
+    def test_incomplete_run_is_not_recorded(self):
+        rc, saved = self._run("UNAVAILABLE")
+        assert rc == 2          # capability failure exits non-zero
+        assert saved == []      # and never pollutes history
+
+    def test_no_history_flag_skips_recording(self):
+        rc, saved = self._run("COMPLETED", no_history=True)
+        assert rc == 0
+        assert saved == []
