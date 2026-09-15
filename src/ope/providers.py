@@ -22,12 +22,15 @@ from typing import Any, Mapping
 # upgrading specific registry checks.
 #
 # ``implemented`` is True only when a real adapter reads the credential and
-# feeds evidence into the pipeline (pagespeed -> inventory["pagespeed"] ->
-# Core Web Vitals checks; openrouter -> advisory reasoning layer). It is False
-# for documented-but-unwired capabilities: their credential is reported for
-# status, but no adapter exists yet, so setting it upgrades no check. Surfacing
-# this flag keeps capability discovery honest — a configured credential never
-# implies an upgrade that would not actually happen.
+# feeds evidence into the pipeline:
+#   pagespeed      -> inventory["pagespeed"]      -> Core Web Vitals checks
+#   search_console -> inventory["search_console"] -> 09-search.query_visibility
+#   backlink_index -> inventory["backlinks"]      -> 11-authority.backlinks
+#   openrouter     -> advisory reasoning layer
+# A provider left at False would be a documented-but-unwired capability whose
+# credential is reported for status but upgrades no check. Surfacing this flag
+# keeps capability discovery honest — a configured credential never implies an
+# upgrade that would not actually happen.
 _PROVIDERS: dict[str, tuple[str, str, tuple[str, ...], bool]] = {
     "pagespeed": (
         "OPE_PAGESPEED_API_KEY",
@@ -39,13 +42,13 @@ _PROVIDERS: dict[str, tuple[str, str, tuple[str, ...], bool]] = {
         "OPE_SEARCH_CONSOLE_KEY",
         "Google Search Console — query visibility",
         ("09-search.query_visibility",),
-        False,
+        True,
     ),
     "backlink_index": (
         "OPE_BACKLINK_API_KEY",
         "Backlink index (e.g. Ahrefs/Moz) — off-site authority links",
         ("11-authority.backlinks",),
-        False,
+        True,
     ),
     "openrouter": (
         "OPENROUTER_API_KEY",

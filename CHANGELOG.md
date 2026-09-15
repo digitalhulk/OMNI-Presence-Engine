@@ -4,6 +4,38 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.2.0
+
+Two optional providers gain real, executable adapters. Both remain
+credential-gated and degrade honestly (checks stay `UNKNOWN` when the key is
+absent or the provider errors — never a fabricated metric).
+
+### Added
+
+- **Search Console adapter** (`integrations/search_console.py`): a stdlib-only
+  Google Search Console Search Analytics client. When `OPE_SEARCH_CONSOLE_KEY`
+  is set it queries the audited property for the last 28 days, aggregates real
+  impressions/clicks/distinct-queries, and upgrades `09-search.query_visibility`
+  to a measured PASS/FAIL. `OPE_SEARCH_CONSOLE_SITE` overrides the property.
+- **Backlink-index adapter** (`integrations/backlink_index.py`): a stdlib-only
+  backlink-stats client (Ahrefs v3 by default). When `OPE_BACKLINK_API_KEY` is
+  set it reads real referring-domain/backlink counts and upgrades
+  `11-authority.backlinks` to a measured PASS/FAIL. `OPE_BACKLINK_BASE_URL` /
+  `OPE_BACKLINK_TARGET` override the endpoint/target for a Moz/other index.
+- Both adapters are wired into `audit()` (inventory `search_console` /
+  `backlinks`), consumed by the audit pipeline, and reported as `implemented`
+  in `provider_status` / `ope providers` (all four providers now render
+  *active*). Bounded response reads, bearer credentials never leaked into
+  reports or errors.
+
+### Tests
+
+- `test_provider_adapters.py`: real-transport tests (local HTTP server, not
+  mocks) for both adapters — metric extraction, unconfigured→None,
+  HTTP-error→None, oversize-response→None, property/target resolution.
+- `test_audit_pipeline.py`: PASS/FAIL/UNKNOWN consumption for
+  `09-search.query_visibility` and `11-authority.backlinks`.
+
 ## 1.1.2
 
 Release-closure honesty fix. A final audit pass found one capability-discovery

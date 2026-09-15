@@ -165,7 +165,7 @@ python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDI
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- provider adapters for external data sources beyond PageSpeed Insights (18 checks are bound but return `UNKNOWN` until their APIs are configured; `ope providers` lists what each would need). Implementing these requires legitimate API credentials/access, so they remain optional and credential-gated.
+- provider adapters for the remaining external data sources (16 checks are bound but return `UNKNOWN` until an evidence source exists for them; `ope providers` lists what each configured provider upgrades). PageSpeed, Search Console, and the backlink index have real, credential-gated adapters (`ope providers` shows them as *active*); the remaining external checks — brand mentions, reputation, dependency CVEs, translation quality, server logs, and similar — have no adapter yet and stay `UNKNOWN` with a specific reason rather than a fabricated value.
 - a standalone scheduler daemon. Multi-target orchestration (`ope multi-audit`) and per-target run history are implemented as the reusable primitives; an external scheduler (cron, CI, a queue) supplies the target list and cadence and calls the engine. The engine deliberately owns *how* to audit and aggregate, not *when* to run.
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**
@@ -455,7 +455,7 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `1.1.2`  
+**Version:** `1.2.0`  
 **Stage:** Stable release + OMNI Command Center dashboard — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
 **Contract:** `evidence-diagnostic-v1`
 
