@@ -455,7 +455,7 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `1.1.1`  
+**Version:** `1.1.2`  
 **Stage:** Stable release + OMNI Command Center dashboard — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
 **Contract:** `evidence-diagnostic-v1`
 

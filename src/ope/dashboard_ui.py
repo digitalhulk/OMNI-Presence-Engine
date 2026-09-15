@@ -329,10 +329,11 @@ async function renderProviders() {
     wrap.textContent = '';
     wrap.appendChild(el('p',{class:'omni-muted', text:'Optional external providers. Absent credentials keep affected checks UNKNOWN (never fabricated).'}));
     const t = el('table',{class:'omni-table'});
-    t.appendChild(el('tr',{},[el('th',{text:'Provider'}),el('th',{text:'Env var'}),el('th',{text:'Configured'}),el('th',{text:'Upgrades'})]));
+    t.appendChild(el('tr',{},[el('th',{text:'Provider'}),el('th',{text:'Env var'}),el('th',{text:'Configured'}),el('th',{text:'Adapter'}),el('th',{text:'Upgrades'})]));
     data.providers.forEach(p => t.appendChild(el('tr',{},[
       el('td',{text:esc(p.provider)}), el('td',{text:esc(p.env_var)}),
-      el('td',{text:p.configured?'yes':'no'}), el('td',{text:(p.upgrades_checks||[]).join(', ')||'(advisory)'})
+      el('td',{text:p.configured?'yes':'no'}), el('td',{text:p.implemented?'active':'planned'}),
+      el('td',{text:(p.upgrades_checks||[]).join(', ')||'(advisory)'})
     ])));
     wrap.appendChild(t);
   } catch (e) { wrap.textContent = 'Provider status unavailable: ' + e.message; }

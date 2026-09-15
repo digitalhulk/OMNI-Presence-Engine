@@ -4,6 +4,27 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.1.2
+
+Release-closure honesty fix. A final audit pass found one capability-discovery
+inaccuracy in the optional-provider registry; it is fixed with regression tests.
+
+### Fixed
+
+- **Provider capability discovery could imply an upgrade that never happens**
+  (P3, truthfulness): `providers.provider_status` reported `configured: yes`
+  for `search_console` (`OPE_SEARCH_CONSOLE_KEY`) and `backlink_index`
+  (`OPE_BACKLINK_API_KEY`) when their credentials were set, even though no
+  executable adapter consumes those credentials — the checks they claimed to
+  upgrade (`09-search.query_visibility`, `11-authority.backlinks`) are
+  hard-wired to stay `UNKNOWN`. Each provider now carries an `implemented`
+  flag distinguishing a real adapter (`pagespeed`, `openrouter`) from a
+  documented-but-unwired capability. `provider_status` exposes it, and both
+  `providers_markdown` and the dashboard render such providers as *planned* so
+  a set credential can never falsely imply an active upgrade. This is a code
+  defect fix (unwired adapter), kept distinct from environment-blocked
+  capabilities (a real adapter whose credential is merely absent).
+
 ## 1.1.1
 
 Adversarial release-acceptance hardening. Reconciliation of an independent QA

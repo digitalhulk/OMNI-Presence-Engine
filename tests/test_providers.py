@@ -38,7 +38,42 @@ def test_markdown_renders_table():
     md = providers_markdown({"OPE_BACKLINK_API_KEY": "k"})
     assert "Optional Providers" in md
     assert "backlink_index" in md
-    assert "| backlink_index | OPE_BACKLINK_API_KEY | yes |" in md
+    # backlink_index is configured here but has no executable adapter, so it is
+    # rendered as "planned", not as an active upgrade.
+    assert "| backlink_index | OPE_BACKLINK_API_KEY | yes | planned |" in md
+    assert "| pagespeed | OPE_PAGESPEED_API_KEY | no | active |" in md
+
+
+def test_status_reports_implemented_flag():
+    status = {p["provider"]: p for p in provider_status({})}
+    # Only providers with a real adapter consuming the credential are implemented.
+    assert status["pagespeed"]["implemented"] is True
+    assert status["openrouter"]["implemented"] is True
+    assert status["search_console"]["implemented"] is False
+    assert status["backlink_index"]["implemented"] is False
+
+
+def test_unimplemented_providers_do_not_actually_upgrade_checks():
+    # Honesty invariant: a provider flagged implemented=False must only claim to
+    # upgrade checks that are hard-wired to stay UNKNOWN (no adapter feeds them),
+    # so reporting it as "planned" is accurate rather than a false capability.
+    from ope.audit_pipeline import _EXTERNAL_EVIDENCE_CHECKS, _PSI_VITALS
+    for entry in provider_status({}):
+        if entry["implemented"] or not entry["upgrades_checks"]:
+            continue
+        for check_id in entry["upgrades_checks"]:
+            assert check_id in _EXTERNAL_EVIDENCE_CHECKS
+            assert check_id not in _PSI_VITALS
+
+
+def test_implemented_provider_checks_have_a_real_code_path():
+    # pagespeed is implemented: its upgrade checks must be backed by a real
+    # execution path (the PSI vitals table), not the always-UNKNOWN external map.
+    from ope.audit_pipeline import _EXTERNAL_EVIDENCE_CHECKS, _PSI_VITALS
+    status = {p["provider"]: p for p in provider_status({})}
+    for check_id in status["pagespeed"]["upgrades_checks"]:
+        assert check_id in _PSI_VITALS
+        assert check_id not in _EXTERNAL_EVIDENCE_CHECKS
 
 
 def test_provider_env_vars_match_check_reasons():

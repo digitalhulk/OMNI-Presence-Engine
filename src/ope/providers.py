@@ -16,29 +16,42 @@ from __future__ import annotations
 import os
 from typing import Any, Mapping
 
-# name -> (env var that enables it, human description, checks it upgrades).
+# name -> (env var that enables it, human description, checks it upgrades,
+# whether an executable adapter actually consumes the credential).
 # An empty checks tuple means the provider adds an advisory layer rather than
 # upgrading specific registry checks.
-_PROVIDERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
+#
+# ``implemented`` is True only when a real adapter reads the credential and
+# feeds evidence into the pipeline (pagespeed -> inventory["pagespeed"] ->
+# Core Web Vitals checks; openrouter -> advisory reasoning layer). It is False
+# for documented-but-unwired capabilities: their credential is reported for
+# status, but no adapter exists yet, so setting it upgrades no check. Surfacing
+# this flag keeps capability discovery honest — a configured credential never
+# implies an upgrade that would not actually happen.
+_PROVIDERS: dict[str, tuple[str, str, tuple[str, ...], bool]] = {
     "pagespeed": (
         "OPE_PAGESPEED_API_KEY",
         "Google PageSpeed Insights — Core Web Vitals (LCP/CLS/INP)",
         ("15-performance.lcp", "15-performance.cls", "15-performance.inp"),
+        True,
     ),
     "search_console": (
         "OPE_SEARCH_CONSOLE_KEY",
         "Google Search Console — query visibility",
         ("09-search.query_visibility",),
+        False,
     ),
     "backlink_index": (
         "OPE_BACKLINK_API_KEY",
         "Backlink index (e.g. Ahrefs/Moz) — off-site authority links",
         ("11-authority.backlinks",),
+        False,
     ),
     "openrouter": (
         "OPENROUTER_API_KEY",
         "Optional advisory reasoning layer over deterministic evidence",
         (),
+        True,
     ),
 }
 
@@ -47,17 +60,20 @@ def provider_status(env: Mapping[str, str] | None = None) -> list[dict[str, Any]
     """Report each optional provider: whether it is configured and what it upgrades.
 
     Deterministic and side-effect free. ``configured`` reflects only whether
-    the credential is present in *env* — it makes no network call. Providers
-    are listed in a stable order.
+    the credential is present in *env* — it makes no network call. ``implemented``
+    reflects whether an executable adapter actually consumes the credential; a
+    provider that is ``configured`` but not ``implemented`` upgrades no check.
+    Providers are listed in a stable order.
     """
     environ = os.environ if env is None else env
     status: list[dict[str, Any]] = []
     for name in sorted(_PROVIDERS):
-        env_var, description, checks = _PROVIDERS[name]
+        env_var, description, checks, implemented = _PROVIDERS[name]
         status.append({
             "provider": name,
             "env_var": env_var,
             "configured": bool(str(environ.get(env_var, "")).strip()),
+            "implemented": implemented,
             "description": description,
             "upgrades_checks": list(checks),
         })
@@ -71,12 +87,15 @@ def providers_markdown(env: Mapping[str, str] | None = None) -> str:
         "",
         "Core checks are deterministic. These optional providers upgrade specific",
         "checks from UNKNOWN to measured evidence when their credential is set.",
+        "Providers marked *planned* under Adapter have no executable adapter yet:",
+        "setting their credential is reported but upgrades no check.",
         "",
-        "| Provider | Env var | Configured | Upgrades |",
-        "| --- | --- | --- | --- |",
+        "| Provider | Env var | Configured | Adapter | Upgrades |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for entry in provider_status(env):
         upgrades = ", ".join(entry["upgrades_checks"]) or "(advisory layer)"
         mark = "yes" if entry["configured"] else "no"
-        lines.append(f"| {entry['provider']} | {entry['env_var']} | {mark} | {upgrades} |")
+        adapter = "active" if entry["implemented"] else "planned"
+        lines.append(f"| {entry['provider']} | {entry['env_var']} | {mark} | {adapter} | {upgrades} |")
     return "\n".join(lines)
