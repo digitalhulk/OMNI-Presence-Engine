@@ -1,0 +1,105 @@
+# OPE Hostinger shared-hosting deployment — Apache configuration.
+#
+# Goals: serve the static Command Center and the PHP API shell, force HTTPS,
+# and make sure nothing from the engine's source tree or operator config is ever
+# readable over HTTP. Written for Apache 2.4 on Hostinger shared hosting; every
+# directive is wrapped in an <IfModule> so a missing module degrades rather than
+# 500s the whole site.
+
+Options -Indexes -ExecCGI +FollowSymLinks
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # --- Force HTTPS -----------------------------------------------------------
+  # Hostinger terminates TLS upstream, so trust X-Forwarded-Proto as well as
+  # Apache's own HTTPS flag.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+  # --- Hard denies (belt and braces with the <Files*> blocks below) ---------
+  RewriteRule (^|/)\.git(/|$)                       - [F,L]
+  RewriteRule (^|/)\.(env|htpasswd|htaccess)$       - [F,L]
+  RewriteRule ^config\.php$                         - [F,L]
+  RewriteRule ^api/_                                - [F,L]
+  RewriteRule \.(py|pyc|pyi|toml|lock|ini|cfg|sh|bak|dist|sql|log)$ - [F,L]
+  RewriteRule ^(src|tests|scripts|schemas|docs|automation|integrations)(/|$) - [F,L]
+
+  # --- Clean API routes ----------------------------------------------------
+  # /api/health -> /api/health.php  (and status, audit). Only this fixed set is
+  # routable; any other /api/* name 404s instead of probing the filesystem.
+  RewriteRule ^api/(health|status|audit)/?$ api/$1.php [L]
+
+  # --- Report permalinks ---------------------------------------------------
+  # /report/<name> -> /reports/<name>.html, restricted to safe filename chars so
+  # traversal (../) can never be expressed.
+  RewriteRule ^report/([A-Za-z0-9._-]+)/?$ reports/$1.html [L]
+</IfModule>
+
+# --- Never serve operator config or internal includes ------------------------
+<Files "config.php">
+  Require all denied
+</Files>
+<Files "config.example.php">
+  Require all denied
+</Files>
+<FilesMatch "^_">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(py|pyc|pyi|toml|lock|ini|cfg|sh|bak|dist|sql|log|md)$">
+  Require all denied
+</FilesMatch>
+
+# --- Security headers --------------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  # HSTS: only meaningful over HTTPS, which the rewrite above guarantees.
+  Header always set Strict-Transport-Security "max-age=31536000" env=HTTPS
+  # Report JSON is data — never let a browser treat it as a document.
+  <FilesMatch "\.json$">
+    Header always set X-Content-Type-Options "nosniff"
+    Header set Content-Disposition "inline"
+  </FilesMatch>
+  # API responses must never be cached by a shared proxy.
+  <FilesMatch "^(health|status|audit)\.php$">
+    Header always set Cache-Control "no-store, max-age=0"
+  </FilesMatch>
+</IfModule>
+
+# --- Content Security Policy -------------------------------------------------
+# The Command Center is self-contained: its own CSS/JS, inline styles from the
+# RawBlock component classes, and Google Fonts for the display faces. No frames,
+# no objects, and no third-party script origins.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(php|html)$">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+  </FilesMatch>
+</IfModule>
+
+# --- Compression + caching for static assets --------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  # Reports and the shell itself must always be revalidated.
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+# --- Error handling ----------------------------------------------------------
+# Never leak PHP internals to a visitor; Hostinger's error log keeps the detail.
+<IfModule mod_php.c>
+  php_flag display_errors off
+  php_flag log_errors on
+</IfModule>
+ErrorDocument 403 /index.php
+ErrorDocument 404 /index.php
