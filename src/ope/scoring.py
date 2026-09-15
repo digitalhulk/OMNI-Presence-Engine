@@ -31,7 +31,27 @@ def _evidence_weight(check_data: dict[str, Any]) -> float:
     return max(0.01, min(1.0, sum(confidences) / len(confidences)))
 
 
-def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | None = None) -> dict[str, Any]:
+# Per schemas/scoring-v1.md: "Module health is evidence-weighted pass coverage,
+# WITH CRITICAL FAILURES CAPPED BY SEVERITY." A module carrying an unresolved
+# critical- or high-severity failure cannot present as healthy on the strength
+# of unrelated passing checks, so its score is capped. Lower-severity findings
+# do not cap. The cap only ever lowers a score, never raises it.
+_SEVERITY_SCORE_CAPS: dict[str, float] = {"critical": 20.0, "high": 40.0}
+
+
+def _apply_severity_cap(basis: dict[str, Any], max_fail_severity: str | None) -> dict[str, Any]:
+    score = basis.get("score")
+    if not isinstance(score, (int, float)) or max_fail_severity is None:
+        return basis
+    cap = _SEVERITY_SCORE_CAPS.get(str(max_fail_severity).lower())
+    if cap is not None and score > cap:
+        basis["uncapped_score"] = score
+        basis["score"] = cap
+        basis["severity_cap"] = {"severity": str(max_fail_severity).lower(), "cap": cap}
+    return basis
+
+
+def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | None = None, max_fail_severity: str | None = None) -> dict[str, Any]:
     """Deterministic explanation of how a module's score was derived.
 
     Returns a structured basis dict so a score is never an opaque number:
@@ -40,6 +60,10 @@ def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | N
     is provenance, not a second scoring path — ``module_score()`` returns
     this dict's ``score`` field, so the number and its explanation can never
     disagree.
+
+    ``max_fail_severity`` is the highest severity among the module's own
+    findings; when it is ``critical`` or ``high`` the score is capped per
+    scoring-v1 (the derivation records ``severity_cap`` and ``uncapped_score``).
     """
     status = module.get("status")
 
@@ -64,9 +88,9 @@ def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | N
                 "reason": "No evidence-backed checks; a numeric score cannot be stated.",
             }
         if status == "FAIL":
-            return {"score": 0.0, "status": "FAIL", "method": "status-derived"}
+            return _apply_severity_cap({"score": 0.0, "status": "FAIL", "method": "status-derived"}, max_fail_severity)
         if status == "PASS":
-            return {"score": 100.0, "status": "PASS", "method": "status-derived"}
+            return _apply_severity_cap({"score": 100.0, "status": "PASS", "method": "status-derived"}, max_fail_severity)
         return {
             "score": None,
             "status": str(status),
@@ -113,7 +137,7 @@ def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | N
         }
 
     score = clamp((weighted_pass / weighted_total) * 100)
-    return {
+    return _apply_severity_cap({
         "score": score,
         "status": str(status) if status is not None else "UNKNOWN",
         "method": "evidence-weighted-coverage",
@@ -124,7 +148,7 @@ def module_score_basis(module: dict[str, Any], module_checks: dict[str, Any] | N
         "checks_na": na,
         "weighted_pass": round(weighted_pass, 4),
         "weighted_total": round(weighted_total, 4),
-    }
+    }, max_fail_severity)
 
 
 def module_score(module: dict[str, Any], module_checks: dict[str, Any] | None = None) -> float | None:

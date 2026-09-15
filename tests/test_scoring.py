@@ -223,3 +223,37 @@ class TestHealthBasis:
         scores = {"03": 100.0, "01": 100.0, "02": 100.0}
         order = [c["module"] for c in health_basis(scores)["contributions"]]
         assert order == ["01", "02", "03"]
+
+
+def test_severity_cap_critical_limits_score():
+    checks = {f"c{i}": {"status": "PASS", "evidence": [{"confidence": 1.0}]} for i in range(4)}
+    # All checks pass → would be 100, but a critical finding caps it.
+    basis = module_score_basis({"status": "FAIL"}, module_checks=checks, max_fail_severity="critical")
+    assert basis["score"] == 20.0
+    assert basis["uncapped_score"] == 100.0
+    assert basis["severity_cap"] == {"severity": "critical", "cap": 20.0}
+
+
+def test_severity_cap_high_limits_score():
+    checks = {f"c{i}": {"status": "PASS", "evidence": [{"confidence": 1.0}]} for i in range(4)}
+    basis = module_score_basis({"status": "FAIL"}, module_checks=checks, max_fail_severity="high")
+    assert basis["score"] == 40.0
+
+
+def test_severity_cap_does_not_raise_low_scores():
+    checks = {"c0": {"status": "FAIL", "evidence": [{"confidence": 1.0}]}}
+    basis = module_score_basis({"status": "FAIL"}, module_checks=checks, max_fail_severity="critical")
+    assert basis["score"] == 0.0            # min(0, 20) — never raised
+    assert "severity_cap" not in basis      # no cap recorded when score already below cap
+
+
+def test_severity_cap_medium_and_below_do_not_cap():
+    checks = {f"c{i}": {"status": "PASS", "evidence": [{"confidence": 1.0}]} for i in range(4)}
+    for sev in ("medium", "low", "info", None):
+        basis = module_score_basis({"status": "PASS"}, module_checks=checks, max_fail_severity=sev)
+        assert basis["score"] == 100.0
+
+
+def test_severity_cap_status_derived_pass():
+    basis = module_score_basis({"status": "PASS"}, max_fail_severity="critical")
+    assert basis["score"] == 20.0
