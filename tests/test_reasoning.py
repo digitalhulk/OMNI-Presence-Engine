@@ -80,3 +80,21 @@ def test_bounded_response_body_is_parsed(monkeypatch):
     payload = json.dumps({"choices": [{"message": {"content": json.dumps({"ok": True})}}]}).encode()
     monkeypatch.setattr(openrouter.urllib.request, "urlopen", lambda *a, **k: _FakeResponse(payload))
     assert client.chat_json([{"role": "user", "content": "hi"}]) == {"ok": True}
+
+
+def test_user_agent_is_derived_from_version_not_hardcoded(monkeypatch):
+    # The reasoning UA must track the package version, not a stale "0.1".
+    assert openrouter.USER_AGENT.startswith("OPE-Reasoning/")
+    assert openrouter.USER_AGENT != "OPE-Reasoning/0.1"
+
+    captured: dict[str, str] = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["ua"] = req.get_header("User-agent")
+        payload = json.dumps({"choices": [{"message": {"content": json.dumps({"ok": True})}}]}).encode()
+        return _FakeResponse(payload)
+
+    client = OpenRouterClient(OpenRouterConfig(api_key="test"))
+    monkeypatch.setattr(openrouter.urllib.request, "urlopen", fake_urlopen)
+    client.chat_json([{"role": "user", "content": "hi"}])
+    assert captured["ua"] == openrouter.USER_AGENT

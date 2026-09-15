@@ -5,7 +5,18 @@ import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import Any
+
+try:
+    _VERSION = _package_version("omni-presence-engine")
+except PackageNotFoundError:  # pragma: no cover - only when running from an uninstalled tree
+    _VERSION = "0.0.0"
+
+# Derived from the installed package version — never a hardcoded string that
+# drifts out of sync (the same rule the rest of the codebase follows).
+USER_AGENT = f"OPE-Reasoning/{_VERSION}"
 
 
 @dataclass(frozen=True)
@@ -60,7 +71,7 @@ class OpenRouterClient:
             headers={
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "OPE-Reasoning/0.1",
+                "User-Agent": USER_AGENT,
             },
             method="POST",
         )

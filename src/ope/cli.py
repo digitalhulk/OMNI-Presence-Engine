@@ -60,16 +60,16 @@ def audit_command(args: argparse.Namespace) -> int:
         result = normalize_result(raw)
         if not args.no_history:
             history.save_run(result)
+        if args.html:
+            path = write_html_report(result, args.html)
+            print(f"RawBlock HTML report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
-    if args.html:
-        path = write_html_report(result, args.html)
-        print(f"RawBlock HTML report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -88,22 +88,22 @@ def site_audit_command(args: argparse.Namespace) -> int:
     )
     try:
         raw = run_site_audit(args.url, config=cfg)
+        raw_dict = raw.to_dict()
+        if not args.no_history:
+            history.attach_baseline(raw_dict)
+        result = normalize_site_result(raw_dict)
+        if not args.no_history:
+            history.save_run(result)
+        if args.html:
+            path = write_site_html_report(result, args.html)
+            print(f"RawBlock HTML site-audit report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(site_audit_markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE site-audit failed: {exc}", file=sys.stderr)
         return 2
-    raw_dict = raw.to_dict()
-    if not args.no_history:
-        history.attach_baseline(raw_dict)
-    result = normalize_site_result(raw_dict)
-    if not args.no_history:
-        history.save_run(result)
-    if args.html:
-        path = write_site_html_report(result, args.html)
-        print(f"RawBlock HTML site-audit report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(site_audit_markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -161,17 +161,17 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     )
     try:
         raw = run_perf_audit(args.url, config=cfg)
+        result = normalize_performance_result(raw.to_dict())
+        if args.html:
+            path = write_performance_html_report(result, args.html)
+            print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(performance_audit_markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
         return 2
-    result = normalize_performance_result(raw.to_dict())
-    if args.html:
-        path = write_performance_html_report(result, args.html)
-        print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(performance_audit_markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 

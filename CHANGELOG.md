@@ -33,6 +33,23 @@ in every report format, and an end-to-end acceptance layer.
 - **SSRF regression tests**: cloud-metadata IP, IPv4-mapped IPv6 loopback,
   and mixed public/private resolution are all confirmed blocked.
 
+### Fixed
+
+- **CLI never claims success on a failed run**: `audit`, `site-audit`, and
+  `performance-audit` now run report writing (and, for site/performance,
+  history + normalization) inside the command's `try/except`. Previously a
+  `--html` write failure, or a corrupt/unreadable history record in the
+  site/performance commands, escaped as an uncaught traceback instead of a
+  clean "OPE … failed" message and exit code 2.
+- **`history.compare()` tolerates a malformed baseline**: a
+  parseable-but-wrong-schema history record (e.g. `metrics` not a dict) now
+  degrades to "no comparison" instead of raising. Corrupt JSON was already
+  skipped by `load_runs`.
+- **OpenRouter User-Agent is version-derived**: the reasoning client used a
+  hardcoded `OPE-Reasoning/0.1`; it now derives from the installed package
+  version (`ope.integrations.openrouter.USER_AGENT`), matching the
+  single-source User-Agent policy used everywhere else.
+
 ### Notes
 
 - The one known SSRF limitation remains DNS-rebinding via TOCTOU (the
