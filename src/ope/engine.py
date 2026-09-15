@@ -177,6 +177,30 @@ def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dic
     return modules
 
 
+def _attach_entity(output: dict[str, Any]) -> None:
+    """Materialize a structured entity record from the JSON-LD signals already
+    extracted into inventory. This is a summary of observed signals (the same
+    ones the 01-entity module evaluates), never a fabricated identity graph:
+    every field is read from inventory, and absent signals stay None/empty.
+    """
+    inv = output.get("inventory")
+    inv = inv if isinstance(inv, dict) else {}
+    types = inv.get("entity_types")
+    output["entity"] = {
+        "types": list(types) if isinstance(types, list) else [],
+        "has_entity_type": bool(inv.get("has_entity_type")),
+        "canonical_url": inv.get("canonical") or output.get("final_url") or output.get("target"),
+        "identifiers_present": inv.get("has_identifiers"),
+        "relationships_present": inv.get("has_relationships"),
+        "name_matches_title": inv.get("name_matches_title"),
+        "is_local_business": bool(inv.get("is_local_business")),
+        "has_nap": inv.get("has_nap"),
+        "ownership_verification": list(inv.get("verification_tags") or []),
+        "evidence_status": "OBSERVED" if inv.get("has_entity_type") else "UNKNOWN",
+        "source": "json-ld",
+    }
+
+
 def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     """Attach the stable evidence/diagnostic contract to an audit result."""
     output = deepcopy(result) if isinstance(result, dict) else {}
@@ -192,6 +216,7 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
         output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 
@@ -222,6 +247,7 @@ def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
     output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 
@@ -250,6 +276,7 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
     output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 
