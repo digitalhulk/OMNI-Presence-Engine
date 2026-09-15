@@ -77,6 +77,7 @@ Optional external evidence — set the environment variable and the matching che
 | `OPE_SEARCH_CONSOLE_KEY` | Query visibility from Google Search Console (`09-search.query_visibility`) |
 | `OPE_BACKLINK_API_KEY` | Off-site authority links from a backlink index, Ahrefs v3 by default (`11-authority.backlinks`) |
 | `OPENROUTER_API_KEY` | Optional advisory reasoning layer — surface it with `ope audit … --reason` |
+| `OPE_DEPENDENCY_SCAN` | Enable the client-side dependency CVE scan via OSV.dev (`16-security.dependencies`); free, no key, needs network to api.osv.dev |
 
 Add an optional advisory AI reasoning layer over the deterministic evidence (needs `OPENROUTER_API_KEY`; without it the layer reports a clean "unavailable" state and the deterministic audit is unaffected):
 
@@ -85,6 +86,61 @@ ope audit https://example.com --reason --markdown
 ```
 
 Legacy `ope-audit` remains supported.
+
+---
+
+## 🎛️ RUN OPE COMMAND CENTER
+
+The Command Center is a real operator UI over the canonical engine — every value
+on screen is read from the same audit result the CLI produces (no second engine,
+no mock data). Exact commands, start to finish:
+
+```bash
+# 1. Install (stdlib-only runtime; Python ≥ 3.10)
+git clone https://github.com/digitalhulk/OMNI-Presence-Engine.git
+cd OMNI-Presence-Engine
+python3 -m pip install -e .
+
+# 2. (Optional) configure external evidence — each is credential-gated and
+#    degrades to an honest UNKNOWN when unset. Skip any you do not have.
+export OPE_PAGESPEED_API_KEY=...     # Core Web Vitals
+export OPE_SEARCH_CONSOLE_KEY=...    # query visibility
+export OPE_BACKLINK_API_KEY=...      # off-site authority (Ahrefs v3 by default)
+export OPE_DEPENDENCY_SCAN=1         # client-side dependency CVEs via OSV.dev (free)
+export OPENROUTER_API_KEY=...        # optional advisory AI reasoning
+
+# 3. Start the Command Center (localhost only by default)
+ope dashboard                        # → http://127.0.0.1:8787/
+# ope dashboard --port 9000          # choose a port
+
+# 4. (Optional) real PDF/PNG export needs the headless-browser extra
+pip install 'omni-presence-engine[report]' && playwright install chromium
+```
+
+**In the browser:**
+1. Enter a website URL in the top bar and click **Run audit** — this executes the
+   real OPE pipeline (validate → crawl → analyze → score → build graph → build plan).
+2. **Overview** — OMNI health, check-level PASS/FAIL/UNKNOWN, finding severities,
+   top root causes, and top remediation priorities for this run.
+3. **Modules** — click any of the 20 modules for its status, score basis, and findings.
+4. **Findings** — filter/sort; expand a finding to see its evidence (source, affected
+   resource, value, confidence, provenance) — i.e. *why* OPE concluded it.
+5. **Dependency Graph** — the canonical 20-module graph, coloured by this run; blocked
+   modules trace back to their upstream root cause.
+6. **Remediation** — the canonical "fix first" plan, ordered by unblock impact.
+7. **AI Reasoning** — click *Generate* (needs `OPENROUTER_API_KEY`; otherwise it says
+   "unavailable" honestly). Advisory only — never evidence or a PASS/FAIL.
+8. **Providers** — each optional provider's status: ACTIVE / NOT CONFIGURED / PLANNED.
+9. **History** — prior runs of the same target (scope-aware: page/site/performance
+   histories never mix).
+10. **Exports** — JSON, Markdown, Text, offline HTML, ZIP bundle, and (with the extra)
+    PDF/PNG — all rendered from the exact run on screen.
+
+**Reading the states:** `PASS`/`FAIL`/`N/A` are direct evidence; `UNKNOWN` means no
+evidence source (never treated as a pass); `BLOCKED` is a dependency-derived module
+state whose root cause is shown. The dashboard binds to localhost, validates every
+target against the SSRF/DNS-rebinding guard, escapes all rendered content, caps
+request bodies, and never exposes credentials.
 
 **Security:** API keys, OAuth tokens, cookies, passwords, private documents, production credentials and payment credentials must remain local or in a secret manager. Never commit real secrets.
 

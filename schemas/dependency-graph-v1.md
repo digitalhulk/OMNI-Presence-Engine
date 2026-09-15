@@ -20,6 +20,8 @@ This is a dependency model, not a rigid workflow. Any observed failure can enter
 
 The graph is encoded in `src/ope/dependency_graph.py` as `MODULE_DEPENDENCIES`, the single executable source of module dependencies — engine execution, cascade propagation, root-cause traversal, and scoring all derive from it, never from a second hardcoded assumption such as "module N depends on module N-1".
 
+**Dependency model level.** The canonical dependency model is deliberately **module-level**. `ModuleRunner` exposes a generic per-check `depends_on` capability, but the registry declares none (all 136 checks have empty `depends_on`), so there is exactly one dependency graph — the module graph above. Introducing check-level dependencies would be a deliberate spec + engine decision, never an accidental second graph; the contract is locked by `tests/test_graph_integrity.py::test_canonical_dependency_model_is_module_level_only`.
+
 **Graph validation.** `validate_graph()` rejects malformed topology explicitly rather than silently accepting it:
 
 - **Dangling edge** — a dependency that is not itself a declared module raises an error.

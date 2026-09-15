@@ -56,6 +56,19 @@ details.omni-det { border: 1px solid #000; margin: 6px 0; padding: 6px 10px; }
 details.omni-det summary { cursor: pointer; font-weight: 700; }
 .omni-bar { height: 14px; background: #eee; border: 1px solid #000; position: relative; }
 .omni-bar > span { position: absolute; left: 0; top: 0; bottom: 0; background: #000; }
+.omni-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.omni-ev { background: #f5f5f5; border: 1px solid #ddd; padding: 6px; font-size: 11px;
+  white-space: pre-wrap; word-break: break-word; overflow-x: auto; margin: 4px 0; }
+.omni-stages { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.omni-stage-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+.omni-stage-map { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px;
+  border: 1px solid #000; background: #fff; }
+.omni-stage-map.is-done { background: #000; color: #fff; }
+details.omni-det pre { white-space: pre-wrap; word-break: break-word; }
+@media (max-width: 640px) {
+  .omni-topbar h1 { font-size: 16px; }
+  table.omni-table th { position: static; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 """
 
@@ -92,18 +105,37 @@ function setStatus(kind, msg) {
   bar.hidden = false;
 }
 
+const STAGES = ['validate', 'crawl', 'analyze', 'score', 'graph', 'plan'];
+// Renders the pipeline as a STATIC MAP of the stages the engine runs in one
+// server-side pass — never as live progress. No fake timers, no fabricated
+// completion fractions, no streaming; the leading label states plainly whether
+// the pass is running or finished.
+function renderStages(done) {
+  let host = $('#omni-stages');
+  if (!host) { host = el('div', {id:'omni-stages', class:'omni-stages'}); $('#omni-status').after(host); }
+  host.textContent = ''; host.hidden = false;
+  host.appendChild(el('span', {class:'omni-stage-label', text: done ? 'Pipeline completed:' : 'Pipeline (runs as one pass):'}));
+  host.appendChild(el('span', {class:'omni-stage-map' + (done ? ' is-done' : ''), text: STAGES.join(' → ')}));
+}
+function hideStages() { const h = $('#omni-stages'); if (h) h.hidden = true; }
+
 async function runAudit() {
   const url = $('#omni-url').value.trim();
   if (!url) { setStatus('fail', 'Enter a URL first.'); return; }
   $('#omni-run-btn').disabled = true;
-  setStatus('run', 'RUNNING — executing the real OPE pipeline against ' + url + ' …');
+  // The audit is one synchronous server-side pass; we show its pipeline stage
+  // MAP (not live progress — no fabricated timers, fractions, or streaming).
+  setStatus('run', 'RUNNING — one server-side pass over the canonical OPE pipeline for ' + url + '…');
+  renderStages(false);
   try {
     const result = await api('/api/audit', { method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ url }) });
     CURRENT = result;
     renderAll(result);
+    renderStages(true);
     setStatus('ok', 'COMPLETED — run ' + esc(result.run_id) + ' · ' + esc(result.final_url || result.target));
   } catch (e) {
+    hideStages();
     setStatus('fail', 'FAILED — ' + e.message);
   } finally {
     $('#omni-run-btn').disabled = false;
@@ -119,29 +151,53 @@ function countStatuses(obj, key) {
 function renderOverview(r) {
   const s = r.summary || {};
   const mc = countStatuses(r.modules || {});
-  // evidence coverage = checks with a determinate (non-UNKNOWN) status
-  const checks = r.checks || {};
-  let determinate = 0, total = 0;
-  for (const k in checks) { total++; if (checks[k].status && checks[k].status !== 'UNKNOWN') determinate++; }
-  const cov = total ? Math.round(100 * determinate / total) : null;
+  // check-level tallies straight from the canonical result
+  const cc = countStatuses(r.checks || {});
+  const totalChecks = cc.PASS + cc.FAIL + cc.UNKNOWN + cc['N/A'] + cc.BLOCKED;
+  const determinate = cc.PASS + cc.FAIL + cc['N/A'];
+  const cov = totalChecks ? Math.round(100 * determinate / totalChecks) : null;
   const dur = (r.completed_at && r.started_at) ? (r.completed_at - r.started_at).toFixed(2) + 's' : '—';
   const cards = [
     ['OMNI Health', r.health === null || r.health === undefined ? 'N/A' : r.health, 'internal diagnostic signal, not a search ranking'],
+    ['Total checks', totalChecks, (GRAPH && GRAPH.registry_check_count ? 'of the ' + GRAPH.registry_check_count + '-check registry' : 'checks executed this run')],
+    ['Checks PASS', cc.PASS, ''], ['Checks FAIL', cc.FAIL, ''],
+    ['Checks UNKNOWN', cc.UNKNOWN, 'no evidence source'],
     ['Findings', s.finding_count ?? 0, ''],
     ['Critical', s.critical ?? 0, ''], ['High', s.high ?? 0, ''],
+    ['Medium', s.medium ?? 0, ''], ['Low', s.low ?? 0, ''],
     ['FAIL modules', mc.FAIL, ''], ['Blocked modules', mc.BLOCKED, 'dependency-derived'],
     ['Unknown modules', mc.UNKNOWN, 'insufficient evidence'],
     ['Evidence coverage', cov === null ? '—' : cov + '%', 'checks with a determinate status'],
     ['Audit duration', dur, ''],
   ];
   const wrap = $('#sec-overview'); wrap.textContent = '';
-  wrap.appendChild(el('p', {class:'omni-muted', text:'OMNI Health is an internal, evidence-weighted diagnostic and remediation signal — not a claim about any search engine ranking.'}));
+  wrap.appendChild(el('p', {class:'omni-muted', text:'OMNI Health is an internal, evidence-weighted diagnostic and remediation signal — not a claim about any search engine ranking. Every number below is read directly from this run.'}));
   const grid = el('div', {class:'omni-cards'});
   cards.forEach(([k,v,note]) => grid.appendChild(el('div', {class:'omni-card'}, [
     el('div',{class:'k',text:k}), el('div',{class:'v',text:esc(v)}),
     note ? el('div',{class:'k',text:note}) : el('span',{})
   ])));
   wrap.appendChild(grid);
+
+  // Top root causes (from the canonical planner) and top priorities (findings).
+  const plan = r.remediation_plan || {};
+  const roots = (plan.root_causes || []).slice(0, 5);
+  if (roots.length) {
+    wrap.appendChild(el('h3', {text:'Top root causes (fix first)'}));
+    const ul = el('ul', {});
+    roots.forEach(step => ul.appendChild(el('li', {text:
+      'Module ' + esc(step.module) + ' (' + esc(step.status) + ')' +
+      (step.unblock_count ? ' — unblocks ' + step.unblock_count + ' module(s)' : '')})));
+    wrap.appendChild(ul);
+  }
+  const top = (r.findings || []).slice().sort((a,b) => (b.priority||0) - (a.priority||0)).slice(0, 5);
+  if (top.length) {
+    wrap.appendChild(el('h3', {text:'Top remediation priorities'}));
+    const ul = el('ul', {});
+    top.forEach(f => ul.appendChild(el('li', {text:
+      'P' + esc(f.priority) + ' [' + esc((f.severity||'').toUpperCase()) + '] ' + esc(f.module) + ' — ' + esc(f.symptom)})));
+    wrap.appendChild(ul);
+  }
 }
 
 function renderModules(r) {
@@ -182,14 +238,34 @@ function showModuleDetail(num, m, r) {
   }
 }
 
+function clip(s, n) { s = esc(s); return s.length > n ? s.slice(0, n) + '…' : s; }
+
 function findingDetail(f) {
   const det = el('details',{class:'omni-det'});
   det.appendChild(el('summary',{text:'[' + esc((f.severity||'').toUpperCase()) + '] ' + esc(f.id) + ' — ' + esc(f.symptom)}));
-  det.appendChild(el('p',{text:'Module: ' + esc(f.module) + ' · Priority: ' + esc(f.priority) + ' · Status: ' + esc(f.status) + ' · Confidence: ' + esc(f.confidence)}));
+  det.appendChild(el('p',{text:'Module: ' + esc(f.module) + ' · Priority: ' + esc(f.priority) +
+    ' · Status: ' + esc(f.status) + ' · Execution: ' + esc(f.execution_status) +
+    ' · Evidence: ' + esc(f.evidence_status) + ' · Confidence: ' + esc(f.confidence)}));
+  if (f.dependency) det.appendChild(el('p',{text:'Depends on / blocked by: ' + esc(f.dependency)}));
   if (f.root_cause) det.appendChild(el('p',{text:'Root cause: ' + esc(f.root_cause)}));
   (f.remediation||[]).forEach(x => det.appendChild(el('div',{text:'• fix: ' + esc(x)})));
   (f.validation||[]).forEach(x => det.appendChild(el('div',{text:'• validate: ' + esc(x)})));
-  (f.evidence||[]).forEach(ev => det.appendChild(el('div',{class:'omni-muted', text:'evidence: ' + esc(ev.source) + ' (confidence ' + esc(ev.confidence) + ')'})));
+  // Evidence-first: show WHY OPE concluded this — source, affected resource, value.
+  const evs = f.evidence || [];
+  if (evs.length) {
+    det.appendChild(el('p',{class:'omni-muted', text:'Evidence (why OPE concluded this):'}));
+    evs.forEach(ev => {
+      const parts = ['source: ' + esc(ev.source)];
+      if (ev.target) parts.push('resource: ' + clip(ev.target, 120));
+      if (ev.confidence !== undefined && ev.confidence !== null) parts.push('confidence: ' + esc(ev.confidence));
+      if (ev.provenance) parts.push('provenance: ' + esc(ev.provenance));
+      det.appendChild(el('div',{class:'omni-muted', text:'• ' + parts.join(' · ')}));
+      if (ev.value !== undefined && ev.value !== null && ev.value !== '') {
+        const val = typeof ev.value === 'string' ? ev.value : JSON.stringify(ev.value);
+        det.appendChild(el('pre',{class:'omni-ev', text: clip(val, 600)}));
+      }
+    });
+  }
   return det;
 }
 
@@ -235,7 +311,7 @@ function drawTable(r) {
     table.appendChild(tr);
   });
   host.appendChild(el('p',{class:'omni-muted', text:rows.length + ' finding(s)'}));
-  host.appendChild(table);
+  host.appendChild(el('div',{class:'omni-scroll'}, [table]));
 }
 
 function renderRemediation(r) {
@@ -327,15 +403,18 @@ async function renderProviders() {
   try {
     const data = await api('/api/providers');
     wrap.textContent = '';
-    wrap.appendChild(el('p',{class:'omni-muted', text:'Optional external providers. Absent credentials keep affected checks UNKNOWN (never fabricated).'}));
+    wrap.appendChild(el('p',{class:'omni-muted', text:'Optional external providers. A provider is only ACTIVE when it has a real adapter and its credential is configured; otherwise affected checks stay UNKNOWN (never fabricated).'}));
     const t = el('table',{class:'omni-table'});
-    t.appendChild(el('tr',{},[el('th',{text:'Provider'}),el('th',{text:'Env var'}),el('th',{text:'Configured'}),el('th',{text:'Adapter'}),el('th',{text:'Upgrades'})]));
-    data.providers.forEach(p => t.appendChild(el('tr',{},[
-      el('td',{text:esc(p.provider)}), el('td',{text:esc(p.env_var)}),
-      el('td',{text:p.configured?'yes':'no'}), el('td',{text:p.implemented?'active':'planned'}),
-      el('td',{text:(p.upgrades_checks||[]).join(', ')||'(advisory)'})
-    ])));
-    wrap.appendChild(t);
+    t.appendChild(el('tr',{},[el('th',{text:'Provider'}),el('th',{text:'Env var'}),el('th',{text:'Status'}),el('th',{text:'Upgrades'})]));
+    data.providers.forEach(p => {
+      const status = !p.implemented ? 'PLANNED' : (p.configured ? 'ACTIVE' : 'NOT CONFIGURED');
+      t.appendChild(el('tr',{},[
+        el('td',{text:esc(p.provider)}), el('td',{text:esc(p.env_var)}),
+        el('td',{}, [el('span',{class:'omni-chip', text:status})]),
+        el('td',{text:(p.upgrades_checks||[]).join(', ')||'(advisory)'})
+      ]));
+    });
+    wrap.appendChild(el('div',{class:'omni-scroll'}, [t]));
   } catch (e) { wrap.textContent = 'Provider status unavailable: ' + e.message; }
 }
 
@@ -351,7 +430,7 @@ async function renderHistory() {
       el('td',{text:esc(run.run_id)}), el('td',{text:esc(run.recorded_at)}),
       el('td',{text:esc((run.finding_ids||[]).length)}), el('td',{text:esc(Object.keys(run.metrics||{}).join(', '))})
     ])));
-    wrap.appendChild(t);
+    wrap.appendChild(el('div',{class:'omni-scroll'}, [t]));
   } catch (e) { wrap.appendChild(el('p',{text:'History unavailable: ' + e.message})); }
 }
 

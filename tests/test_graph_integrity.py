@@ -98,3 +98,22 @@ def test_spec_file_names_the_executable_source():
     spec = (Path(__file__).resolve().parents[1] / "schemas" / "dependency-graph-v1.md").read_text(encoding="utf-8")
     assert "MODULE_DEPENDENCIES" in spec
     assert "parallel branches" in spec.lower()
+
+
+def test_canonical_dependency_model_is_module_level_only():
+    """The canonical dependency model is MODULE-level (MODULE_DEPENDENCIES).
+
+    ModuleRunner supports a generic check-level `depends_on`, but the registry
+    intentionally declares none — schemas/dependency-graph-v1.md states cascade
+    derives *module* status only. This contract test prevents a second,
+    check-level dependency graph from being introduced by accident: if a future
+    check declares check-level deps, this fails and forces an explicit decision.
+    """
+    from ope.registry import CHECKS
+    with_check_deps = [c.id for c in CHECKS if getattr(c, "depends_on", ())]
+    assert with_check_deps == [], (
+        "check-level depends_on is declared on "
+        f"{with_check_deps}; the canonical dependency model is module-level "
+        "(MODULE_DEPENDENCIES). Introducing check-level edges needs a deliberate "
+        "spec + engine decision, not an accidental second graph."
+    )

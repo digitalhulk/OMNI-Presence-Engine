@@ -156,6 +156,12 @@ class TestServer:
         assert len(prov["providers"]) == 5
         _, g = _get(live_server, "/api/dependency-graph")
         assert len(g["nodes"]) == 20
+        # Canonical registry sizes travel with the graph so the UI never embeds
+        # its own constant. They must match the engine's live registry.
+        from ope.dependency_graph import MODULE_DEPENDENCIES
+        from ope.registry import registered_check_ids
+        assert g["registry_check_count"] == len(registered_check_ids())
+        assert g["module_count"] == len(MODULE_DEPENDENCIES)
 
     def test_audit_endpoint_runs_real_pipeline(self, live_server):
         status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
@@ -262,3 +268,78 @@ class TestReasoning:
         status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
         run = json.loads(body)
         assert "reasoning" not in run
+
+
+class TestOperatorUI:
+    """The shipped page must carry the operator-console features (rendered
+    client-side from the canonical result — asserted here at the source level)."""
+
+    def _page(self):
+        from ope.dashboard_ui import render_index
+        return render_index()
+
+    def test_page_has_run_control_and_stage_map(self):
+        page = self._page()
+        assert "omni-run-btn" in page and 'id="omni-url"' in page
+        # Stages are presented as a static pipeline MAP, not live progress.
+        assert "Pipeline (runs as one pass)" in page
+        assert "Pipeline completed:" in page
+        for stage in ("validate", "crawl", "analyze", "score", "graph", "plan"):
+            assert stage in page
+
+    def test_stage_ui_is_not_fake_live_progress(self):
+        page = self._page()
+        # No invented progress vocabulary (precise phrases, so legitimate CSS
+        # widths and the real evidence-coverage percentage are not flagged).
+        for banned in ("% complete", "ETA", "estimated time", "elapsed", "progress-bar", "per-stage"):
+            assert banned not in page, f"stage UI must not imply live progress ({banned!r})"
+
+    def test_no_hardcoded_registry_count(self):
+        # The registry total must be derived from the canonical engine, never a
+        # literal in the UI. If checks are added/removed the UI stays correct.
+        page = self._page()
+        assert "136" not in page
+        assert "registry_check_count" in page
+
+    def test_overview_exposes_check_level_and_priorities(self):
+        page = self._page()
+        for label in ("Total checks", "Checks PASS", "Checks FAIL", "Checks UNKNOWN",
+                      "Top root causes", "Top remediation priorities"):
+            assert label in page
+
+    def test_evidence_first_rendering_present(self):
+        page = self._page()
+        assert "why OPE concluded this" in page
+        assert "omni-ev" in page          # evidence value block
+        assert "provenance" in page
+
+    def test_provider_status_labels_present(self):
+        page = self._page()
+        for label in ("ACTIVE", "NOT CONFIGURED", "PLANNED"):
+            assert label in page
+
+    def test_tables_wrapped_for_mobile(self):
+        page = self._page()
+        assert "omni-scroll" in page
+
+    def test_all_tabs_present(self):
+        page = self._page()
+        for tab in ("overview", "modules", "findings", "remediation", "graph",
+                    "reasoning", "providers", "history", "exports"):
+            assert f'sec-{tab}' in page
+
+    def test_no_hardcoded_metric_literals_in_page(self):
+        # The page ships no audit data — every metric is fetched at runtime.
+        # Guard against a demo result object being embedded in the HTML/JS.
+        page = self._page()
+        assert '"health":' not in page
+        assert '"findings":' not in page
+        assert "run_id" in page  # referenced as a field name, not a value
+
+
+class TestFavicon:
+    def test_favicon_returns_no_content_not_404(self, live_server):
+        import urllib.request
+        with urllib.request.urlopen(live_server + "/favicon.ico") as r:
+            assert r.status == 204          # avoids a console 404 for operators
+            assert r.read() == b""

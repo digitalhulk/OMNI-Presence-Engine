@@ -4,6 +4,46 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.5.0
+
+OMNI Command Center — operator UX. The dashboard already ran the real canonical
+pipeline; this makes it operable as a true command center, every value still
+read from the same canonical run (no second engine, no fabricated data).
+
+### Added
+
+- Executive **Overview**: check-level Total/PASS/FAIL/UNKNOWN, medium/low finding
+  counts, top root causes (canonical planner) and top remediation priorities.
+- **Evidence-first** finding detail: execution/evidence status, dependency/blocker,
+  and per-evidence source, affected resource, value, confidence, provenance —
+  answering "why did OPE conclude this?". All rendered via textContent (XSS-safe).
+- **Honest run stages** (validate → crawl → analyze → score → graph → plan) shown
+  as one server-side pass — no invented percentages.
+- **Provider status** column: ACTIVE / NOT CONFIGURED / PLANNED.
+- **Responsive**: findings/history/providers tables wrapped for mobile; evidence
+  values wrap.
+- README **RUN OPE COMMAND CENTER** runbook (install → config → start → audit →
+  read → export) + `OPE_DEPENDENCY_SCAN` in the env table.
+
+### Hardening
+
+- The registry/check total shown in the Overview is derived from the canonical
+  registry (served on `/api/dependency-graph` as `registry_check_count` /
+  `module_count`) — no literal count in the UI, so it stays correct if checks
+  are added or removed.
+- Pipeline stages are presented as an explicit static MAP ("Pipeline (runs as
+  one pass)" / "Pipeline completed:"), never as fabricated live progress
+  (no percentages, timers, ETA, or streaming).
+- The server answers `/favicon.ico` with 204 so operators see no console 404.
+
+### Tests
+
+- +7 operator-UI render assertions and a Playwright-gated real-browser test
+  (`test_dashboard_browser.py`) that drives the full operator flow in headless
+  Chromium and skips cleanly where no browser is available. JS validated with
+  `node --check`. No backend or diagnosis change — one source of truth remains
+  the engine.
+
 ## 1.4.0
 
 Completion pass: closed the actionable schema/scoring/history/entity gaps and
