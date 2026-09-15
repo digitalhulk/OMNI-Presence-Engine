@@ -49,30 +49,47 @@ derived. OpenRouter response-body size hardening.
 
 ## 0.9.0
 
-Executable dependency graph, BLOCKED cascade propagation, graph-based
-root-cause traversal, and dependency-aware scoring.
+Executable, validated dependency graph with evidence-safe BLOCKED cascade,
+graph-based root-cause traversal, and dependency-aware scoring.
 
 ### Added
 
 - **`dependency_graph.py`**: the 20-module dependency graph from
-  `schemas/dependency-graph-v1.md` encoded as `MODULE_DEPENDENCIES` with
+  `schemas/dependency-graph-v1.md` encoded as `MODULE_DEPENDENCIES` — the
+  single executable source of module dependencies — with deterministic
   topological ordering (`TOPOLOGICAL_ORDER`, `TOPOLOGICAL_ORDER_NUMBERS`),
-  number-keyed dependency mapping (`DEPENDENCIES_BY_NUMBER`), and four
-  query functions: `upstream_modules()`, `downstream_modules()`,
+  number-keyed dependency mapping (`DEPENDENCIES_BY_NUMBER`), and query
+  functions `upstream_modules()`, `downstream_modules()`,
   `cascade_blocked()`, `find_root_causes()`.
-- **BLOCKED cascade propagation**: `cascade_blocked()` iterates modules in
-  topological order and marks any module BLOCKED when an upstream dependency
-  has FAIL or BLOCKED status. UNKNOWN upstream does not cascade — absent
-  evidence is not a failure. The cascade is deterministic and execution-order
-  independent.
+- **Graph validation** (`validate_graph()`, `GraphValidationError`): a
+  reusable validator that rejects **dangling edges** (a dependency that is
+  not a declared module) and **cycles**. Cycles are detected with an
+  iterative three-state DFS (UNSEEN → VISITING → COMPLETE) — a single
+  "visited" set cannot distinguish a back-edge from an already-explored
+  node — and the traversal is iterative so a deep/adversarial graph cannot
+  exhaust the recursion stack. Topological order uses Kahn's algorithm and
+  is deterministic.
+- **Evidence-safe BLOCKED cascade**: `cascade_blocked()` marks a module
+  `BLOCKED` when any transitive upstream dependency is `FAIL`/`BLOCKED`,
+  but `BLOCKED` is a *derived* state that never replaces direct evidence —
+  a module's own `FAIL` stays `FAIL` and its own `N/A` stays `N/A`; only
+  `PASS`/`UNKNOWN` modules are converted. `UNKNOWN`/`N/A` upstream states
+  never cause a block. Cascade derives module status only and never mutates
+  check-level evidence.
 - **Graph-based root-cause traversal**: `find_root_causes()` traces each
-  BLOCKED module's transitive upstream to find the FAIL modules that caused
-  it, skipping BLOCKED intermediaries. Root causes are reported per module
+  BLOCKED module's transitive upstream to the FAIL modules that caused it,
+  never fabricating a BLOCKED intermediary as a cause and never inventing a
+  cause where no upstream FAIL exists. Root causes are reported per module
   in `dependency_root_causes` and per blocked module in `blocked_by`.
-- **`test_dependency_graph.py`**: 38 tests across 8 classes covering graph
-  structure, parallel branches, upstream/downstream queries, cascade
-  propagation, root-cause traversal, the definitive acceptance test, and
-  execution-order independence.
+- **`test_dependency_graph.py`**: 66 tests across 11 classes covering graph
+  structure, parallel branches, upstream/downstream queries, graph
+  validation (cycles, self-cycle, dangling edges, deep-chain determinism),
+  evidence-safe cascade (direct FAIL/N/A preservation), root-cause
+  traversal, nine end-to-end golden scenarios, the definitive acceptance
+  test, and execution-order independence.
+- **Evidence-firewall tests** (`test_engine.py::TestEvidenceFirewall`):
+  cascade never mutates check evidence, direct-FAIL modules keep FAIL
+  end-to-end, and BLOCKED is module-level only (never a check status).
 
 ### Changed
 

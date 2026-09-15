@@ -280,3 +280,51 @@ class TestScoringIntegration:
         score = output["modules"]["01"]["score"]
         assert score is not None
         assert 0.0 < score < 100.0
+
+
+class TestEvidenceFirewall:
+    """Dependency propagation derives MODULE status but never fabricates
+    CHECK evidence, and never overwrites direct evidence with BLOCKED."""
+
+    def _run(self, monkeypatch):
+        # Module 02 fails (direct evidence) and module 10 also fails
+        # (direct downstream evidence). Everything else has no evidence.
+        injected = {
+            "02-infrastructure.hosting.availability": {
+                "module": "02-infrastructure", "status": "FAIL",
+                "evidence": [{"confidence": 0.9}],
+            },
+            "10-ai-search.answer_eligibility": {
+                "module": "10-ai-search", "status": "FAIL",
+                "evidence": [{"confidence": 0.9}],
+            },
+        }
+        monkeypatch.setattr(engine, "execute_audit_checks", lambda _: {"checks": dict(injected)})
+        modules = {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)}
+        modules["02"]["status"] = "FAIL"
+        modules["10"]["status"] = "FAIL"
+        output = engine.normalize_result({"modules": modules, "findings": [], "inventory": {}})
+        return output, injected
+
+    def test_cascade_does_not_mutate_check_evidence(self, monkeypatch) -> None:
+        output, injected = self._run(monkeypatch)
+        # The stored checks are exactly what execution produced — no check was
+        # turned FAIL/BLOCKED because an upstream module failed.
+        assert output["checks"] == injected
+        assert all(c["status"] == "FAIL" for c in output["checks"].values())
+
+    def test_direct_fail_modules_keep_fail(self, monkeypatch) -> None:
+        output, _ = self._run(monkeypatch)
+        assert output["modules"]["02"]["status"] == "FAIL"
+        assert output["modules"]["10"]["status"] == "FAIL"  # direct downstream FAIL preserved
+        assert "10" not in output.get("dependency_root_causes", {})
+
+    def test_blocked_modules_are_derived_with_root_cause(self, monkeypatch) -> None:
+        output, _ = self._run(monkeypatch)
+        m03 = output["modules"]["03"]
+        assert m03["status"] == "BLOCKED"
+        assert m03["score"] is None
+        assert m03["score_basis"]["method"] == "blocked"
+        assert m03["score_basis"]["blocked_by"] == ["02"]
+        # BLOCKED is module-level only; it never appears as a check status.
+        assert all(c["status"] != "BLOCKED" for c in output["checks"].values())
