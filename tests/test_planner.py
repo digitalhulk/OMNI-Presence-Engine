@@ -125,6 +125,33 @@ class TestBuildRemediationPlan:
         step = build_remediation_plan(result)["root_causes"][0]
         assert step["findings"][0]["remediation"] == []
 
+    def test_unknown_only_run_has_empty_plan(self):
+        # A run with no FAIL evidence (all UNKNOWN) must plan no work.
+        result = {
+            "modules": {f"{i:02d}": {"status": "UNKNOWN"} for i in range(1, 21)},
+            "findings": [],
+            "dependency_root_causes": {},
+        }
+        plan = build_remediation_plan(result)
+        assert plan["root_causes"] == []
+        assert plan["direct_failures"] == []
+        assert plan["summary"]["planned_findings"] == 0
+
+    def test_duplicate_finding_ids_are_handled_deterministically(self):
+        result = {
+            "modules": {"02": {"status": "FAIL"}, "03": {"status": "BLOCKED"}},
+            "findings": [
+                _finding("dup", "02-infrastructure", 0.9),
+                _finding("dup", "02-infrastructure", 0.9),
+            ],
+            "dependency_root_causes": {"03": ["02"]},
+        }
+        step = build_remediation_plan(result)["root_causes"][0]
+        # Findings are surfaced as-is (evidence is not invented or dropped),
+        # and ordering is deterministic.
+        assert [f["id"] for f in step["findings"]] == ["dup", "dup"]
+        assert build_remediation_plan(result) == build_remediation_plan(result)
+
 
 class TestDiagnosisMarkdown:
     def test_renders_health_and_no_failures(self):

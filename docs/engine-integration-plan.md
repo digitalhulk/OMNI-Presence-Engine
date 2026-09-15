@@ -74,6 +74,8 @@ Remediation is planned: `planner.build_remediation_plan()` turns the diagnosis i
 
 Reporting surfaces the full diagnosis in all three formats: JSON carries every key (`health`, `health_basis`, per-module `score`/`score_basis`/`status`, `dependency_root_causes`, `remediation_plan`, `checks`); the Markdown reports (single-page, site, performance) and the RawBlock HTML report all render a "Diagnosis & Plan" section via the shared renderers, with all content HTML-escaped. The live fetch path is hardened for real responses: SSRF-validated targets (resolved-address checks against loopback/private/link-local/metadata/IPv6 forms), per-hop redirect revalidation, bounded response and error bodies, and bounded gzip/deflate decompression for servers that compress unsolicited.
 
+The DNS-rebinding TOCTOU is closed by `net.py`: for direct connections the socket connects to an address resolved and validated in the same step (pinning), so the validated resolution is the one connected to; TLS SNI/certificate validation still use the hostname. When an egress proxy applies to the URL the proxy resolves and enforces policy, so pinning is skipped and proxy semantics are preserved. `orchestrator.py` runs the single-target pipeline across many targets with bounded concurrency and per-target isolation, and is the reusable primitive an external scheduler builds on; `providers.py` exposes optional-provider capability discovery. All three keep the deterministic core and the evidence-first contract unchanged.
+
 ## Explicit non-goals
 
 - No synthetic evidence.

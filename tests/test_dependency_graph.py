@@ -341,6 +341,16 @@ class TestGraphValidation:
         with pytest.raises(GraphValidationError, match="cycle"):
             validate_graph(graph)
 
+    def test_disconnected_graph_is_valid_and_fully_ordered(self) -> None:
+        # Two independent components with no edge between them.
+        graph = {"a": (), "b": ("a",), "x": (), "y": ("x",)}
+        validate_graph(graph)  # no raise
+        order = _compute_topological_order(graph)
+        assert set(order) == set(graph)
+        assert order.index("a") < order.index("b")
+        assert order.index("x") < order.index("y")
+        assert _compute_topological_order(graph) == order  # deterministic
+
 
 class TestEvidenceSafeCascade:
     """BLOCKED is a derived dependency state and never replaces direct evidence."""

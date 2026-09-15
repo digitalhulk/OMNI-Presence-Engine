@@ -4,6 +4,43 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.13.0
+
+Production release: DNS-rebinding SSRF hardening, multi-target orchestration,
+and optional-provider capability discovery.
+
+### Added
+
+- **DNS-rebinding / TOCTOU SSRF hardening** (`src/ope/net.py`): pinned
+  HTTP(S) connections that resolve *and* validate a target in the same step,
+  then connect to the validated address — the resolution that is validated is
+  exactly the one connected to, closing the window between
+  `validate_url_strict()` and the socket connect. TLS SNI and certificate
+  validation still use the hostname. Proxy-aware: when an egress proxy applies,
+  the proxy resolves and enforces policy, so pinning is skipped (proxy
+  semantics preserved). The main page fetch and subresource fetches both use
+  the pinned, proxy-aware opener with per-hop redirect revalidation.
+- **Reusable SSRF address policy** (`url.address_is_restricted`,
+  `url.resolve_and_validate`): single source of the loopback/private/
+  link-local/metadata/reserved/multicast/IPv4-mapped-IPv6 blocklist.
+- **Multi-target orchestration** (`src/ope/orchestrator.py`,
+  `ope multi-audit URL...`): audits many targets with bounded concurrency
+  (workers clamped to ≤ min(requested, targets, 16) — never unbounded) and
+  strict per-target isolation (one target's failure never aborts the batch).
+  Deterministic aggregation (input-order results, deterministic summary),
+  per-target results + aggregate summary, JSON/Markdown output. Exit code 2
+  only when every target failed. This is the reusable execution primitive an
+  external scheduler builds on.
+- **Optional-provider capability discovery** (`src/ope/providers.py`,
+  `ope providers`): lists each optional provider (PageSpeed, Search Console,
+  backlink index, OpenRouter), whether its credential is configured, and which
+  checks it would upgrade from UNKNOWN to measured evidence. No fake providers;
+  absent credentials keep the affected checks UNKNOWN with a specific reason.
+- **Golden/red-team test expansion**: SSRF matrix (0.0.0.0, gopher,
+  credential-bearing URLs, IPv4-mapped IPv6, metadata, mixed resolution),
+  pinned-connection blocking, TOCTOU-closure, disconnected-graph ordering,
+  UNKNOWN-only planner runs, duplicate findings.
+
 ## 0.12.0
 
 Live-site finalization: real-response robustness, full diagnostic surfacing

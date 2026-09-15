@@ -247,6 +247,15 @@ def multi_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def providers_command(args: argparse.Namespace) -> int:
+    from .providers import provider_status, providers_markdown
+    if getattr(args, "as_json", False):
+        print(json.dumps(provider_status(), indent=2, ensure_ascii=False))
+    else:
+        print(providers_markdown())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
     sub = parser.add_subparsers(dest="command")
@@ -295,12 +304,15 @@ def build_parser() -> argparse.ArgumentParser:
     ma.add_argument("--max-workers", type=int, default=4, help="max concurrent target audits (default 4)")
     ma.add_argument("--no-history", action="store_true", help="do not read or write local run history")
     ma.set_defaults(handler=multi_audit_command)
+    pr = sub.add_parser("providers", help="list optional external providers and whether they are configured")
+    pr.add_argument("--json", action="store_true", dest="as_json", help="output JSON instead of markdown")
+    pr.set_defaults(handler=providers_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)

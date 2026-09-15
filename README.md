@@ -42,6 +42,16 @@ ope audit https://example.com --no-history        # do not read or write local r
 ope audit https://example.com --timeout 30
 ```
 
+Audit several targets at once, or list what optional providers are configured:
+
+```bash
+ope multi-audit https://a.com https://b.com https://c.com --markdown
+ope multi-audit https://a.com https://b.com --max-workers 4 --json
+ope providers            # which optional providers are configured + what they upgrade
+```
+
+`multi-audit` runs targets with bounded concurrency and per-target isolation — one failing site never destroys the others — and returns a deterministic per-target + aggregate result.
+
 Run history is stored locally at `~/.ope/runs` (override the base directory with `OPE_HOME`) and is what lets the engine detect regressions between runs.
 
 Optional external evidence — set the environment variable and the matching checks upgrade from `UNKNOWN` to measured evidence; nothing is fabricated when it is absent:
@@ -105,6 +115,9 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Dependency-ordered remediation plan** — `planner.build_remediation_plan()` turns the diagnosis into an actionable, deterministic plan (the executable `PLAN` stage): root-cause modules ordered by how many downstream modules each would unblock, each with its evidence-backed findings; direct failures and blocked-and-waiting modules listed separately. It orders existing evidence only — inventing no remediation — and every report now surfaces a "Diagnosis & Plan" section. `IMPLEMENT` stays human-owned.
 - **Diagnostics in every report** — JSON, Markdown, and the RawBlock HTML report all expose the same diagnostic chain: global health, per-module status and score, dependency root causes, blocked modules, and the remediation plan. All rendered content is HTML-escaped (no XSS).
 - **Real-response robustness** — the live fetch path validates the target against SSRF (loopback, private, link-local, cloud-metadata, IPv6 forms — all resolved-address-checked), revalidates every redirect hop, bounds the response and error bodies, and decompresses gzip/deflate responses under a decompression-bomb cap. Network failures produce a clean CLI error and a non-zero exit code, never a partial or fabricated result.
+- **DNS-rebinding hardening** — for direct connections the fetch pins the validated DNS resolution: the address that is SSRF-validated is exactly the one connected to, closing the resolve→validate→connect TOCTOU window. TLS SNI/cert validation still use the hostname. When an egress proxy is configured it resolves and enforces policy, so pinning is skipped and proxy semantics are preserved.
+- **Multi-target orchestration** — `ope multi-audit URL...` audits many targets with bounded concurrency and strict per-target isolation (one failure never destroys the others), deterministic input-order aggregation, and a per-target + aggregate summary in JSON or Markdown.
+- **Optional-provider capability discovery** — `ope providers` lists each optional provider (PageSpeed, Search Console, backlink index, OpenRouter), whether its credential is configured, and which checks it would upgrade. Absent credentials keep the affected checks `UNKNOWN` with a specific reason — never fabricated.
 - **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
@@ -137,8 +150,8 @@ python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDI
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- provider adapters for external data sources beyond PageSpeed Insights (18 checks are bound but return `UNKNOWN` until their APIs are configured)
-- orchestration and scheduling across multiple targets
+- provider adapters for external data sources beyond PageSpeed Insights (18 checks are bound but return `UNKNOWN` until their APIs are configured; `ope providers` lists what each would need). Implementing these requires legitimate API credentials/access, so they remain optional and credential-gated.
+- a standalone scheduler daemon. Multi-target orchestration (`ope multi-audit`) and per-target run history are implemented as the reusable primitives; an external scheduler (cron, CI, a queue) supplies the target list and cadence and calls the engine. The engine deliberately owns *how* to audit and aggregate, not *when* to run.
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**
 
@@ -427,8 +440,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.12.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning, diagnostics surfaced in JSON/Markdown/HTML  
+**Version:** `0.13.0`  
+**Stage:** Production release — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning, diagnostics in JSON/Markdown/HTML, DNS-rebinding-hardened SSRF, multi-target orchestration, provider capability discovery  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**
