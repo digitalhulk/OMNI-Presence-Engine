@@ -85,15 +85,27 @@ def get_reasoning(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def dependency_graph_view() -> dict[str, Any]:
-    """The declared 20-module dependency graph for visualization (structure only)."""
+    """The declared 20-module dependency graph for visualization (structure only).
+
+    Also carries the canonical registry sizes so the UI can display the check /
+    module totals without embedding a constant of its own — a future
+    addition/removal of checks is reflected automatically.
+    """
     from .dependency_graph import MODULE_DEPENDENCIES, TOPOLOGICAL_ORDER_NUMBERS
+    from .registry import registered_check_ids
     nodes = [{"module": name.split("-", 1)[0], "name": name} for name in MODULE_DEPENDENCIES]
     edges = [
         {"from": dep.split("-", 1)[0], "to": name.split("-", 1)[0]}
         for name, deps in MODULE_DEPENDENCIES.items()
         for dep in deps
     ]
-    return {"nodes": nodes, "edges": edges, "topological_order": list(TOPOLOGICAL_ORDER_NUMBERS)}
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "topological_order": list(TOPOLOGICAL_ORDER_NUMBERS),
+        "registry_check_count": len(registered_check_ids()),
+        "module_count": len(MODULE_DEPENDENCIES),
+    }
 
 
 _EXPORTS = {

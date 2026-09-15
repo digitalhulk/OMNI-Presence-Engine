@@ -90,6 +90,10 @@ def _make_handler(state: _State) -> type[http.server.BaseHTTPRequestHandler]:
             try:
                 if route == "/" or route == "/index.html":
                     self._send(200, render_index().encode("utf-8"), "text/html; charset=utf-8")
+                elif route == "/favicon.ico":
+                    # Answer the browser's automatic favicon request so it does
+                    # not surface as a 404 in the operator's console.
+                    self._send(204, b"", "image/x-icon")
                 elif route == "/api/providers":
                     self._json(200, {"providers": service.get_providers()})
                 elif route == "/api/dependency-graph":

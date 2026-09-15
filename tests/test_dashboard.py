@@ -156,6 +156,12 @@ class TestServer:
         assert len(prov["providers"]) == 5
         _, g = _get(live_server, "/api/dependency-graph")
         assert len(g["nodes"]) == 20
+        # Canonical registry sizes travel with the graph so the UI never embeds
+        # its own constant. They must match the engine's live registry.
+        from ope.dependency_graph import MODULE_DEPENDENCIES
+        from ope.registry import registered_check_ids
+        assert g["registry_check_count"] == len(registered_check_ids())
+        assert g["module_count"] == len(MODULE_DEPENDENCIES)
 
     def test_audit_endpoint_runs_real_pipeline(self, live_server):
         status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
@@ -272,11 +278,28 @@ class TestOperatorUI:
         from ope.dashboard_ui import render_index
         return render_index()
 
-    def test_page_has_run_control_and_stages(self):
+    def test_page_has_run_control_and_stage_map(self):
         page = self._page()
         assert "omni-run-btn" in page and 'id="omni-url"' in page
-        for stage in ("Validating", "Crawling", "Analyzing", "Scoring", "Building graph", "Building plan"):
+        # Stages are presented as a static pipeline MAP, not live progress.
+        assert "Pipeline (runs as one pass)" in page
+        assert "Pipeline completed:" in page
+        for stage in ("validate", "crawl", "analyze", "score", "graph", "plan"):
             assert stage in page
+
+    def test_stage_ui_is_not_fake_live_progress(self):
+        page = self._page()
+        # No invented progress vocabulary (precise phrases, so legitimate CSS
+        # widths and the real evidence-coverage percentage are not flagged).
+        for banned in ("% complete", "ETA", "estimated time", "elapsed", "progress-bar", "per-stage"):
+            assert banned not in page, f"stage UI must not imply live progress ({banned!r})"
+
+    def test_no_hardcoded_registry_count(self):
+        # The registry total must be derived from the canonical engine, never a
+        # literal in the UI. If checks are added/removed the UI stays correct.
+        page = self._page()
+        assert "136" not in page
+        assert "registry_check_count" in page
 
     def test_overview_exposes_check_level_and_priorities(self):
         page = self._page()
@@ -312,3 +335,11 @@ class TestOperatorUI:
         assert '"health":' not in page
         assert '"findings":' not in page
         assert "run_id" in page  # referenced as a field name, not a value
+
+
+class TestFavicon:
+    def test_favicon_returns_no_content_not_404(self, live_server):
+        import urllib.request
+        with urllib.request.urlopen(live_server + "/favicon.ico") as r:
+            assert r.status == 204          # avoids a console 404 for operators
+            assert r.read() == b""

@@ -59,10 +59,11 @@ details.omni-det summary { cursor: pointer; font-weight: 700; }
 .omni-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .omni-ev { background: #f5f5f5; border: 1px solid #ddd; padding: 6px; font-size: 11px;
   white-space: pre-wrap; word-break: break-word; overflow-x: auto; margin: 4px 0; }
-.omni-stages { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.omni-stage { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px;
+.omni-stages { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.omni-stage-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+.omni-stage-map { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px;
   border: 1px solid #000; background: #fff; }
-.omni-stage.is-done { background: #000; color: #fff; }
+.omni-stage-map.is-done { background: #000; color: #fff; }
 details.omni-det pre { white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 640px) {
   .omni-topbar h1 { font-size: 16px; }
@@ -104,12 +105,17 @@ function setStatus(kind, msg) {
   bar.hidden = false;
 }
 
-const STAGES = ['Validating', 'Crawling', 'Analyzing', 'Scoring', 'Building graph', 'Building plan'];
+const STAGES = ['validate', 'crawl', 'analyze', 'score', 'graph', 'plan'];
+// Renders the pipeline as a STATIC MAP of the stages the engine runs in one
+// server-side pass — never as live progress. No fake timers, no fabricated
+// completion fractions, no streaming; the leading label states plainly whether
+// the pass is running or finished.
 function renderStages(done) {
   let host = $('#omni-stages');
   if (!host) { host = el('div', {id:'omni-stages', class:'omni-stages'}); $('#omni-status').after(host); }
   host.textContent = ''; host.hidden = false;
-  STAGES.forEach(s => host.appendChild(el('span', {class:'omni-stage' + (done ? ' is-done' : ''), text: s})));
+  host.appendChild(el('span', {class:'omni-stage-label', text: done ? 'Pipeline completed:' : 'Pipeline (runs as one pass):'}));
+  host.appendChild(el('span', {class:'omni-stage-map' + (done ? ' is-done' : ''), text: STAGES.join(' → ')}));
 }
 function hideStages() { const h = $('#omni-stages'); if (h) h.hidden = true; }
 
@@ -117,9 +123,9 @@ async function runAudit() {
   const url = $('#omni-url').value.trim();
   if (!url) { setStatus('fail', 'Enter a URL first.'); return; }
   $('#omni-run-btn').disabled = true;
-  // The audit is one synchronous server-side pass; we show the real pipeline
-  // stages it runs (no invented per-stage percentages or timing).
-  setStatus('run', 'RUNNING — executing the real OPE pipeline against ' + url + ' (validate → crawl → analyze → score → graph → plan)…');
+  // The audit is one synchronous server-side pass; we show its pipeline stage
+  // MAP (not live progress — no fabricated timers, fractions, or streaming).
+  setStatus('run', 'RUNNING — one server-side pass over the canonical OPE pipeline for ' + url + '…');
   renderStages(false);
   try {
     const result = await api('/api/audit', { method: 'POST', headers: {'Content-Type':'application/json'},
@@ -153,7 +159,7 @@ function renderOverview(r) {
   const dur = (r.completed_at && r.started_at) ? (r.completed_at - r.started_at).toFixed(2) + 's' : '—';
   const cards = [
     ['OMNI Health', r.health === null || r.health === undefined ? 'N/A' : r.health, 'internal diagnostic signal, not a search ranking'],
-    ['Total checks', totalChecks, 'of the 136-check registry'],
+    ['Total checks', totalChecks, (GRAPH && GRAPH.registry_check_count ? 'of the ' + GRAPH.registry_check_count + '-check registry' : 'checks executed this run')],
     ['Checks PASS', cc.PASS, ''], ['Checks FAIL', cc.FAIL, ''],
     ['Checks UNKNOWN', cc.UNKNOWN, 'no evidence source'],
     ['Findings', s.finding_count ?? 0, ''],
