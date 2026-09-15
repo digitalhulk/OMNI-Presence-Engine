@@ -72,6 +72,18 @@ def get_history(target: str) -> list[dict[str, Any]]:
     return history_module.load_runs(target)
 
 
+def get_reasoning(result: dict[str, Any]) -> dict[str, Any]:
+    """Optional advisory AI reasoning over a canonical run (never fabricated).
+
+    Delegates to the shared reasoning layer, which returns an honest
+    ``available: False`` record when ``OPENROUTER_API_KEY`` is absent or the
+    provider errors. This performs no diagnosis of its own and never mutates the
+    run; the reasoning is display-only advisory metadata.
+    """
+    from .reasoning import reasoning_or_unavailable
+    return reasoning_or_unavailable(result)
+
+
 def dependency_graph_view() -> dict[str, Any]:
     """The declared 20-module dependency graph for visualization (structure only)."""
     from .dependency_graph import MODULE_DEPENDENCIES, TOPOLOGICAL_ORDER_NUMBERS

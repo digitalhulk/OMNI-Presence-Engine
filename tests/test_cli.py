@@ -476,3 +476,39 @@ class TestPerformanceAuditMarkdownReport:
         }
         md = performance_audit_markdown_report(result)
         assert "Core Web Vitals" not in md
+
+
+class TestReasonFlag:
+    def test_reason_flag_parses(self) -> None:
+        args = build_parser().parse_args(["audit", "https://example.com", "--reason"])
+        assert args.reason is True
+
+    def test_reason_default_off(self) -> None:
+        args = build_parser().parse_args(["audit", "https://example.com"])
+        assert args.reason is False
+
+    def test_audit_command_attaches_reasoning_in_markdown(self, capsys) -> None:
+        import ope.cli as cli_mod
+        args = build_parser().parse_args(["audit", "https://example.com", "--markdown", "--reason", "--no-history"])
+        fake_reasoning = {"provider": "openrouter", "available": True, "advisory": True,
+                          "model": "test/model", "result": {"priorities": ["restore origin"]}}
+        with mock.patch.object(cli_mod, "audit", return_value={"raw": True}), \
+             mock.patch.object(cli_mod, "normalize_result", return_value={"target": "https://example.com", "run_id": "ope-1", "started_at": 0, "inventory": {"status": 200}, "summary": {"finding_count": 0}, "modules": {}, "findings": []}), \
+             mock.patch.object(cli_mod, "reasoning_or_unavailable", return_value=fake_reasoning) as rr:
+            rc = args.handler(args)
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "AI Reasoning (advisory)" in out
+        assert "restore origin" in out
+        # reasoning is computed exactly once, from the normalized result
+        assert rr.call_count == 1
+
+    def test_audit_command_without_reason_omits_reasoning(self, capsys) -> None:
+        import ope.cli as cli_mod
+        args = build_parser().parse_args(["audit", "https://example.com", "--markdown", "--no-history"])
+        with mock.patch.object(cli_mod, "audit", return_value={"raw": True}), \
+             mock.patch.object(cli_mod, "normalize_result", return_value={"target": "https://example.com", "run_id": "ope-1", "started_at": 0, "inventory": {"status": 200}, "summary": {"finding_count": 0}, "modules": {}, "findings": []}), \
+             mock.patch.object(cli_mod, "reasoning_or_unavailable", side_effect=AssertionError("should not be called")):
+            rc = args.handler(args)
+        assert rc == 0
+        assert "AI Reasoning" not in capsys.readouterr().out

@@ -8,7 +8,7 @@ from ope.integrations.openrouter import (
     OpenRouterConfig,
     OpenRouterError,
 )
-from ope.reasoning import reason_about_result
+from ope.reasoning import reason_about_result, reasoning_markdown, reasoning_or_unavailable
 
 
 class FakeClient:
@@ -98,3 +98,70 @@ def test_user_agent_is_derived_from_version_not_hardcoded(monkeypatch):
     monkeypatch.setattr(openrouter.urllib.request, "urlopen", fake_urlopen)
     client.chat_json([{"role": "user", "content": "hi"}])
     assert captured["ua"] == openrouter.USER_AGENT
+
+
+class _ErrorClient:
+    config = OpenRouterConfig(api_key="test", model="test/model")
+
+    def chat_json(self, messages, *, temperature=0.0):
+        raise OpenRouterError("OpenRouter HTTP 402: insufficient credits")
+
+
+class _RichClient:
+    config = OpenRouterConfig(api_key="test", model="test/model")
+
+    def chat_json(self, messages, *, temperature=0.0):
+        return {
+            "root_cause_hypotheses": ["origin returns 503"],
+            "priorities": ["restore origin"],
+            "recommendations": ["add monitoring"],
+            "content_opportunities": [],
+            "validation_plan": ["re-audit after fix"],
+        }
+
+
+def test_or_unavailable_without_key_is_honest(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    out = reasoning_or_unavailable({"target": "https://example.com", "findings": []})
+    assert out["available"] is False
+    assert "OPENROUTER_API_KEY" in out["reason"]
+    assert out["result"] is None
+    assert out["advisory"] is True
+
+
+def test_or_unavailable_with_client_is_available():
+    out = reasoning_or_unavailable({"target": "https://example.com", "modules": {}, "findings": []}, _RichClient())
+    assert out["available"] is True
+    assert out["model"] == "test/model"
+    assert out["result"]["priorities"] == ["restore origin"]
+
+
+def test_or_unavailable_on_provider_error_degrades(monkeypatch):
+    out = reasoning_or_unavailable({"target": "https://example.com", "findings": []}, _ErrorClient())
+    assert out["available"] is False
+    assert "failed" in out["reason"].lower()
+    assert "test" not in out["reason"]  # the api_key value never appears in the reason
+    assert out["result"] is None
+
+
+def test_reasoning_markdown_available_renders_sections():
+    out = reasoning_or_unavailable({"target": "x", "modules": {}, "findings": []}, _RichClient())
+    md = reasoning_markdown(out)
+    assert "## AI Reasoning (advisory)" in md
+    assert "Advisory only" in md
+    assert "### Root-cause hypotheses" in md
+    assert "origin returns 503" in md
+    assert "### Content opportunities" not in md  # empty section omitted
+
+
+def test_reasoning_markdown_unavailable_is_explicit():
+    md = reasoning_markdown({"available": False, "reason": "OPENROUTER_API_KEY is not configured"})
+    assert "Unavailable" in md
+    assert "OPENROUTER_API_KEY is not configured" in md
+    assert "deterministic findings above are unaffected" in md
+
+
+def test_or_unavailable_does_not_mutate_result():
+    result = {"target": "x", "modules": {"01": {"status": "UNKNOWN"}}, "findings": []}
+    reasoning_or_unavailable(result, _RichClient())
+    assert "reasoning" not in result  # wrapper returns a value; it never mutates the run

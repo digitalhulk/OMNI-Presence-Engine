@@ -4,6 +4,36 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.3.0
+
+Surfaces the OpenRouter advisory reasoning layer, which shipped in the code but
+was unreachable from any user surface (a shipped-but-disconnected capability the
+provider registry already advertised as implemented). No new engine logic; one
+canonical reasoning path now reaches the CLI, reports, and dashboard.
+
+### Added
+
+- **`ope audit … --reason`** — attaches an optional advisory AI reasoning layer
+  over the deterministic evidence. Rendered in JSON, Markdown, and the RawBlock
+  HTML report. Advisory only: never a measurement, PASS/FAIL, or evidence, and
+  it is attached *after* the run is saved so the non-deterministic text never
+  enters the run history used for regression comparison.
+- **Dashboard "AI Reasoning" panel** + `POST /api/reason` — generates the same
+  advisory reasoning for the current run on demand, rendered with XSS-safe DOM
+  builders.
+- **`reasoning.reasoning_or_unavailable()` / `reasoning_markdown()`** — a
+  never-raising, never-fabricating entry point: when `OPENROUTER_API_KEY` is
+  absent or the provider errors it returns an honest `available: False` record
+  with a specific reason (the credential value never appears in that reason),
+  instead of a made-up result.
+
+### Tests
+
+- Reasoning wrapper honesty (no-key / provider-error → unavailable; injected
+  client → available), markdown rendering, CLI `--reason` dispatch, HTML report
+  reasoning section + escaping + absence, and the dashboard `/api/reason`
+  endpoint (honest unavailable, run required, never persisted to history).
+
 ## 1.2.0
 
 Two optional providers gain real, executable adapters. Both remain

@@ -377,9 +377,56 @@ function renderExports() {
   wrap.appendChild(el('p',{class:'omni-muted', text:'PDF/PNG require the optional browser backend; if it is not installed the export reports that clearly rather than producing a fake file.'}));
 }
 
+const _REASONING_SECTIONS = [
+  ['root_cause_hypotheses','Root-cause hypotheses'], ['priorities','Priorities'],
+  ['recommendations','Recommendations'], ['content_opportunities','Content opportunities'],
+  ['validation_plan','Validation plan'],
+];
+
+function renderReasoning() {
+  const wrap = $('#sec-reasoning'); wrap.textContent = '';
+  wrap.appendChild(el('p',{class:'omni-muted', text:'Optional advisory layer: an LLM reasons over the deterministic evidence of the current run. It is advisory only — never a measurement, PASS/FAIL, or evidence, and it never changes the audit. Needs OPENROUTER_API_KEY; when absent it reports "unavailable" honestly.'}));
+  if (!CURRENT) { wrap.appendChild(el('p',{class:'omni-muted', text:'Run an audit first.'})); return; }
+  const out = el('div',{id:'reasoning-out', style:'margin-top:12px'});
+  const btn = el('button',{class:'omni-btn', text:'Generate AI reasoning (advisory)', onclick: async () => {
+    btn.disabled = true; out.textContent = 'Reasoning…';
+    try {
+      const data = await api('/api/reason', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ run_id: CURRENT.run_id, result: CURRENT }) });
+      drawReasoning(out, data.reasoning || {});
+    } catch (e) { out.textContent = ''; out.appendChild(el('p',{text:'Reasoning failed: ' + e.message})); }
+    finally { btn.disabled = false; }
+  }});
+  wrap.appendChild(btn);
+  wrap.appendChild(out);
+}
+
+function drawReasoning(host, reasoning) {
+  host.textContent = '';
+  if (!reasoning.available) {
+    host.appendChild(el('p',{class:'omni-muted', text:'Unavailable — ' + esc(reasoning.reason || 'not configured') + '. The deterministic findings are unaffected.'}));
+    return;
+  }
+  host.appendChild(el('p',{class:'omni-muted', text:'Advisory only (model: ' + esc(reasoning.model || 'unknown') + '), grounded in deterministic evidence.'}));
+  const body = reasoning.result || {};
+  let any = false;
+  _REASONING_SECTIONS.forEach(([key,title]) => {
+    let items = body[key];
+    if (items === undefined || items === null) return;
+    if (!Array.isArray(items)) items = [items];
+    if (!items.length) return;
+    any = true;
+    host.appendChild(el('h4',{text:title}));
+    const ul = el('ul',{});
+    items.forEach(it => ul.appendChild(el('li',{text: typeof it === 'string' ? it : JSON.stringify(it)})));
+    host.appendChild(ul);
+  });
+  if (!any) host.appendChild(el('p',{class:'omni-muted', text:'The provider returned no reasoning items.'}));
+}
+
 function renderAll(r) {
   renderOverview(r); renderModules(r); renderFindings(r); renderRemediation(r); renderGraph(r);
-  renderHistory(); renderExports();
+  renderHistory(); renderExports(); renderReasoning();
 }
 
 function switchTab(name) {
@@ -388,6 +435,7 @@ function switchTab(name) {
   if (name === 'providers') renderProviders();
   if (name === 'history') renderHistory();
   if (name === 'graph') renderGraph(CURRENT);
+  if (name === 'reasoning') renderReasoning();
 }
 
 async function boot() {
@@ -404,7 +452,8 @@ document.addEventListener('DOMContentLoaded', boot);
 _TABS = [
     ("overview", "Overview"), ("modules", "Modules"), ("findings", "Findings"),
     ("remediation", "Remediation"), ("graph", "Dependency Graph"),
-    ("providers", "Providers"), ("history", "History"), ("exports", "Exports"),
+    ("reasoning", "AI Reasoning"), ("providers", "Providers"),
+    ("history", "History"), ("exports", "Exports"),
 ]
 
 

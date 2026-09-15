@@ -10,6 +10,7 @@ from . import history
 from .audit import audit, markdown_report
 from .engine import normalize_result
 from .planner import diagnosis_markdown
+from .reasoning import reasoning_markdown, reasoning_or_unavailable
 from .report_html import write_html_report
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
@@ -60,11 +61,18 @@ def audit_command(args: argparse.Namespace) -> int:
         result = normalize_result(raw)
         if not args.no_history:
             history.save_run(result)
+        # Optional advisory reasoning is attached AFTER history is saved, so the
+        # non-deterministic advisory text never enters the run record used for
+        # regression comparison. It is display-only metadata.
+        if getattr(args, "reason", False):
+            result["reasoning"] = reasoning_or_unavailable(result)
         if args.html:
             path = write_html_report(result, args.html)
             print(f"RawBlock HTML report written: {path}", file=sys.stderr)
         if args.markdown:
             print(markdown_report(result))
+            if getattr(args, "reason", False):
+                print("\n" + reasoning_markdown(result.get("reasoning")))
         elif not args.html:
             print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
@@ -288,6 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--browser-timeout", type=int, default=30, help="browser timeout in seconds (default 30)")
     audit_parser.add_argument("--browser-desktop-only", action="store_true", help="browser audit: skip mobile profile")
     audit_parser.add_argument("--browser-mobile-only", action="store_true", help="browser audit: skip desktop profile")
+    audit_parser.add_argument("--reason", action="store_true", help="attach an optional advisory AI reasoning layer (needs OPENROUTER_API_KEY; honest 'unavailable' when absent)")
     audit_parser.set_defaults(handler=audit_command)
     sa = sub.add_parser("site-audit", help="run a multi-page site-level audit")
     sa.add_argument("url")
