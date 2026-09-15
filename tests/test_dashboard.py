@@ -262,3 +262,53 @@ class TestReasoning:
         status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
         run = json.loads(body)
         assert "reasoning" not in run
+
+
+class TestOperatorUI:
+    """The shipped page must carry the operator-console features (rendered
+    client-side from the canonical result — asserted here at the source level)."""
+
+    def _page(self):
+        from ope.dashboard_ui import render_index
+        return render_index()
+
+    def test_page_has_run_control_and_stages(self):
+        page = self._page()
+        assert "omni-run-btn" in page and 'id="omni-url"' in page
+        for stage in ("Validating", "Crawling", "Analyzing", "Scoring", "Building graph", "Building plan"):
+            assert stage in page
+
+    def test_overview_exposes_check_level_and_priorities(self):
+        page = self._page()
+        for label in ("Total checks", "Checks PASS", "Checks FAIL", "Checks UNKNOWN",
+                      "Top root causes", "Top remediation priorities"):
+            assert label in page
+
+    def test_evidence_first_rendering_present(self):
+        page = self._page()
+        assert "why OPE concluded this" in page
+        assert "omni-ev" in page          # evidence value block
+        assert "provenance" in page
+
+    def test_provider_status_labels_present(self):
+        page = self._page()
+        for label in ("ACTIVE", "NOT CONFIGURED", "PLANNED"):
+            assert label in page
+
+    def test_tables_wrapped_for_mobile(self):
+        page = self._page()
+        assert "omni-scroll" in page
+
+    def test_all_tabs_present(self):
+        page = self._page()
+        for tab in ("overview", "modules", "findings", "remediation", "graph",
+                    "reasoning", "providers", "history", "exports"):
+            assert f'sec-{tab}' in page
+
+    def test_no_hardcoded_metric_literals_in_page(self):
+        # The page ships no audit data — every metric is fetched at runtime.
+        # Guard against a demo result object being embedded in the HTML/JS.
+        page = self._page()
+        assert '"health":' not in page
+        assert '"findings":' not in page
+        assert "run_id" in page  # referenced as a field name, not a value
