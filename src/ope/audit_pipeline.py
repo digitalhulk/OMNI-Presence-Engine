@@ -242,7 +242,6 @@ _EXTERNAL_EVIDENCE_CHECKS: dict[str, tuple[str, str]] = {
     "11-authority.brand_mentions": ("11-authority", "Brand-mention monitoring requires an external brand-tracking API (not configured)"),
     "11-authority.reputation": ("11-authority", "Reputation assessment requires a review-aggregation or sentiment API (not configured)"),
     "14-accessibility.contrast": ("14-accessibility", "Colour-contrast verification requires a rendered-page screenshot and WCAG analysis (not available in headless mode)"),
-    "16-security.dependencies": ("16-security", "Dependency vulnerability scanning requires a CVE database or SCA tool (not configured)"),
     "17-language.translation_quality": ("17-language", "Translation quality assessment requires multilingual NLP analysis (not configured)"),
     "17-language.transliteration": ("17-language", "Transliteration accuracy assessment requires script-conversion analysis (not configured)"),
     "18-analytics.search_data": ("18-analytics", "Search performance data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)"),
@@ -725,6 +724,15 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if not isinstance(impressions, (int, float)):
             return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Search Console returned no query-visibility metrics for this property")
         return _check(check_id, "09-search", impressions > 0, target, {"total_impressions": int(impressions), "total_clicks": data.get("total_clicks"), "distinct_queries": data.get("distinct_queries")}, source="search-console")
+
+    if check_id == "16-security.dependencies":
+        scan = inventory.get("dependency_scan")
+        if not isinstance(scan, dict):
+            deps = inventory.get("client_dependencies")
+            detail = f"{len(deps)} client-side librarie(s) detected" if isinstance(deps, list) and deps else "no versioned client-side libraries detected"
+            return CheckResult(check_id, "16-security", ExecutionStatus.UNKNOWN, reason=f"Dependency vulnerability scanning requires the OSV scan (OPE_DEPENDENCY_SCAN not configured; needs network access to api.osv.dev); {detail}")
+        vulnerable = scan.get("vulnerable") or []
+        return _check(check_id, "16-security", not vulnerable, target, {"checked": scan.get("checked"), "vulnerable": vulnerable}, source="osv.dev")
 
     if check_id == "11-authority.backlinks":
         data = inventory.get("backlinks")

@@ -153,7 +153,7 @@ class TestServer:
 
     def test_providers_and_graph_endpoints(self, live_server):
         _, prov = _get(live_server, "/api/providers")
-        assert len(prov["providers"]) == 4
+        assert len(prov["providers"]) == 5
         _, g = _get(live_server, "/api/dependency-graph")
         assert len(g["nodes"]) == 20
 

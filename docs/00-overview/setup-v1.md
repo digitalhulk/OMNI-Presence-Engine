@@ -97,6 +97,7 @@ report `UNKNOWN` — nothing is estimated in its place.
 | `OPE_SEARCH_CONSOLE_KEY` | Query visibility from Google Search Console (`09-search.query_visibility`); optional `OPE_SEARCH_CONSOLE_SITE` overrides the property |
 | `OPE_BACKLINK_API_KEY` | Off-site authority links from a backlink index, Ahrefs v3 by default (`11-authority.backlinks`); optional `OPE_BACKLINK_BASE_URL` / `OPE_BACKLINK_TARGET` override the endpoint/target |
 | `OPENROUTER_API_KEY` | Advisory reasoning layer over deterministic evidence (surface it with `ope audit … --reason` or the dashboard's AI Reasoning panel) |
+| `OPE_DEPENDENCY_SCAN` | Enable the client-side dependency CVE scan via OSV.dev (`16-security.dependencies`); free, no key, needs network access to api.osv.dev. Scans only libraries whose version is embedded in a CDN URL. |
 
 ## Flow
 

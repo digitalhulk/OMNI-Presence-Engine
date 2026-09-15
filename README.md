@@ -141,14 +141,14 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **DNS-rebinding hardening** — for direct connections the fetch pins the validated DNS resolution: the address that is SSRF-validated is exactly the one connected to, closing the resolve→validate→connect TOCTOU window. TLS SNI/cert validation still use the hostname. When an egress proxy is configured it resolves and enforces policy, so pinning is skipped and proxy semantics are preserved.
 - **Multi-target orchestration** — `ope multi-audit URL...` audits many targets with bounded concurrency and strict per-target isolation (one failure never destroys the others), deterministic input-order aggregation, and a per-target + aggregate summary in JSON or Markdown.
 - **Optional-provider capability discovery** — `ope providers` lists each optional provider (PageSpeed, Search Console, backlink index, OpenRouter), whether its credential is configured, and which checks it would upgrade. Absent credentials keep the affected checks `UNKNOWN` with a specific reason — never fabricated.
-- **Evidence-backed check bindings** — all 136 registry checks are bound; 117 execute against direct observations or an optional configured provider (PageSpeed, Search Console, backlink index), 3 are finding-record checks, and 16 return `UNKNOWN` with a specific reason naming the missing external API or service.
+- **Evidence-backed check bindings** — all 136 registry checks are bound; 118 execute against direct observations or an optional configured provider (PageSpeed, Search Console, backlink index, OSV dependency scan), 3 are finding-record checks, and 15 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
 - **Optional external evidence** — PageSpeed Insights (Core Web Vitals), Google Search Console (query visibility), a backlink index (off-site authority), and an advisory OpenRouter reasoning layer (surfaced by `ope audit … --reason` and the dashboard's AI Reasoning panel) — all credential-gated and honestly unavailable when unset.
 
 ### Check coverage by module
 
-Bound checks per module — **136 of 136 total** (16 require external APIs with no adapter yet and return `UNKNOWN` with a reason):
+Bound checks per module — **136 of 136 total** (15 require external APIs with no adapter yet and return `UNKNOWN` with a reason):
 
 | Module | Bound | Module | Bound |
 | --- | --- | --- | --- |

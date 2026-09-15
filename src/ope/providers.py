@@ -56,6 +56,12 @@ _PROVIDERS: dict[str, tuple[str, str, tuple[str, ...], bool]] = {
         (),
         True,
     ),
+    "osv_dependencies": (
+        "OPE_DEPENDENCY_SCAN",
+        "Client-side dependency CVE scan via OSV.dev (free, no key; set to enable network scan)",
+        ("16-security.dependencies",),
+        True,
+    ),
 }
 
 

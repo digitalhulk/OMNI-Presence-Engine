@@ -1202,3 +1202,26 @@ def test_frame_cost_unknown_without_browser():
     audit["inventory"].pop("browser_vitals", None)
     result = execute_audit_checks(audit)
     assert result["checks"]["15-performance.frame_cost"]["status"] == "UNKNOWN"
+
+
+def test_dependencies_pass_when_no_vulnerabilities():
+    audit = _audit_result()
+    audit["inventory"]["dependency_scan"] = {"checked": 2, "vulnerable": [], "source": "osv.dev"}
+    check = execute_audit_checks(audit)["checks"]["16-security.dependencies"]
+    assert check["status"] == "PASS"
+    assert any(e.get("source") == "osv.dev" for e in check["evidence"])
+
+
+def test_dependencies_fail_when_vulnerable():
+    audit = _audit_result()
+    audit["inventory"]["dependency_scan"] = {"checked": 1, "vulnerable": [{"name": "jquery", "version": "1.7.2", "vulnerability_ids": ["CVE-x"]}], "source": "osv.dev"}
+    check = execute_audit_checks(audit)["checks"]["16-security.dependencies"]
+    assert check["status"] == "FAIL"
+
+
+def test_dependencies_unknown_without_scan():
+    audit = _audit_result()
+    audit["inventory"].pop("dependency_scan", None)
+    check = execute_audit_checks(audit)["checks"]["16-security.dependencies"]
+    assert check["status"] == "UNKNOWN"
+    assert "OPE_DEPENDENCY_SCAN" in check["reason"]
