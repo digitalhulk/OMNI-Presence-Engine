@@ -70,3 +70,20 @@ def test_save_run_returns_none_when_the_store_is_not_writable(tmp_path):
     blocked = tmp_path / "blocked"
     blocked.write_text("not a directory", encoding="utf-8")
     assert history.save_run(_result(), blocked) is None
+
+
+def test_compare_tolerates_malformed_baseline_metrics():
+    # A parseable-but-wrong-schema baseline must degrade to "no comparison",
+    # never crash the audit.
+    inventory = {"ttfb_ms": 100.0, "word_count": 500}
+    result = history.compare(inventory, [], {"metrics": "corrupt-not-a-dict", "finding_ids": None})
+    assert result["metric_regressions"] == []
+    assert result["new_findings"] == []
+
+
+def test_attach_baseline_survives_corrupt_history(tmp_path, monkeypatch):
+    # load_runs returns a record whose fields are the wrong type.
+    monkeypatch.setattr(history, "load_runs", lambda *a, **k: [{"run_id": "x", "metrics": 123, "finding_ids": "oops"}])
+    result = {"target": "https://example.com", "inventory": {"ttfb_ms": 10.0}, "findings": []}
+    out = history.attach_baseline(result, tmp_path)  # must not raise
+    assert "history" in out["inventory"]

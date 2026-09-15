@@ -4,6 +4,401 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.2.0
+
+Two optional providers gain real, executable adapters. Both remain
+credential-gated and degrade honestly (checks stay `UNKNOWN` when the key is
+absent or the provider errors — never a fabricated metric).
+
+### Added
+
+- **Search Console adapter** (`integrations/search_console.py`): a stdlib-only
+  Google Search Console Search Analytics client. When `OPE_SEARCH_CONSOLE_KEY`
+  is set it queries the audited property for the last 28 days, aggregates real
+  impressions/clicks/distinct-queries, and upgrades `09-search.query_visibility`
+  to a measured PASS/FAIL. `OPE_SEARCH_CONSOLE_SITE` overrides the property.
+- **Backlink-index adapter** (`integrations/backlink_index.py`): a stdlib-only
+  backlink-stats client (Ahrefs v3 by default). When `OPE_BACKLINK_API_KEY` is
+  set it reads real referring-domain/backlink counts and upgrades
+  `11-authority.backlinks` to a measured PASS/FAIL. `OPE_BACKLINK_BASE_URL` /
+  `OPE_BACKLINK_TARGET` override the endpoint/target for a Moz/other index.
+- Both adapters are wired into `audit()` (inventory `search_console` /
+  `backlinks`), consumed by the audit pipeline, and reported as `implemented`
+  in `provider_status` / `ope providers` (all four providers now render
+  *active*). Bounded response reads, bearer credentials never leaked into
+  reports or errors.
+
+### Tests
+
+- `test_provider_adapters.py`: real-transport tests (local HTTP server, not
+  mocks) for both adapters — metric extraction, unconfigured→None,
+  HTTP-error→None, oversize-response→None, property/target resolution.
+- `test_audit_pipeline.py`: PASS/FAIL/UNKNOWN consumption for
+  `09-search.query_visibility` and `11-authority.backlinks`.
+
+## 1.1.2
+
+Release-closure honesty fix. A final audit pass found one capability-discovery
+inaccuracy in the optional-provider registry; it is fixed with regression tests.
+
+### Fixed
+
+- **Provider capability discovery could imply an upgrade that never happens**
+  (P3, truthfulness): `providers.provider_status` reported `configured: yes`
+  for `search_console` (`OPE_SEARCH_CONSOLE_KEY`) and `backlink_index`
+  (`OPE_BACKLINK_API_KEY`) when their credentials were set, even though no
+  executable adapter consumes those credentials — the checks they claimed to
+  upgrade (`09-search.query_visibility`, `11-authority.backlinks`) are
+  hard-wired to stay `UNKNOWN`. Each provider now carries an `implemented`
+  flag distinguishing a real adapter (`pagespeed`, `openrouter`) from a
+  documented-but-unwired capability. `provider_status` exposes it, and both
+  `providers_markdown` and the dashboard render such providers as *planned* so
+  a set credential can never falsely imply an active upgrade. This is a code
+  defect fix (unwired adapter), kept distinct from environment-blocked
+  capabilities (a real adapter whose credential is merely absent).
+
+## 1.1.1
+
+Adversarial release-acceptance hardening. Reconciliation of an independent QA
+pass against real current code + real transport (local HTTP servers, not mocks)
+found several issues still present; all are fixed with regression tests.
+
+### Fixed
+
+- **Redirect-hop SSRF in robots & sitemap** (P1): `crawler.fetch_robots` and
+  `sitemap._fetch_sitemap_bytes` used plain `urlopen`, so a `public → 302 →
+  private/loopback/metadata` redirect was followed without revalidation. Both
+  now use the shared `net.open_url` (validated target + per-hop redirect
+  revalidation via `net.SafeRedirectHandler` + IP pinning), matching the main
+  page and subresource paths. Proven end-to-end with a local redirect server.
+- **4xx/5xx were unreachable in real transport** (P2): `_request` let urllib's
+  `HTTPError` propagate, so a real 404/500/503 crashed the audit and
+  `CODE-HTTP-001` never fired. `HTTPError` is now caught and represented as a
+  `Response` with its status (bounded error body). Verified against a real
+  local server.
+- **Priority scale collision** (P1): `normalize_finding` clamped priority to
+  `0–1` while `_finding`/`scoring.priority` produce `0–100`, collapsing every
+  distinct high priority to `1.0`. Priority is now canonically `0–100`
+  everywhere (clamp fixed; performance producer constants rescaled).
+- **Truncated Content-Length** (P2): a body shorter than a declared
+  `Content-Length` is now rejected as incomplete instead of being silently
+  accepted as evidence.
+- **Unbounded PageSpeed read** (P2): the provider response is now bounded to
+  the engine's size limit, like every other fetch path.
+- **Browser-capability honesty** (P2): a missing/failed headless browser is
+  surfaced (`browser_status: "unavailable"`; browser-dependent checks stay
+  `UNKNOWN`, never fabricated `FAIL`), and `ope performance-audit` now exits
+  non-zero with a clear message on a non-`COMPLETED` run instead of presenting
+  a capability failure as a clean success.
+
+### Added
+
+- **Real-transport tests** (`test_transport.py`): 4xx/5xx status handling,
+  redirect-to-private blocking end-to-end, truncated Content-Length, and the
+  `SafeRedirectHandler` restricted-target matrix — all against a live local
+  HTTP server rather than mocked `_request`.
+- Comprehensive multi-field HTML-escaping regression (id/module/symptom/root
+  cause/evidence/confidence) confirming no attribute-breakout or raw tag.
+
+## 1.1.0
+
+OMNI Command Center — a local dashboard over the canonical engine.
+
+### Added
+
+- **`ope dashboard`**: a local, framework-free dashboard server (stdlib only,
+  bound to `127.0.0.1` by default). Enter a URL, run the **real** OPE audit,
+  and see live status plus health, the 20-module grid, findings (filter/sort),
+  root causes, the dependency-ordered remediation roadmap, an interactive
+  dependency-graph SVG coloured by module status, provider capability
+  discovery, and history.
+- **`dashboard_service.py`**: the audit-service boundary. It performs no
+  scoring/dependency/root-cause/remediation/evidence logic of its own — every
+  value comes straight from `audit()`→`normalize_result()`,
+  `orchestrator.audit_targets()`, `history.load_runs()`, `provider_status()`,
+  and the canonical report renderers. One source of diagnostic truth.
+- **Export center**: JSON (canonical), Markdown, Text, standalone offline HTML,
+  and a ZIP **bundle** (`report.{json,md,txt,html}` + `manifest.json`) — all
+  rendered from the exact same run. Optional **PDF/PNG** via a headless browser
+  (`omni-presence-engine[report]`); when the browser backend is absent the
+  export reports a clean "unavailable" state rather than producing a fake file.
+- **Dashboard tests** (`test_dashboard.py`): engine↔dashboard parity, no-dummy-data,
+  export consistency across formats, localhost bind, SSRF rejection, request-size
+  cap, HTML-escaping of audited content, no-secret-in-manifest, and determinism.
+
+### Security
+
+- Dashboard binds to localhost by default; request bodies are size-capped; target
+  URLs go through the engine's SSRF + DNS-rebinding guard; exported HTML reuses the
+  canonical escaping renderer; no user input is used as a filesystem path; provider
+  credentials never appear in output (only a configured yes/no flag).
+
+## 1.0.0
+
+First stable release. The public contract — the `evidence-diagnostic-v1`
+engine output, the `ope` CLI commands (`setup`, `audit`, `site-audit`,
+`performance-audit`, `multi-audit`, `providers`) and their exit codes, the
+20-module dependency graph and 136-check registry, and the JSON/Markdown/HTML
+report shape — is considered stable and will follow semantic versioning.
+
+No behavioral changes from 0.13.0 beyond the fixes below; this release marks
+the contract as stable after the full verification gate (see below).
+
+### Fixed
+
+- **Redirect limit now enforced**: `_SafeRedirect.max_redirections` is set on
+  the redirect handler (where urllib reads it) instead of on the opener
+  (where it had no effect), so the intended `MAX_REDIRECTS` cap of 5 applies
+  instead of urllib's default of 10. Every redirect hop is still re-validated
+  against the SSRF policy.
+
+### Added
+
+- **Redirect-safety tests**: a redirect to a private or cloud-metadata address
+  is rejected mid-chain; a public redirect is re-validated and allowed; the
+  redirect cap is asserted on the handler.
+
+### Verification (v1.0.0 release gate)
+
+- 797 tests pass against the source tree **and** the installed wheel
+  (`omni_presence_engine-1.0.0-py3-none-any.whl`, stdlib-only deps).
+- ruff, mypy, compileall clean; registry 136/136; CI green on Python
+  3.10/3.11/3.12/3.13.
+- Clean-venv install verified: CLI entry point, exit codes, and JSON/Markdown/
+  HTML report generation all work from the installed package.
+- All verification against deterministic local fixtures (the build environment
+  has no external egress); labeled FIXTURE VERIFIED, not LIVE VERIFIED.
+
+## 0.13.0
+
+Production release: DNS-rebinding SSRF hardening, multi-target orchestration,
+and optional-provider capability discovery.
+
+### Added
+
+- **DNS-rebinding / TOCTOU SSRF hardening** (`src/ope/net.py`): pinned
+  HTTP(S) connections that resolve *and* validate a target in the same step,
+  then connect to the validated address — the resolution that is validated is
+  exactly the one connected to, closing the window between
+  `validate_url_strict()` and the socket connect. TLS SNI and certificate
+  validation still use the hostname. Proxy-aware: when an egress proxy applies,
+  the proxy resolves and enforces policy, so pinning is skipped (proxy
+  semantics preserved). The main page fetch and subresource fetches both use
+  the pinned, proxy-aware opener with per-hop redirect revalidation.
+- **Reusable SSRF address policy** (`url.address_is_restricted`,
+  `url.resolve_and_validate`): single source of the loopback/private/
+  link-local/metadata/reserved/multicast/IPv4-mapped-IPv6 blocklist.
+- **Multi-target orchestration** (`src/ope/orchestrator.py`,
+  `ope multi-audit URL...`): audits many targets with bounded concurrency
+  (workers clamped to ≤ min(requested, targets, 16) — never unbounded) and
+  strict per-target isolation (one target's failure never aborts the batch).
+  Deterministic aggregation (input-order results, deterministic summary),
+  per-target results + aggregate summary, JSON/Markdown output. Exit code 2
+  only when every target failed. This is the reusable execution primitive an
+  external scheduler builds on.
+- **Optional-provider capability discovery** (`src/ope/providers.py`,
+  `ope providers`): lists each optional provider (PageSpeed, Search Console,
+  backlink index, OpenRouter), whether its credential is configured, and which
+  checks it would upgrade from UNKNOWN to measured evidence. No fake providers;
+  absent credentials keep the affected checks UNKNOWN with a specific reason.
+- **Golden/red-team test expansion**: SSRF matrix (0.0.0.0, gopher,
+  credential-bearing URLs, IPv4-mapped IPv6, metadata, mixed resolution),
+  pinned-connection blocking, TOCTOU-closure, disconnected-graph ordering,
+  UNKNOWN-only planner runs, duplicate findings.
+
+## 0.12.0
+
+Live-site finalization: real-response robustness, full diagnostic surfacing
+in every report format, and an end-to-end acceptance layer.
+
+### Added
+
+- **Response decompression** (`audit._decode_content_encoding`): bounded
+  gzip/deflate handling for servers that compress a response OPE did not
+  ask to be compressed. Output is capped (8 MiB) against decompression
+  bombs; unknown or malformed encodings raise rather than feeding garbage
+  to the HTML parser.
+- **HTML report diagnostics**: the canonical `report_html.py` renderer now
+  shows global health, per-module scores, dependency root causes, and the
+  dependency-ordered remediation plan (root causes by unblock impact,
+  independent failures, blocked-and-waiting) — all through the existing
+  `_e()` escaping. The module grid shows each module's score. JSON,
+  Markdown, and HTML now expose the same diagnostic chain the engine
+  computes.
+- **`test_acceptance.py`** (19 tests): drives the real `audit()` pipeline
+  against controlled fixtures with the network mocked — healthy site,
+  broken infrastructure, redirect, malformed HTML, robots restrictions,
+  missing metadata/canonical/alt, performance-evidence present vs. absent,
+  end-to-end cascade + root-cause invariants (evidence firewall: a module
+  with its own FAIL is never masked to BLOCKED), and JSON/Markdown/HTML
+  report generation across HTTP status codes without crashes.
+- **SSRF regression tests**: cloud-metadata IP, IPv4-mapped IPv6 loopback,
+  and mixed public/private resolution are all confirmed blocked.
+
+### Fixed
+
+- **CLI never claims success on a failed run**: `audit`, `site-audit`, and
+  `performance-audit` now run report writing (and, for site/performance,
+  history + normalization) inside the command's `try/except`. Previously a
+  `--html` write failure, or a corrupt/unreadable history record in the
+  site/performance commands, escaped as an uncaught traceback instead of a
+  clean "OPE … failed" message and exit code 2.
+- **`history.compare()` tolerates a malformed baseline**: a
+  parseable-but-wrong-schema history record (e.g. `metrics` not a dict) now
+  degrades to "no comparison" instead of raising. Corrupt JSON was already
+  skipped by `load_runs`.
+- **OpenRouter User-Agent is version-derived**: the reasoning client used a
+  hardcoded `OPE-Reasoning/0.1`; it now derives from the installed package
+  version (`ope.integrations.openrouter.USER_AGENT`), matching the
+  single-source User-Agent policy used everywhere else.
+
+### Notes
+
+- The one known SSRF limitation remains DNS-rebinding via TOCTOU (the
+  resolved address is validated, then reconnected): closing it requires
+  pinning the validated IP through the opener/TLS/redirect path and is
+  tracked as separate hardening. All static and resolved-address SSRF
+  vectors (loopback, private, link-local, metadata, IPv6 forms) are blocked.
+
+## 0.11.0
+
+Executable remediation planning (the `PLAN` stage) and diagnostic surfacing.
+The dependency-graph root-cause analysis and explainable scores built in
+prior clusters now drive a dependency-ordered remediation plan and are
+visible in every human-readable report.
+
+### Added
+
+- **`planner.py` — `build_remediation_plan()`**: a deterministic,
+  evidence-based remediation plan derived from the diagnosis. It never
+  invents remediation, evidence, or priorities — it *orders* what the
+  diagnosis produced, driven by the real dependency graph:
+  - **root causes** — `FAIL` modules that block downstream work, ordered by
+    how many modules each would unblock (desc), then module number; fixing
+    these first frees the most of the graph;
+  - **direct failures** — `FAIL` modules that block nothing downstream;
+  - **blocked** — modules waiting on their root causes, listed but not
+    planned as work items (their evidence is untrustworthy until the
+    upstream failure is fixed).
+  Findings are ordered by priority then id; a module with no finding record
+  is reported with an empty finding list rather than an invented one.
+  `IMPLEMENT` stays human-owned — the plan describes what to fix, never
+  applies changes.
+- **`planner.diagnosis_markdown()`**: a shared markdown renderer for global
+  health, failing/blocked modules, and the remediation plan, so the
+  diagnostic view is identical across single-page, site, and performance
+  reports.
+- **Engine wiring**: each normalizer now attaches a top-level
+  `remediation_plan` to the output.
+- **Report surfacing**: `audit.markdown_report()` and the site/performance
+  markdown reports now include a "Diagnosis & Plan" section — previously the
+  single-page report surfaced neither health, module status, root causes,
+  nor scores.
+- **`test_planner.py`** (12 tests) and engine-integration coverage for the
+  attached plan.
+
+## 0.10.0
+
+Score explainability and provenance: every module score and the global
+health score now carry a deterministic basis explaining how they were
+derived. OpenRouter response-body size hardening.
+
+### Added
+
+- **`scoring.module_score_basis()`**: returns a structured explanation of a
+  module's score — the derivation `method` (`evidence-weighted-coverage`,
+  `status-derived`, `blocked`, or `no-evidence`), check tallies
+  (passed/failed/unknown/na), and the evidence-weighted pass/total. For
+  BLOCKED modules it names the `blocked_by` root causes. `module_score()`
+  now returns this basis's `score`, so the number and its explanation can
+  never disagree.
+- **`scoring.health_basis()`**: returns the topological rollup behind the
+  global health score — per scored module, the upstream confidence applied,
+  the limiting upstream module, and the adjusted contribution.
+  `global_health()` returns this basis's `health`.
+- **Engine wiring**: each module dict now carries a `score_basis` key and
+  the output carries a top-level `health_basis` key, attached by the three
+  normalizers via `engine._compute_scores()` / `_reconcile_and_score()`.
+- **Score-basis and health-basis tests**: `TestModuleScoreBasis` (7 tests)
+  and `TestHealthBasis` (5 tests) verifying basis/score agreement, check
+  tallies, BLOCKED root-cause naming, topological ordering, and determinism.
+- **OpenRouter body-bounding tests**: oversized responses are rejected and
+  bounded responses are parsed.
+
+### Changed
+
+- **`scoring.module_score()` / `global_health()`**: refactored to delegate
+  to the new basis functions — a single source of computation, so the
+  score and its provenance are always consistent. External behavior and
+  golden values are unchanged.
+
+### Fixed
+
+- **OpenRouter unbounded read**: `OpenRouterClient.chat_json()` now bounds
+  the success response body to 1 MiB (`MAX_RESPONSE_BYTES`), matching the
+  bound already enforced on the audit HTTP path. Previously the success
+  path called `response.read()` with no size limit while only the error
+  path was bounded.
+
+## 0.9.0
+
+Executable, validated dependency graph with evidence-safe BLOCKED cascade,
+graph-based root-cause traversal, and dependency-aware scoring.
+
+### Added
+
+- **`dependency_graph.py`**: the 20-module dependency graph from
+  `schemas/dependency-graph-v1.md` encoded as `MODULE_DEPENDENCIES` — the
+  single executable source of module dependencies — with deterministic
+  topological ordering (`TOPOLOGICAL_ORDER`, `TOPOLOGICAL_ORDER_NUMBERS`),
+  number-keyed dependency mapping (`DEPENDENCIES_BY_NUMBER`), and query
+  functions `upstream_modules()`, `downstream_modules()`,
+  `cascade_blocked()`, `find_root_causes()`.
+- **Graph validation** (`validate_graph()`, `GraphValidationError`): a
+  reusable validator that rejects **dangling edges** (a dependency that is
+  not a declared module) and **cycles**. Cycles are detected with an
+  iterative three-state DFS (UNSEEN → VISITING → COMPLETE) — a single
+  "visited" set cannot distinguish a back-edge from an already-explored
+  node — and the traversal is iterative so a deep/adversarial graph cannot
+  exhaust the recursion stack. Topological order uses Kahn's algorithm and
+  is deterministic.
+- **Evidence-safe BLOCKED cascade**: `cascade_blocked()` marks a module
+  `BLOCKED` when any transitive upstream dependency is `FAIL`/`BLOCKED`,
+  but `BLOCKED` is a *derived* state that never replaces direct evidence —
+  a module's own `FAIL` stays `FAIL` and its own `N/A` stays `N/A`; only
+  `PASS`/`UNKNOWN` modules are converted. `UNKNOWN`/`N/A` upstream states
+  never cause a block. Cascade derives module status only and never mutates
+  check-level evidence.
+- **Graph-based root-cause traversal**: `find_root_causes()` traces each
+  BLOCKED module's transitive upstream to the FAIL modules that caused it,
+  never fabricating a BLOCKED intermediary as a cause and never inventing a
+  cause where no upstream FAIL exists. Root causes are reported per module
+  in `dependency_root_causes` and per blocked module in `blocked_by`.
+- **`test_dependency_graph.py`**: 66 tests across 11 classes covering graph
+  structure, parallel branches, upstream/downstream queries, graph
+  validation (cycles, self-cycle, dangling edges, deep-chain determinism),
+  evidence-safe cascade (direct FAIL/N/A preservation), root-cause
+  traversal, nine end-to-end golden scenarios, the definitive acceptance
+  test, and execution-order independence.
+- **Evidence-firewall tests** (`test_engine.py::TestEvidenceFirewall`):
+  cascade never mutates check evidence, direct-FAIL modules keep FAIL
+  end-to-end, and BLOCKED is module-level only (never a check status).
+
+### Changed
+
+- **`engine.py` reconciliation**: after check execution and module status
+  reconciliation, the engine now runs `cascade_blocked()` and
+  `find_root_causes()` against the 20-module status map. Modules whose
+  status changes to BLOCKED get a `blocked_by` key listing root causes.
+  The output gains a `dependency_root_causes` map when any module is blocked.
+- **`scoring.module_score()`**: BLOCKED modules now return `None` instead
+  of computing scores from unreliable check results.
+- **`scoring.global_health()`**: replaced alphabetical module-key ordering
+  with topological-order traversal from the dependency graph. Upstream
+  confidence uses `min()` across direct graph dependencies, so parallel
+  branches (Content/Media, Search/AI, Authority/Local, UX tier) do not
+  penalize each other.
+
 ## 0.8.0
 
 SSRF final consolidation, User-Agent unification, version sync, and test

@@ -4,10 +4,12 @@ from copy import deepcopy
 from typing import Any
 
 from .audit_pipeline import execute_audit_checks
+from .dependency_graph import cascade_blocked, find_root_causes
 from .module_runner import ExecutionStatus
 from .performance_evidence import inject_performance_evidence
+from .planner import build_remediation_plan
 from .registry import checks_for_module
-from .scoring import global_health, module_score
+from .scoring import health_basis, module_score_basis
 from .site_evidence import inject_site_evidence
 
 HYPOTHESIS_ROOT_CAUSE = "Not yet established; additional evidence or dependency analysis is required."
@@ -42,7 +44,11 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
         item["root_cause"] = HYPOTHESIS_ROOT_CAUSE
         item["status"] = "HYPOTHESIS"
         item["evidence_status"] = "HYPOTHESIS"
-    item["priority"] = round(max(0.0, min(1.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
+    # Priority is canonically 0-100 (the scoring.priority() primitive and
+    # audit._finding both produce that scale). Clamping to 0-1 here previously
+    # collapsed every distinct high priority to 1.0 — a real severity-ordering
+    # collision. Clamp to the canonical 0-100 range instead.
+    item["priority"] = round(max(0.0, min(100.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
     return item
 
 
@@ -64,7 +70,7 @@ def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
 
 
 def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str, float | None]:
-    """Compute per-module scores and attach them to each module dict."""
+    """Compute per-module scores and attach score + score_basis to each module."""
     scores: dict[str, float | None] = {}
     for module_number, module in modules.items():
         if not isinstance(module, dict):
@@ -74,9 +80,10 @@ def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str
         for check_id, check_data in checks.items():
             if isinstance(check_data, dict) and str(check_data.get("module", "")).startswith(module_code + "-"):
                 module_checks[check_id] = check_data
-        score = module_score(module, module_checks=module_checks or None)
-        module["score"] = score
-        scores[module_number] = score
+        basis = module_score_basis(module, module_checks=module_checks or None)
+        module["score"] = basis["score"]
+        module["score_basis"] = basis
+        scores[module_number] = basis["score"]
     return scores
 
 
@@ -111,8 +118,28 @@ def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> Non
         ]
         module["status"] = _reconcile_module_status(module.get("status"), statuses)
 
+    pre_cascade = {
+        num: mod.get("status", "UNKNOWN")
+        for num, mod in modules.items()
+        if isinstance(mod, dict)
+    }
+    cascaded = cascade_blocked(pre_cascade)
+    root_cause_map = find_root_causes(cascaded)
+    for num, mod in modules.items():
+        if isinstance(mod, dict) and cascaded.get(num) != pre_cascade.get(num):
+            mod["status"] = cascaded[num]
+            if num in root_cause_map:
+                mod["blocked_by"] = root_cause_map[num]
+
+    if root_cause_map:
+        output["dependency_root_causes"] = root_cause_map
+
     scores = _compute_scores(modules, checks)
-    output["health"] = global_health(scores)
+    basis = health_basis(scores)
+    output["health"] = basis["health"]
+    output["health_basis"] = basis
+
+    output["remediation_plan"] = build_remediation_plan(output)
 
 
 def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -202,8 +229,9 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+# Canonical 0-100 priority scale (matches scoring.priority() and _finding()).
 _PERF_SEVERITY_PRIORITY: dict[str, float] = {
-    "HIGH": 0.8, "MEDIUM": 0.5, "LOW": 0.3, "INFO": 0.1,
+    "HIGH": 80.0, "MEDIUM": 50.0, "LOW": 30.0, "INFO": 10.0,
 }
 
 

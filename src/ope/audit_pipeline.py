@@ -238,10 +238,8 @@ _EXTERNAL_EVIDENCE_CHECKS: dict[str, tuple[str, str]] = {
     "07-content.originality": ("07-content", "Originality assessment requires a content-comparison service (not configured)"),
     "07-content.factual_accuracy": ("07-content", "Factual accuracy verification requires an external fact-checking service (not configured)"),
     "08-media.image_quality": ("08-media", "Image quality assessment requires rendered visual analysis (not available in headless mode)"),
-    "09-search.query_visibility": ("09-search", "Query visibility data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)"),
     "10-ai-search.factual_consistency": ("10-ai-search", "Factual consistency verification requires an external fact-checking service (not configured)"),
     "11-authority.brand_mentions": ("11-authority", "Brand-mention monitoring requires an external brand-tracking API (not configured)"),
-    "11-authority.backlinks": ("11-authority", "Backlink analysis requires a link-index API such as Ahrefs or Moz (OPE_BACKLINK_API_KEY not configured)"),
     "11-authority.reputation": ("11-authority", "Reputation assessment requires a review-aggregation or sentiment API (not configured)"),
     "14-accessibility.contrast": ("14-accessibility", "Colour-contrast verification requires a rendered-page screenshot and WCAG analysis (not available in headless mode)"),
     "16-security.dependencies": ("16-security", "Dependency vulnerability scanning requires a CVE database or SCA tool (not configured)"),
@@ -718,6 +716,24 @@ def _bound(check_id: str, audit_result: dict[str, Any]) -> CheckResult:
         if "contact_input" not in inventory:
             return CheckResult(check_id, "19-conversion", ExecutionStatus.UNKNOWN, reason="Contact-field observation is missing")
         return _check(check_id, "19-conversion", bool(inventory.get("contact_input")), target, {"contact_input": inventory.get("contact_input"), "forms": inventory.get("forms")})
+
+    if check_id == "09-search.query_visibility":
+        data = inventory.get("search_console")
+        if not isinstance(data, dict):
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Query visibility data requires Search Console API access (OPE_SEARCH_CONSOLE_KEY not configured)")
+        impressions = data.get("total_impressions")
+        if not isinstance(impressions, (int, float)):
+            return CheckResult(check_id, "09-search", ExecutionStatus.UNKNOWN, reason="Search Console returned no query-visibility metrics for this property")
+        return _check(check_id, "09-search", impressions > 0, target, {"total_impressions": int(impressions), "total_clicks": data.get("total_clicks"), "distinct_queries": data.get("distinct_queries")}, source="search-console")
+
+    if check_id == "11-authority.backlinks":
+        data = inventory.get("backlinks")
+        if not isinstance(data, dict):
+            return CheckResult(check_id, "11-authority", ExecutionStatus.UNKNOWN, reason="Backlink analysis requires a link-index API such as Ahrefs or Moz (OPE_BACKLINK_API_KEY not configured)")
+        referring_domains = data.get("referring_domains")
+        if not isinstance(referring_domains, (int, float)):
+            return CheckResult(check_id, "11-authority", ExecutionStatus.UNKNOWN, reason="Backlink index returned no referring-domain metric for this target")
+        return _check(check_id, "11-authority", referring_domains > 0, target, {"referring_domains": int(referring_domains), "backlinks": data.get("backlinks")}, source="backlink-index")
 
     if check_id in _EXTERNAL_EVIDENCE_CHECKS:
         module, reason = _EXTERNAL_EVIDENCE_CHECKS[check_id]

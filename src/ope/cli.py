@@ -9,6 +9,7 @@ from typing import Any
 from . import history
 from .audit import audit, markdown_report
 from .engine import normalize_result
+from .planner import diagnosis_markdown
 from .report_html import write_html_report
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
@@ -59,16 +60,16 @@ def audit_command(args: argparse.Namespace) -> int:
         result = normalize_result(raw)
         if not args.no_history:
             history.save_run(result)
+        if args.html:
+            path = write_html_report(result, args.html)
+            print(f"RawBlock HTML report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE audit failed: {exc}", file=sys.stderr)
         return 2
-    if args.html:
-        path = write_html_report(result, args.html)
-        print(f"RawBlock HTML report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -87,22 +88,22 @@ def site_audit_command(args: argparse.Namespace) -> int:
     )
     try:
         raw = run_site_audit(args.url, config=cfg)
+        raw_dict = raw.to_dict()
+        if not args.no_history:
+            history.attach_baseline(raw_dict)
+        result = normalize_site_result(raw_dict)
+        if not args.no_history:
+            history.save_run(result)
+        if args.html:
+            path = write_site_html_report(result, args.html)
+            print(f"RawBlock HTML site-audit report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(site_audit_markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE site-audit failed: {exc}", file=sys.stderr)
         return 2
-    raw_dict = raw.to_dict()
-    if not args.no_history:
-        history.attach_baseline(raw_dict)
-    result = normalize_site_result(raw_dict)
-    if not args.no_history:
-        history.save_run(result)
-    if args.html:
-        path = write_site_html_report(result, args.html)
-        print(f"RawBlock HTML site-audit report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(site_audit_markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -116,6 +117,7 @@ def site_audit_markdown_report(result: dict[str, Any]) -> str:
         f"**Findings:** `{len(result.get('findings', []))}`",
         "",
     ]
+    lines += diagnosis_markdown(result)
     findings = result.get("findings", [])
     if findings:
         lines += ["## Findings", ""]
@@ -159,17 +161,23 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     )
     try:
         raw = run_perf_audit(args.url, config=cfg)
+        result = normalize_performance_result(raw.to_dict())
+        if args.html:
+            path = write_performance_html_report(result, args.html)
+            print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
+        if args.markdown:
+            print(performance_audit_markdown_report(result))
+        elif not args.html:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
         print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
         return 2
-    result = normalize_performance_result(raw.to_dict())
-    if args.html:
-        path = write_performance_html_report(result, args.html)
-        print(f"RawBlock HTML performance-audit report written: {path}", file=sys.stderr)
-    if args.markdown:
-        print(performance_audit_markdown_report(result))
-    elif not args.html:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+    # A capability failure (e.g. browser unavailable) must not present as a
+    # clean success. Report it and exit non-zero; the report is still emitted.
+    status = result.get("status")
+    if status not in (None, "COMPLETED"):
+        print(f"OPE performance-audit did not complete: {status} — {result.get('error') or 'capability unavailable'}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -203,6 +211,7 @@ def performance_audit_markdown_report(result: dict[str, Any]) -> str:
                     lines.append(f"| {metric.upper()} | {val}{unit} | {data.get('rating', '?')} |")
                 lines.append("")
 
+    lines += diagnosis_markdown(result)
     findings = result.get("findings", [])
     if findings:
         lines += ["## Findings", ""]
@@ -218,6 +227,48 @@ def performance_audit_markdown_report(result: dict[str, Any]) -> str:
     else:
         lines.append("No performance findings were generated.")
     return "\n".join(lines)
+
+
+def multi_audit_command(args: argparse.Namespace) -> int:
+    from .orchestrator import audit_targets, multi_audit_markdown
+    try:
+        report = audit_targets(
+            list(args.urls),
+            timeout=args.timeout,
+            fetch_subresources=not args.no_subresources,
+            max_workers=args.max_workers,
+            record_history=not args.no_history,
+        )
+        if args.markdown:
+            print(multi_audit_markdown(report))
+        else:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+    except Exception as exc:
+        print(f"OPE multi-audit failed: {exc}", file=sys.stderr)
+        return 2
+    # A batch where every target failed is itself a failure; otherwise success
+    # (individual target failures are reported per-target in the output).
+    if report["summary"]["target_count"] and report["summary"]["succeeded"] == 0:
+        return 2
+    return 0
+
+
+def dashboard_command(args: argparse.Namespace) -> int:
+    from .dashboard import serve
+    try:
+        return serve(host=args.host, port=args.port)
+    except OSError as exc:
+        print(f"OPE dashboard failed to start: {exc}", file=sys.stderr)
+        return 2
+
+
+def providers_command(args: argparse.Namespace) -> int:
+    from .providers import provider_status, providers_markdown
+    if getattr(args, "as_json", False):
+        print(json.dumps(provider_status(), indent=2, ensure_ascii=False))
+    else:
+        print(providers_markdown())
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -260,12 +311,27 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
     pa.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML performance-audit report")
     pa.set_defaults(handler=performance_audit_command)
+    ma = sub.add_parser("multi-audit", help="audit multiple targets with bounded concurrency")
+    ma.add_argument("urls", nargs="+", help="one or more target URLs")
+    ma.add_argument("--markdown", action="store_true", help="output an aggregate markdown summary instead of JSON")
+    ma.add_argument("--timeout", type=int, default=15)
+    ma.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS")
+    ma.add_argument("--max-workers", type=int, default=4, help="max concurrent target audits (default 4)")
+    ma.add_argument("--no-history", action="store_true", help="do not read or write local run history")
+    ma.set_defaults(handler=multi_audit_command)
+    pr = sub.add_parser("providers", help="list optional external providers and whether they are configured")
+    pr.add_argument("--json", action="store_true", dest="as_json", help="output JSON instead of markdown")
+    pr.set_defaults(handler=providers_command)
+    db = sub.add_parser("dashboard", help="launch the OMNI Command Center local dashboard")
+    db.add_argument("--host", default="127.0.0.1", help="bind host (default 127.0.0.1 — local only)")
+    db.add_argument("--port", type=int, default=8787, help="bind port (default 8787)")
+    db.set_defaults(handler=dashboard_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "dashboard", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)

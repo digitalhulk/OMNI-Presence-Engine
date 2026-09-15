@@ -178,6 +178,25 @@ class TestAuditCommand:
         )
         assert audit_command(args) == 2
 
+    @mock.patch("ope.cli.write_html_report", side_effect=OSError("permission denied"))
+    @mock.patch("ope.cli.history")
+    @mock.patch("ope.cli.normalize_result")
+    @mock.patch("ope.cli.audit")
+    def test_html_write_failure_returns_2(self, mock_audit, mock_norm, mock_hist, mock_write, capsys):
+        import argparse
+
+        from ope.cli import audit_command
+        mock_audit.return_value = {"target": "https://example.com", "inventory": {}, "findings": []}
+        mock_norm.return_value = {"target": "https://example.com", "findings": [], "modules": {}}
+        args = argparse.Namespace(
+            url="https://example.com", timeout=15, no_subresources=False,
+            no_history=True, markdown=False, html="/no/such/dir/out.html",
+            browser=False, browser_timeout=30,
+            browser_desktop_only=False, browser_mobile_only=False,
+        )
+        assert audit_command(args) == 2
+        assert "OPE audit failed" in capsys.readouterr().err
+
 
 class TestSiteAuditCommand:
     @mock.patch("ope.cli.history")
@@ -257,6 +276,46 @@ class TestSiteAuditCommand:
         )
         assert site_audit_command(args) == 2
 
+    @mock.patch("ope.cli.history")
+    @mock.patch("ope.site_audit.site_audit")
+    def test_history_failure_returns_2(self, mock_sa: mock.Mock, mock_hist: mock.Mock, capsys) -> None:
+        # A corrupt/unreadable history store must not crash the command.
+        import argparse
+
+        from ope.cli import site_audit_command
+        obj = mock.Mock()
+        obj.to_dict.return_value = {"target": "https://example.com", "inventory": {}, "findings": []}
+        mock_sa.return_value = obj
+        mock_hist.attach_baseline.side_effect = ValueError("corrupt history record")
+        args = argparse.Namespace(
+            url="https://example.com", max_pages=200, max_depth=10,
+            timeout=15, delay=0.5, allow_subdomains=False,
+            no_sitemaps=False, no_robots=False, no_history=False,
+            markdown=False, html=None,
+        )
+        assert site_audit_command(args) == 2
+        assert "OPE site-audit failed" in capsys.readouterr().err
+
+    @mock.patch("ope.report_html_site.write_site_html_report", side_effect=OSError("denied"))
+    @mock.patch("ope.cli.history")
+    @mock.patch("ope.engine.normalize_site_result")
+    @mock.patch("ope.site_audit.site_audit")
+    def test_html_write_failure_returns_2(self, mock_sa, mock_norm, mock_hist, mock_write) -> None:
+        import argparse
+
+        from ope.cli import site_audit_command
+        obj = mock.Mock()
+        obj.to_dict.return_value = {"target": "https://example.com", "inventory": {}, "findings": []}
+        mock_sa.return_value = obj
+        mock_norm.return_value = {"target": "https://example.com", "findings": [], "modules": {}}
+        args = argparse.Namespace(
+            url="https://example.com", max_pages=200, max_depth=10,
+            timeout=15, delay=0.5, allow_subdomains=False,
+            no_sitemaps=False, no_robots=False, no_history=True,
+            markdown=False, html="/no/such/dir/site.html",
+        )
+        assert site_audit_command(args) == 2
+
 
 class TestPerformanceAuditCommand:
     @mock.patch("ope.performance_audit.performance_audit")
@@ -326,6 +385,24 @@ class TestPerformanceAuditCommand:
             url="https://example.com", timeout=30,
             desktop_only=False, mobile_only=False,
             no_screenshot=False, markdown=False, html=None,
+        )
+        assert performance_audit_command(args) == 2
+
+    @mock.patch("ope.report_html_performance.write_performance_html_report", side_effect=OSError("denied"))
+    @mock.patch("ope.engine.normalize_performance_result")
+    @mock.patch("ope.performance_audit.performance_audit")
+    def test_html_write_failure_returns_2(self, mock_pa, mock_norm, mock_write) -> None:
+        import argparse
+
+        from ope.cli import performance_audit_command
+        obj = mock.Mock()
+        obj.to_dict.return_value = {"target": "https://example.com", "performance_report": {"findings": []}, "inventory": {}, "findings": []}
+        mock_pa.return_value = obj
+        mock_norm.return_value = {"target": "https://example.com", "findings": [], "modules": {}}
+        args = argparse.Namespace(
+            url="https://example.com", timeout=30,
+            desktop_only=False, mobile_only=False,
+            no_screenshot=False, markdown=False, html="/no/such/dir/perf.html",
         )
         assert performance_audit_command(args) == 2
 

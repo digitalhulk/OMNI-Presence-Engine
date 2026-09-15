@@ -42,6 +42,31 @@ ope audit https://example.com --no-history        # do not read or write local r
 ope audit https://example.com --timeout 30
 ```
 
+Audit several targets at once, or list what optional providers are configured:
+
+```bash
+ope multi-audit https://a.com https://b.com https://c.com --markdown
+ope multi-audit https://a.com https://b.com --max-workers 4 --json
+ope providers            # which optional providers are configured + what they upgrade
+```
+
+### OMNI Command Center (local dashboard)
+
+```bash
+ope dashboard                       # serves http://127.0.0.1:8787/ (local only)
+ope dashboard --port 9000           # choose a port
+```
+
+Open the printed URL, enter a website, and click **Run audit**. The dashboard executes the **real** OPE pipeline (no dummy data, no second engine) and renders health, the 20-module grid, findings (filter/sort), root causes, the dependency-ordered remediation roadmap, an interactive dependency-graph coloured by module status, provider status, and history. Export the exact run as JSON, Markdown, Text, standalone offline HTML, or a complete ZIP bundle. PDF/PNG export is optional and needs the headless-browser extra:
+
+```bash
+pip install 'omni-presence-engine[report]' && playwright install chromium
+```
+
+Without it, PDF/PNG report a clear "unavailable" state instead of producing a fake file. The dashboard binds to localhost by default and preserves every engine security guarantee (SSRF/DNS-rebinding validation, HTML escaping, request-size caps, no credential exposure).
+
+`multi-audit` runs targets with bounded concurrency and per-target isolation — one failing site never destroys the others — and returns a deterministic per-target + aggregate result.
+
 Run history is stored locally at `~/.ope/runs` (override the base directory with `OPE_HOME`) and is what lets the engine detect regressions between runs.
 
 Optional external evidence — set the environment variable and the matching checks upgrade from `UNKNOWN` to measured evidence; nothing is fabricated when it is absent:
@@ -98,6 +123,16 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Machine-readable audit/finding schemas**.
 - **CI test foundation** and executable contract tests.
 - **Dependency-aware `ModuleRunner`** executing the 136-check, 20-module registry.
+- **Executable, validated dependency graph** — the 20-module dependency graph from `schemas/dependency-graph-v1.md` is encoded in `dependency_graph.py` as the single executable source of module dependencies, with deterministic topological ordering. Graph construction rejects malformed topology: dangling edges and cycles fail explicitly (iterative three-state DFS), never silently accepted.
+- **Evidence-safe BLOCKED cascade** — a module is derived `BLOCKED` when it transitively depends on a failed module, but `BLOCKED` never replaces direct evidence: a module's own `FAIL` stays `FAIL` and its own `N/A` stays `N/A` (only `PASS`/`UNKNOWN` are converted; `UNKNOWN`/`N/A` upstream never cause a block). Cascade derives module status only and never fabricates check-level evidence. Graph-based root-cause traversal traces each BLOCKED module back to the upstream FAIL modules that caused it, never inventing a cause where none exists.
+- **Graph-based scoring** — `global_health()` traverses the dependency graph in topological order so parallel branches (Content/Media, Search/AI, Authority/Local, UX tier) do not penalize each other. BLOCKED modules return `None` scores.
+- **Score explainability** — every module carries a `score_basis` (derivation method, check tallies, evidence-weighted pass/total, and `blocked_by` root causes for BLOCKED modules) and the output carries a `health_basis` (the per-module topological rollup with upstream confidence). Scores are never opaque numbers — the number and its provenance come from a single computation and can never disagree.
+- **Dependency-ordered remediation plan** — `planner.build_remediation_plan()` turns the diagnosis into an actionable, deterministic plan (the executable `PLAN` stage): root-cause modules ordered by how many downstream modules each would unblock, each with its evidence-backed findings; direct failures and blocked-and-waiting modules listed separately. It orders existing evidence only — inventing no remediation — and every report now surfaces a "Diagnosis & Plan" section. `IMPLEMENT` stays human-owned.
+- **Diagnostics in every report** — JSON, Markdown, and the RawBlock HTML report all expose the same diagnostic chain: global health, per-module status and score, dependency root causes, blocked modules, and the remediation plan. All rendered content is HTML-escaped (no XSS).
+- **Real-response robustness** — the live fetch path validates the target against SSRF (loopback, private, link-local, cloud-metadata, IPv6 forms — all resolved-address-checked), revalidates every redirect hop, bounds the response and error bodies, and decompresses gzip/deflate responses under a decompression-bomb cap. Network failures produce a clean CLI error and a non-zero exit code, never a partial or fabricated result.
+- **DNS-rebinding hardening** — for direct connections the fetch pins the validated DNS resolution: the address that is SSRF-validated is exactly the one connected to, closing the resolve→validate→connect TOCTOU window. TLS SNI/cert validation still use the hostname. When an egress proxy is configured it resolves and enforces policy, so pinning is skipped and proxy semantics are preserved.
+- **Multi-target orchestration** — `ope multi-audit URL...` audits many targets with bounded concurrency and strict per-target isolation (one failure never destroys the others), deterministic input-order aggregation, and a per-target + aggregate summary in JSON or Markdown.
+- **Optional-provider capability discovery** — `ope providers` lists each optional provider (PageSpeed, Search Console, backlink index, OpenRouter), whether its credential is configured, and which checks it would upgrade. Absent credentials keep the affected checks `UNKNOWN` with a specific reason — never fabricated.
 - **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
@@ -130,8 +165,8 @@ python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDI
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- provider adapters for external data sources beyond PageSpeed Insights (18 checks are bound but return `UNKNOWN` until their APIs are configured)
-- orchestration and scheduling across multiple targets
+- provider adapters for the remaining external data sources (16 checks are bound but return `UNKNOWN` until an evidence source exists for them; `ope providers` lists what each configured provider upgrades). PageSpeed, Search Console, and the backlink index have real, credential-gated adapters (`ope providers` shows them as *active*); the remaining external checks — brand mentions, reputation, dependency CVEs, translation quality, server logs, and similar — have no adapter yet and stay `UNKNOWN` with a specific reason rather than a fabricated value.
+- a standalone scheduler daemon. Multi-target orchestration (`ope multi-audit`) and per-target run history are implemented as the reusable primitives; an external scheduler (cron, CI, a queue) supplies the target list and cadence and calls the engine. The engine deliberately owns *how* to audit and aggregate, not *when* to run.
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**
 
@@ -420,8 +455,10 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.8.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound, scoring integrated  
+**Version:** `1.2.0`  
+**Stage:** Stable release + OMNI Command Center dashboard — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
 **Contract:** `evidence-diagnostic-v1`
+
+Capabilities: 136/136 checks bound · validated dependency graph · evidence firewall · root-cause traversal · explainable scoring · dependency-ordered remediation planning · diagnostics in JSON/Markdown/HTML · DNS-rebinding-hardened SSRF · multi-target orchestration · provider capability discovery · run history/regression.
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**

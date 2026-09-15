@@ -93,6 +93,8 @@ report `UNKNOWN` — nothing is estimated in its place.
 | Variable | Unlocks |
 | --- | --- |
 | `OPE_PAGESPEED_API_KEY` | Core Web Vitals from Google PageSpeed Insights (`15-performance.lcp/fcp/cls/tbt/inp`) |
+| `OPE_SEARCH_CONSOLE_KEY` | Query visibility from Google Search Console (`09-search.query_visibility`); optional `OPE_SEARCH_CONSOLE_SITE` overrides the property |
+| `OPE_BACKLINK_API_KEY` | Off-site authority links from a backlink index, Ahrefs v3 by default (`11-authority.backlinks`); optional `OPE_BACKLINK_BASE_URL` / `OPE_BACKLINK_TARGET` override the endpoint/target |
 | `OPENROUTER_API_KEY` | Advisory reasoning layer over deterministic evidence |
 
 ## Flow

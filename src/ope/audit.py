@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -16,12 +17,70 @@ from importlib.metadata import version as _package_version
 from typing import Any
 
 from . import citability, crawler
+from .integrations.backlink_index import fetch_backlinks
 from .integrations.pagespeed import fetch_vitals
+from .integrations.search_console import fetch_query_visibility
+from .net import build_opener as build_safe_opener
+from .planner import diagnosis_markdown
 from .scoring import priority as compute_priority
 from .url import ALLOWED_SCHEMES, validate_url_strict
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_DECOMPRESSED_BYTES = 8 * 1024 * 1024
 MAX_REDIRECTS = 5
+
+
+def _decode_content_encoding(body: bytes, encoding: str | None) -> bytes:
+    """Decompress a response body per Content-Encoding, bounded against zip bombs.
+
+    Handles servers that gzip/deflate even though OPE does not request it.
+    Unknown encodings and malformed compressed data raise ValueError rather
+    than yielding garbage that would be silently parsed as HTML.  The
+    decompressed output is capped so a small compressed body cannot expand
+    without limit.
+    """
+    enc = (encoding or "").strip().lower()
+    if not enc or enc == "identity":
+        return body
+    if enc not in ("gzip", "x-gzip", "deflate"):
+        raise ValueError(f"Unsupported content encoding: {enc}")
+    # deflate is served either zlib-wrapped (RFC 1950, wbits 15) or raw
+    # (RFC 1951, wbits -15); gzip is wbits 31. Try the plausible framings.
+    wbits_options = (31,) if enc in ("gzip", "x-gzip") else (15, -15)
+    last_error: Exception | None = None
+    for wbits in wbits_options:
+        decompressor = zlib.decompressobj(wbits)
+        try:
+            out = decompressor.decompress(body, MAX_DECOMPRESSED_BYTES + 1)
+        except zlib.error as exc:
+            last_error = exc
+            continue
+        if len(out) > MAX_DECOMPRESSED_BYTES or decompressor.unconsumed_tail:
+            raise ValueError(
+                f"Decompressed response exceeds OPE safety limit of {MAX_DECOMPRESSED_BYTES} bytes"
+            )
+        out += decompressor.flush()
+        return out
+    raise ValueError(f"Malformed {enc} response body") from last_error
+
+
+def _assert_complete_body(body: bytes, content_length: str | None) -> None:
+    """Reject a body shorter than a declared Content-Length (truncated response).
+
+    A server (or MITM) that advertises more bytes than it delivers must not
+    have the partial body silently accepted as complete evidence. Only genuine
+    truncation is flagged — a body deliberately capped at the size limit is
+    handled by the caller's size check. Chunked/unknown-length responses have
+    no Content-Length and are bounded by the size cap instead.
+    """
+    if not content_length:
+        return
+    try:
+        declared = int(content_length)
+    except (TypeError, ValueError):
+        return
+    if 0 <= len(body) < declared and len(body) <= MAX_RESPONSE_BYTES:
+        raise ValueError(f"Incomplete response: received {len(body)} of {declared} declared bytes")
 
 try:
     # Reported in every audit result, so it is read from the installed package
@@ -207,6 +266,11 @@ class Finding:
 
 
 class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    # urllib reads max_redirections off the *handler*, so the cap must live
+    # here (setting it on the opener has no effect). Every hop's target is
+    # re-validated, so a redirect to a private/blocked address is rejected.
+    max_redirections = MAX_REDIRECTS
+
     def redirect_request(self, req: urllib.request.Request, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> urllib.request.Request | None:
         safe = validate_url_strict(newurl)
         return super().redirect_request(req, fp, code, msg, headers, safe)
@@ -220,26 +284,51 @@ def _request(url: str, timeout: int = 15) -> Response:
     dns_ms = round((time.perf_counter() - dns_start) * 1000, 1)
     req = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
     ctx = ssl.create_default_context()
-    opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
-    opener.max_redirections = MAX_REDIRECTS  # type: ignore[attr-defined]
+    # Pin the validated resolution for direct connections (closes the
+    # DNS-rebinding TOCTOU); delegate to the egress proxy when one applies.
+    opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
     ttfb_start = time.perf_counter()
-    with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
+    try:
+        with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
+            ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
+            content_type = (r.headers.get("Content-Type") or "").lower()
+            if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
+                raise ValueError(f"Unsupported target content type: {content_type}")
+            body = r.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
+            _assert_complete_body(body, r.headers.get("Content-Length"))
+            body = _decode_content_encoding(body, r.headers.get("Content-Encoding"))
+            return Response(
+                final_url=validate_url_strict(r.geturl()),
+                status=r.status,
+                headers={k.lower(): v for k, v in r.headers.items()},
+                # get_all keeps every Set-Cookie; a plain dict would collapse
+                # them to the last one and hide insecure cookies.
+                set_cookies=list(r.headers.get_all("Set-Cookie") or []),
+                body=body,
+                charset=r.headers.get_content_charset() or "utf-8",
+                dns_ms=dns_ms,
+                ttfb_ms=ttfb_ms,
+            )
+    except urllib.error.HTTPError as http_err:
+        # A 4xx/5xx is a real HTTP response with a status, not a transport
+        # failure. Represent it as a Response so status-based checks (e.g.
+        # CODE-HTTP-001) can evaluate it. Redirect hops were already
+        # SSRF-revalidated before this final error status was reached.
         ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
-        content_type = (r.headers.get("Content-Type") or "").lower()
-        if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
-            raise ValueError(f"Unsupported target content type: {content_type}")
-        body = r.read(MAX_RESPONSE_BYTES + 1)
-        if len(body) > MAX_RESPONSE_BYTES:
-            raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
+        err_body = http_err.read(MAX_RESPONSE_BYTES + 1)[:MAX_RESPONSE_BYTES]
+        try:
+            err_body = _decode_content_encoding(err_body, http_err.headers.get("Content-Encoding"))
+        except ValueError:
+            pass  # a malformed error body must not mask the real status
         return Response(
-            final_url=validate_url_strict(r.geturl()),
-            status=r.status,
-            headers={k.lower(): v for k, v in r.headers.items()},
-            # get_all keeps every Set-Cookie; a plain dict would collapse
-            # them to the last one and hide insecure cookies.
-            set_cookies=list(r.headers.get_all("Set-Cookie") or []),
-            body=body,
-            charset=r.headers.get_content_charset() or "utf-8",
+            final_url=validate_url_strict(http_err.geturl() or safe_url),
+            status=int(http_err.code),
+            headers={k.lower(): v for k, v in http_err.headers.items()},
+            set_cookies=list(http_err.headers.get_all("Set-Cookie") or []),
+            body=err_body,
+            charset=http_err.headers.get_content_charset() or "utf-8",
             dns_ms=dns_ms,
             ttfb_ms=ttfb_ms,
         )
@@ -402,11 +491,14 @@ def _fetch_subresources(page_url: str, stylesheets: list[str], scripts: list[str
     measured = {"css": 0, "js": 0}
     fetched = 0
     css_text: list[str] = []
+    ctx = ssl.create_default_context()
     for kind, absolute in resolved[:MAX_SUBRESOURCES]:
         try:
             safe_url = validate_url_strict(absolute)
             request = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
-            with urllib.request.urlopen(request, timeout=max(1, min(timeout, 20))) as response:
+            # Same SSRF pinning + redirect revalidation as the main fetch.
+            opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
+            with opener.open(request, timeout=max(1, min(timeout, 20))) as response:
                 payload = response.read(MAX_SUBRESOURCE_BYTES)
         except Exception:
             continue
@@ -531,9 +623,13 @@ def _run_browser_pass(
         return {
             "browser": [br.to_dict() for br in browser_results],
             "performance_report": perf_report.to_dict(),
+            "browser_status": "completed",
         }
     except Exception:
-        return {}
+        # Browser capability unavailable/failed: surface it honestly rather
+        # than silently omitting it. Browser-dependent checks stay UNKNOWN
+        # (never fabricated as FAIL) because no browser evidence was injected.
+        return {"browser_status": "unavailable"}
 
 
 def audit(url: str, timeout: int = 15, fetch_subresources: bool = True, browser: bool = False, browser_timeout: int = 30, browser_profiles: list[str] | None = None) -> dict[str, Any]:
@@ -549,6 +645,8 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True, browser:
     word_count = sum(len(str(block.get("content", "")).split()) for block in content_blocks)
     citability_report = citability.analyze_blocks(content_blocks)
     pagespeed_vitals = fetch_vitals(final_url)
+    search_console_visibility = fetch_query_visibility(final_url)
+    backlink_metrics = fetch_backlinks(final_url)
     entities = _json_ld_summary(p.json_ld_raw, p.title.strip(), p.description)
     link_locality = _link_locality(p.links, final_url)
     has_analytics = any(marker in html for marker in _ANALYTICS_MARKERS)
@@ -611,7 +709,7 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True, browser:
         modules[key]["findings"].append(f.id)
         modules[key]["status"] = "FAIL"
 
-    inventory: dict[str, Any] = {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers, "verification_tags": p.verification_tags, "lazy_images": p.lazy_images, "noscript_content": p.noscript_content, "has_password_input": p.has_password_input, "lists": p.lists, "tables": p.tables, "has_captcha": has_captcha, "has_event_tracking": has_event_tracking, "has_attribution_code": has_attribution_code, "soft_404": soft_404, "has_rate_limit_headers": has_rate_limit_headers, "intent_aligned": intent_aligned}
+    inventory: dict[str, Any] = {"status": status, "bytes": len(body), "title": p.title.strip(), "description": p.description, "lang": p.lang, "viewport": p.viewport, "canonical": p.canonical, "headings": len(p.headings), "h1": p.h1_count, "links": len(p.links), "images": p.images, "images_missing_alt": p.images_missing_alt, "forms": p.forms, "json_ld_blocks": p.json_ld, "robots": robots, "meta_robots": p.meta_robots, "x_robots_tag": security_headers.get("x-robots-tag"), "hreflang_count": p.hreflang_count, "landmarks": sorted(p.landmarks), "dns_ms": dns_ms, "ttfb_ms": ttfb_ms, "citability": citability_report, "pagespeed": pagespeed_vitals, "search_console": search_console_visibility, "backlinks": backlink_metrics, "entity_types": entities["types"], **{key: value for key, value in entities.items() if key != "types"}, "internal_links": link_locality["internal_links"], "external_links": link_locality["external_links"], "last_modified": security_headers.get("last-modified"), "article_modified": p.article_modified, "has_analytics": has_analytics, "images_missing_dimensions": p.images_missing_dimensions, "images_missing_srcset": p.images_missing_srcset, "contact_input": p.contact_input, "tls": tls, "cookies": cookies, "csp_profile": csp, "exposed_secrets": exposed_secrets, "cdn_markers": cdn_markers, "waf_markers": waf_markers, "doctype": p.doctype, "declared_charset": declared_charset, "title_count": p.title_count, "structure": sorted(p.structure), "word_count": word_count, "inputs": p.inputs, "unlabelled_inputs": p.unlabelled_inputs, "buttons": p.buttons, "buttons_without_text": p.buttons_without_text, "videos": p.videos, "videos_missing_metadata": p.videos_missing_metadata, "media_elements": p.media_elements, "caption_tracks": p.caption_tracks, "positive_tabindex": p.positive_tabindex, "forms_missing_action": p.forms_missing_action, "has_trust_links": has_trust_links, "has_cta": has_cta, "question_headings": question_headings, "subheadings": len(p.headings) - p.h1_count, "canonical_is_self": canonical_is_self, "page_weight_bytes": page_weight_bytes, **{key: value for key, value in subresources.items() if key != "css_text"}, **css_behaviour, **inventory_security_headers, "verification_tags": p.verification_tags, "lazy_images": p.lazy_images, "noscript_content": p.noscript_content, "has_password_input": p.has_password_input, "lists": p.lists, "tables": p.tables, "has_captcha": has_captcha, "has_event_tracking": has_event_tracking, "has_attribution_code": has_attribution_code, "soft_404": soft_404, "has_rate_limit_headers": has_rate_limit_headers, "intent_aligned": intent_aligned}
 
     browser_data: dict[str, Any] = {}
     if browser:
@@ -623,7 +721,8 @@ def audit(url: str, timeout: int = 15, fetch_subresources: bool = True, browser:
 def markdown_report(result: dict[str, Any]) -> str:
     lines = [f"# OPE Audit — {result['target']}", "", f"**Run:** `{result['run_id']}`  ", f"**HTTP:** `{result['inventory']['status']}`  ", f"**Findings:** `{result['summary']['finding_count']}`", "", "## Inventory", ""]
     lines += [f"- **{k}:** {v}" for k, v in result["inventory"].items()]
-    lines += ["", "## Findings", ""]
+    lines += ["", *diagnosis_markdown(result)]
+    lines += ["## Findings", ""]
     if not result["findings"]: lines.append("No findings were generated by the deterministic checks.")
     for f in sorted(result["findings"], key=lambda x: x["priority"], reverse=True):
         lines += [f"### {f['id']} — {f['severity'].upper()} — Priority {f['priority']}", f"**Module:** {f['module']}", f"**Symptom:** {f['symptom']}", "", "**Remediation:**"] + [f"- {x}" for x in f["remediation"]] + ["", "**Validation:**"] + [f"- {x}" for x in f["validation"]] + [""]

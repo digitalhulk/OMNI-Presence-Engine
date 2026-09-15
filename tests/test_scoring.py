@@ -1,4 +1,11 @@
-from ope.scoring import clamp, global_health, module_score, priority
+from ope.scoring import (
+    clamp,
+    global_health,
+    health_basis,
+    module_score,
+    module_score_basis,
+    priority,
+)
 
 
 def test_priority_is_bounded():
@@ -133,3 +140,86 @@ def test_global_health_skips_none():
     health = global_health(scores)
     assert health is not None
     assert 60.0 <= health <= 80.0
+
+
+class TestModuleScoreBasis:
+    def test_basis_score_matches_module_score(self):
+        checks = {
+            "01-entity.identity": {"status": "PASS", "evidence": [{"confidence": 0.9}]},
+            "01-entity.ownership": {"status": "FAIL", "evidence": [{"confidence": 0.9}]},
+        }
+        module = {"status": "FAIL"}
+        basis = module_score_basis(module, module_checks=checks)
+        assert basis["score"] == module_score(module, module_checks=checks)
+
+    def test_basis_counts_check_statuses(self):
+        checks = {
+            "c1": {"status": "PASS", "evidence": [{"confidence": 1.0}]},
+            "c2": {"status": "FAIL", "evidence": [{"confidence": 1.0}]},
+            "c3": {"status": "UNKNOWN", "evidence": []},
+            "c4": {"status": "N/A"},
+        }
+        basis = module_score_basis({"status": "FAIL"}, module_checks=checks)
+        assert basis["method"] == "evidence-weighted-coverage"
+        assert basis["checks_total"] == 4
+        assert basis["checks_passed"] == 1
+        assert basis["checks_failed"] == 1
+        assert basis["checks_unknown"] == 1
+        assert basis["checks_na"] == 1
+
+    def test_basis_blocked_names_root_cause(self):
+        basis = module_score_basis({"status": "BLOCKED", "blocked_by": ["02"]})
+        assert basis["score"] is None
+        assert basis["method"] == "blocked"
+        assert basis["blocked_by"] == ["02"]
+
+    def test_basis_status_derived(self):
+        assert module_score_basis({"status": "PASS"})["method"] == "status-derived"
+        assert module_score_basis({"status": "FAIL"})["score"] == 0.0
+
+    def test_basis_no_evidence(self):
+        basis = module_score_basis({"status": "UNKNOWN"})
+        assert basis["score"] is None
+        assert basis["method"] == "no-evidence"
+
+    def test_basis_all_na(self):
+        checks = {"c1": {"status": "N/A"}, "c2": {"status": "N/A"}}
+        basis = module_score_basis({"status": "N/A"}, module_checks=checks)
+        assert basis["score"] is None
+        assert basis["method"] == "no-evidence"
+        assert basis["checks_na"] == 2
+
+    def test_basis_is_deterministic(self):
+        checks = {"c1": {"status": "PASS", "evidence": [{"confidence": 1.0}]}}
+        assert module_score_basis({"status": "PASS"}, module_checks=checks) == module_score_basis(
+            {"status": "PASS"}, module_checks=checks
+        )
+
+
+class TestHealthBasis:
+    def test_health_matches_global_health(self):
+        scores = {"01": 100.0, "02": 80.0, "03": 60.0}
+        assert health_basis(scores)["health"] == global_health(scores)
+
+    def test_health_basis_has_contribution_per_scored_module(self):
+        scores = {"01": 100.0, "02": 80.0, "03": None}
+        basis = health_basis(scores)
+        assert basis["modules_scored"] == 2
+        assert {c["module"] for c in basis["contributions"]} == {"01", "02"}
+
+    def test_health_basis_records_upstream_confidence(self):
+        scores = {"01": 20.0, "02": 100.0, "03": 100.0}
+        basis = health_basis(scores)
+        by_module = {c["module"]: c for c in basis["contributions"]}
+        assert by_module["02"]["upstream_confidence"] < 1.0
+        assert by_module["02"]["limiting_upstream"] == "01"
+
+    def test_health_basis_empty(self):
+        basis = health_basis({})
+        assert basis["health"] is None
+        assert basis["contributions"] == []
+
+    def test_health_basis_contributions_in_topological_order(self):
+        scores = {"03": 100.0, "01": 100.0, "02": 100.0}
+        order = [c["module"] for c in health_basis(scores)["contributions"]]
+        assert order == ["01", "02", "03"]

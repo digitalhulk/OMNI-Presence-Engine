@@ -5,7 +5,18 @@ import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import Any
+
+try:
+    _VERSION = _package_version("omni-presence-engine")
+except PackageNotFoundError:  # pragma: no cover - only when running from an uninstalled tree
+    _VERSION = "0.0.0"
+
+# Derived from the installed package version — never a hardcoded string that
+# drifts out of sync (the same rule the rest of the codebase follows).
+USER_AGENT = f"OPE-Reasoning/{_VERSION}"
 
 
 @dataclass(frozen=True)
@@ -29,6 +40,9 @@ class OpenRouterConfig:
 
 class OpenRouterError(RuntimeError):
     pass
+
+
+MAX_RESPONSE_BYTES = 1_048_576  # 1 MiB — bound the response body to prevent unbounded reads
 
 
 class OpenRouterClient:
@@ -57,13 +71,17 @@ class OpenRouterClient:
             headers={
                 "Authorization": f"Bearer {self.config.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "OPE-Reasoning/0.1",
+                "User-Agent": USER_AGENT,
             },
             method="POST",
         )
         try:
             with urllib.request.urlopen(request, timeout=max(1, min(self.config.timeout, 120))) as response:
-                body = response.read()
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise OpenRouterError(
+                        f"OpenRouter response exceeds {MAX_RESPONSE_BYTES}-byte safety limit"
+                    )
         except urllib.error.HTTPError as exc:
             detail = exc.read(2048).decode("utf-8", errors="replace")
             raise OpenRouterError(f"OpenRouter HTTP {exc.code}: {detail}") from exc

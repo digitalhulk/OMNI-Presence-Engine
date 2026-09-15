@@ -464,6 +464,52 @@ def test_poor_web_vitals_fail_their_checks():
         assert result["checks"][check_id]["status"] == "FAIL"
 
 
+def test_search_console_visibility_passes_when_impressions_present():
+    audit = _audit_result()
+    audit["inventory"]["search_console"] = {"total_impressions": 1200, "total_clicks": 80, "distinct_queries": 45}
+    check = execute_audit_checks(audit)["checks"]["09-search.query_visibility"]
+    assert check["status"] == "PASS"
+    assert any(e.get("source") == "search-console" for e in check["evidence"])
+
+
+def test_search_console_visibility_fails_when_no_impressions():
+    audit = _audit_result()
+    audit["inventory"]["search_console"] = {"total_impressions": 0, "total_clicks": 0, "distinct_queries": 0}
+    check = execute_audit_checks(audit)["checks"]["09-search.query_visibility"]
+    assert check["status"] == "FAIL"
+
+
+def test_search_console_visibility_unknown_without_key():
+    audit = _audit_result()
+    audit["inventory"].pop("search_console", None)
+    check = execute_audit_checks(audit)["checks"]["09-search.query_visibility"]
+    assert check["status"] == "UNKNOWN"
+    assert "OPE_SEARCH_CONSOLE_KEY" in check["reason"]
+
+
+def test_backlinks_pass_when_referring_domains_present():
+    audit = _audit_result()
+    audit["inventory"]["backlinks"] = {"referring_domains": 210, "backlinks": 5400}
+    check = execute_audit_checks(audit)["checks"]["11-authority.backlinks"]
+    assert check["status"] == "PASS"
+    assert any(e.get("source") == "backlink-index" for e in check["evidence"])
+
+
+def test_backlinks_fail_when_no_referring_domains():
+    audit = _audit_result()
+    audit["inventory"]["backlinks"] = {"referring_domains": 0, "backlinks": 0}
+    check = execute_audit_checks(audit)["checks"]["11-authority.backlinks"]
+    assert check["status"] == "FAIL"
+
+
+def test_backlinks_unknown_without_key():
+    audit = _audit_result()
+    audit["inventory"].pop("backlinks", None)
+    check = execute_audit_checks(audit)["checks"]["11-authority.backlinks"]
+    assert check["status"] == "UNKNOWN"
+    assert "OPE_BACKLINK_API_KEY" in check["reason"]
+
+
 def test_missing_citability_observation_is_unknown():
     audit = _audit_result()
     audit["inventory"]["citability"] = {"total_blocks_analyzed": 0, "average_citability_score": 0.0, "grade_distribution": {}}

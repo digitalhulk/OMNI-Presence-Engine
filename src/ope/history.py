@@ -88,8 +88,14 @@ def load_runs(target: str, directory: str | Path | None = None, limit: int = MAX
 
 
 def compare(inventory: dict[str, Any], findings: list[Any], baseline: dict[str, Any]) -> dict[str, Any]:
-    """Diff the current observations against the most recent stored run."""
-    baseline_metrics = baseline.get("metrics") or {}
+    """Diff the current observations against the most recent stored run.
+
+    Tolerates a parseable-but-malformed baseline record: fields with the
+    wrong type are treated as absent rather than raising, so a corrupt
+    history entry degrades to "no comparison" instead of crashing the audit.
+    """
+    raw_baseline_metrics = baseline.get("metrics")
+    baseline_metrics = raw_baseline_metrics if isinstance(raw_baseline_metrics, dict) else {}
     current_metrics = _metrics(inventory)
     regressions = []
     for key, direction, tolerance, floor in _TRACKED_METRICS:

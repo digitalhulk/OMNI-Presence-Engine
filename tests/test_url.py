@@ -128,6 +128,27 @@ class TestValidateTarget:
             assert result.status == TargetStatus.INVALID
             assert "DNS" in result.reason
 
+    def test_cloud_metadata_ip_blocked(self) -> None:
+        with mock.patch("socket.getaddrinfo") as m:
+            m.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("169.254.169.254", 0))]
+            assert validate_target("http://metadata.example").status == TargetStatus.BLOCKED
+
+    def test_ipv4_mapped_ipv6_loopback_blocked(self) -> None:
+        # A hostname resolving to an IPv4-mapped IPv6 loopback must not bypass
+        # the SSRF guard via the alternate representation.
+        with mock.patch("socket.getaddrinfo") as m:
+            m.return_value = [(socket.AF_INET6, socket.SOCK_STREAM, 0, "", ("::ffff:127.0.0.1", 0, 0, 0))]
+            assert validate_target("http://sneaky.example").status == TargetStatus.BLOCKED
+
+    def test_any_restricted_address_among_many_blocks(self) -> None:
+        # If a host resolves to a public AND a private address, block it.
+        with mock.patch("socket.getaddrinfo") as m:
+            m.return_value = [
+                (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("10.0.0.5", 0)),
+            ]
+            assert validate_target("http://rebind.example").status == TargetStatus.BLOCKED
+
     def test_valid_public_ip(self) -> None:
         with mock.patch("socket.getaddrinfo") as m:
             m.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
