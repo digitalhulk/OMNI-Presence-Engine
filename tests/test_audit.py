@@ -226,13 +226,14 @@ def test_subresource_fetch_classifies_third_party_hosts_and_survives_failures(mo
         def __enter__(self): return self
         def __exit__(self, *_): return False
 
-    def fake_urlopen(request, timeout=10):
-        url = request.full_url
-        if "broken" in url:
-            raise OSError("unreachable")
-        return _FakeResponse(b"x" * 100 if url.endswith(".css") else b"y" * 250)
+    class _FakeOpener:
+        def open(self, request, timeout=10):
+            url = request.full_url
+            if "broken" in url:
+                raise OSError("unreachable")
+            return _FakeResponse(b"x" * 100 if url.endswith(".css") else b"y" * 250)
 
-    monkeypatch.setattr(audit_module.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(audit_module, "build_safe_opener", lambda *a, **k: _FakeOpener())
     result = audit_module._fetch_subresources(
         "https://example.com/",
         ["/site.css", "https://cdn.other.net/lib.css"],

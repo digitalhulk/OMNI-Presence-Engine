@@ -111,10 +111,48 @@ def validate_target(url: str, *, resolve_dns: bool = True) -> TargetValidation:
     if not addresses:
         return TargetValidation(url=url, status=TargetStatus.INVALID, normalized=normalized, reason=f"No addresses resolved for {host}")
     for addr_str in addresses:
-        addr = ipaddress.ip_address(addr_str)
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_multicast or addr.is_unspecified:
-            return TargetValidation(url=url, status=TargetStatus.BLOCKED, normalized=normalized, reason=f"Resolves to restricted address: {addr}", addresses=addresses)
+        if address_is_restricted(addr_str):
+            return TargetValidation(url=url, status=TargetStatus.BLOCKED, normalized=normalized, reason=f"Resolves to restricted address: {addr_str}", addresses=addresses)
     return TargetValidation(url=url, status=TargetStatus.VALID, normalized=normalized, addresses=addresses)
+
+
+def address_is_restricted(addr_str: str) -> bool:
+    """True when an IP literal is one OPE must never connect to (SSRF guard).
+
+    Covers loopback, private (RFC1918/ULA), link-local (incl. cloud metadata
+    169.254.169.254), reserved, multicast, and unspecified ranges, for both
+    IPv4 and IPv6 — including IPv4-mapped IPv6 forms, which ``ipaddress``
+    classifies by their embedded IPv4 address.
+    """
+    try:
+        addr = ipaddress.ip_address(addr_str)
+    except ValueError:
+        return True  # unparseable address is not something we will connect to
+    return bool(
+        addr.is_private or addr.is_loopback or addr.is_link_local
+        or addr.is_reserved or addr.is_multicast or addr.is_unspecified
+    )
+
+
+def resolve_and_validate(host: str) -> tuple[str, ...]:
+    """Resolve *host* and return its addresses, or raise ValueError if unsafe.
+
+    Raises when the host does not resolve or resolves to *any* restricted
+    address. Used at connection time to pin a validated resolution, closing
+    the DNS-rebinding TOCTOU window between validation and connect: the same
+    resolution that is validated here is the one the socket connects to.
+    """
+    try:
+        raw = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise ValueError(f"DNS resolution failed: {host}") from exc
+    addresses = tuple(sorted({str(info[4][0]) for info in raw}))
+    if not addresses:
+        raise ValueError(f"No addresses resolved for {host}")
+    for addr_str in addresses:
+        if address_is_restricted(addr_str):
+            raise ValueError(f"Resolves to restricted address: {addr_str}")
+    return addresses
 
 
 def validate_url_strict(url: str) -> str:

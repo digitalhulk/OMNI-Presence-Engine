@@ -18,6 +18,7 @@ from typing import Any
 
 from . import citability, crawler
 from .integrations.pagespeed import fetch_vitals
+from .net import build_opener as build_safe_opener
 from .planner import diagnosis_markdown
 from .scoring import priority as compute_priority
 from .url import ALLOWED_SCHEMES, validate_url_strict
@@ -257,7 +258,9 @@ def _request(url: str, timeout: int = 15) -> Response:
     dns_ms = round((time.perf_counter() - dns_start) * 1000, 1)
     req = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
     ctx = ssl.create_default_context()
-    opener = urllib.request.build_opener(_SafeRedirect(), urllib.request.HTTPSHandler(context=ctx))
+    # Pin the validated resolution for direct connections (closes the
+    # DNS-rebinding TOCTOU); delegate to the egress proxy when one applies.
+    opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
     opener.max_redirections = MAX_REDIRECTS  # type: ignore[attr-defined]
     ttfb_start = time.perf_counter()
     with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
@@ -440,11 +443,14 @@ def _fetch_subresources(page_url: str, stylesheets: list[str], scripts: list[str
     measured = {"css": 0, "js": 0}
     fetched = 0
     css_text: list[str] = []
+    ctx = ssl.create_default_context()
     for kind, absolute in resolved[:MAX_SUBRESOURCES]:
         try:
             safe_url = validate_url_strict(absolute)
             request = urllib.request.Request(safe_url, headers={"User-Agent": f"OPE-Audit/{ENGINE_VERSION}"}, method="GET")
-            with urllib.request.urlopen(request, timeout=max(1, min(timeout, 20))) as response:
+            # Same SSRF pinning + redirect revalidation as the main fetch.
+            opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
+            with opener.open(request, timeout=max(1, min(timeout, 20))) as response:
                 payload = response.read(MAX_SUBRESOURCE_BYTES)
         except Exception:
             continue
