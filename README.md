@@ -102,6 +102,7 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Evidence-safe BLOCKED cascade** — a module is derived `BLOCKED` when it transitively depends on a failed module, but `BLOCKED` never replaces direct evidence: a module's own `FAIL` stays `FAIL` and its own `N/A` stays `N/A` (only `PASS`/`UNKNOWN` are converted; `UNKNOWN`/`N/A` upstream never cause a block). Cascade derives module status only and never fabricates check-level evidence. Graph-based root-cause traversal traces each BLOCKED module back to the upstream FAIL modules that caused it, never inventing a cause where none exists.
 - **Graph-based scoring** — `global_health()` traverses the dependency graph in topological order so parallel branches (Content/Media, Search/AI, Authority/Local, UX tier) do not penalize each other. BLOCKED modules return `None` scores.
 - **Score explainability** — every module carries a `score_basis` (derivation method, check tallies, evidence-weighted pass/total, and `blocked_by` root causes for BLOCKED modules) and the output carries a `health_basis` (the per-module topological rollup with upstream confidence). Scores are never opaque numbers — the number and its provenance come from a single computation and can never disagree.
+- **Dependency-ordered remediation plan** — `planner.build_remediation_plan()` turns the diagnosis into an actionable, deterministic plan (the executable `PLAN` stage): root-cause modules ordered by how many downstream modules each would unblock, each with its evidence-backed findings; direct failures and blocked-and-waiting modules listed separately. It orders existing evidence only — inventing no remediation — and every report now surfaces a "Diagnosis & Plan" section. `IMPLEMENT` stays human-owned.
 - **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
@@ -424,8 +425,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.10.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound, dependency graph active, explainable scoring integrated  
+**Version:** `0.11.0`  
+**Stage:** Evidence-driven executable foundation — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**

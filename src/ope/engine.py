@@ -7,6 +7,7 @@ from .audit_pipeline import execute_audit_checks
 from .dependency_graph import cascade_blocked, find_root_causes
 from .module_runner import ExecutionStatus
 from .performance_evidence import inject_performance_evidence
+from .planner import build_remediation_plan
 from .registry import checks_for_module
 from .scoring import health_basis, module_score_basis
 from .site_evidence import inject_site_evidence
@@ -133,6 +134,8 @@ def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> Non
     basis = health_basis(scores)
     output["health"] = basis["health"]
     output["health_basis"] = basis
+
+    output["remediation_plan"] = build_remediation_plan(output)
 
 
 def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:

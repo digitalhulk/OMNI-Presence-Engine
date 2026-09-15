@@ -4,6 +4,43 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.11.0
+
+Executable remediation planning (the `PLAN` stage) and diagnostic surfacing.
+The dependency-graph root-cause analysis and explainable scores built in
+prior clusters now drive a dependency-ordered remediation plan and are
+visible in every human-readable report.
+
+### Added
+
+- **`planner.py` — `build_remediation_plan()`**: a deterministic,
+  evidence-based remediation plan derived from the diagnosis. It never
+  invents remediation, evidence, or priorities — it *orders* what the
+  diagnosis produced, driven by the real dependency graph:
+  - **root causes** — `FAIL` modules that block downstream work, ordered by
+    how many modules each would unblock (desc), then module number; fixing
+    these first frees the most of the graph;
+  - **direct failures** — `FAIL` modules that block nothing downstream;
+  - **blocked** — modules waiting on their root causes, listed but not
+    planned as work items (their evidence is untrustworthy until the
+    upstream failure is fixed).
+  Findings are ordered by priority then id; a module with no finding record
+  is reported with an empty finding list rather than an invented one.
+  `IMPLEMENT` stays human-owned — the plan describes what to fix, never
+  applies changes.
+- **`planner.diagnosis_markdown()`**: a shared markdown renderer for global
+  health, failing/blocked modules, and the remediation plan, so the
+  diagnostic view is identical across single-page, site, and performance
+  reports.
+- **Engine wiring**: each normalizer now attaches a top-level
+  `remediation_plan` to the output.
+- **Report surfacing**: `audit.markdown_report()` and the site/performance
+  markdown reports now include a "Diagnosis & Plan" section — previously the
+  single-page report surfaced neither health, module status, root causes,
+  nor scores.
+- **`test_planner.py`** (12 tests) and engine-integration coverage for the
+  attached plan.
+
 ## 0.10.0
 
 Score explainability and provenance: every module score and the global

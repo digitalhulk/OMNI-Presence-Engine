@@ -328,3 +328,18 @@ class TestEvidenceFirewall:
         assert m03["score_basis"]["blocked_by"] == ["02"]
         # BLOCKED is module-level only; it never appears as a check status.
         assert all(c["status"] != "BLOCKED" for c in output["checks"].values())
+
+    def test_remediation_plan_is_attached_and_dependency_ordered(self, monkeypatch) -> None:
+        output, _ = self._run(monkeypatch)
+        plan = output["remediation_plan"]
+        assert plan["method"] == "dependency-ordered"
+        # Both 02 and 10 are FAIL and both block downstream modules, so both
+        # are root causes. 02 unblocks more (03..20) than 10 (11..20), so 02
+        # is ordered first.
+        root_modules = [s["module"] for s in plan["root_causes"]]
+        assert root_modules[0] == "02"
+        assert "10" in root_modules
+        two = next(s for s in plan["root_causes"] if s["module"] == "02")
+        ten = next(s for s in plan["root_causes"] if s["module"] == "10")
+        assert two["unblock_count"] > ten["unblock_count"]
+        assert plan["summary"]["blocked_count"] >= 1

@@ -70,6 +70,8 @@ Scoring is integrated: `scoring.module_score()` computes evidence-weighted pass 
 
 Scores are explainable: `scoring.module_score_basis()` and `scoring.health_basis()` return the deterministic derivation behind each number — the module basis names the derivation method, check tallies, evidence-weighted pass/total, and (for BLOCKED modules) the `blocked_by` root causes; the health basis lists each scored module's upstream confidence and adjusted contribution in topological order. `module_score()` and `global_health()` return the `score`/`health` field of these bases, so the number and its provenance share a single computation and cannot disagree. Each normalizer attaches per-module `score_basis` and a top-level `health_basis` key.
 
+Remediation is planned: `planner.build_remediation_plan()` turns the diagnosis into a dependency-ordered plan attached to the output as `remediation_plan`. Root-cause modules are ordered by how many downstream modules each would unblock (from the dependency graph), then module number; each carries its evidence-backed findings ordered by priority. Direct failures (blocking nothing) and blocked modules (waiting on their root causes) are listed separately. The planner orders existing evidence only — it invents no remediation — and `IMPLEMENT` stays human-owned. `planner.diagnosis_markdown()` renders the health, module status, and plan into the markdown reports so the diagnostic chain is visible, not just computed.
+
 ## Explicit non-goals
 
 - No synthetic evidence.

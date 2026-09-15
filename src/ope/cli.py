@@ -9,6 +9,7 @@ from typing import Any
 from . import history
 from .audit import audit, markdown_report
 from .engine import normalize_result
+from .planner import diagnosis_markdown
 from .report_html import write_html_report
 
 CONFIG_PATH = Path.home() / ".ope" / "config.json"
@@ -116,6 +117,7 @@ def site_audit_markdown_report(result: dict[str, Any]) -> str:
         f"**Findings:** `{len(result.get('findings', []))}`",
         "",
     ]
+    lines += diagnosis_markdown(result)
     findings = result.get("findings", [])
     if findings:
         lines += ["## Findings", ""]
@@ -203,6 +205,7 @@ def performance_audit_markdown_report(result: dict[str, Any]) -> str:
                     lines.append(f"| {metric.upper()} | {val}{unit} | {data.get('rating', '?')} |")
                 lines.append("")
 
+    lines += diagnosis_markdown(result)
     findings = result.get("findings", [])
     if findings:
         lines += ["## Findings", ""]
