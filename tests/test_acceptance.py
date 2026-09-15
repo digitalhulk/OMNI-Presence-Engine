@@ -246,3 +246,26 @@ def test_site_markdown_report_end_to_end(monkeypatch):
                   final_url="http://down.example/")
     md = site_audit_markdown_report(result)
     assert "Diagnosis & Plan" in md
+
+
+def test_diagnostic_output_is_deterministic_modulo_timing(monkeypatch):
+    """Same input yields the same diagnosis. Per-check duration_ms and
+    wall-clock observed_at are measured telemetry and legitimately vary; the
+    diagnostic conclusions (status/score/health/root causes/plan) do not."""
+    # Fields that legitimately vary: measured timings, wall-clock timestamps,
+    # and run identity. Everything else is the deterministic diagnosis.
+    volatile = {"duration_ms", "observed_at", "recorded_at", "started_at", "completed_at", "run_id"}
+
+    def scrub(obj):
+        if isinstance(obj, dict):
+            return {k: scrub(v) for k, v in obj.items() if k not in volatile}
+        if isinstance(obj, list):
+            return [scrub(v) for v in obj]
+        return obj
+
+    a = _run(monkeypatch, html=_HEALTHY_HTML)
+    b = _run(monkeypatch, html=_HEALTHY_HTML)
+    assert json.dumps(scrub(a), sort_keys=True) == json.dumps(scrub(b), sort_keys=True)
+    # The high-value diagnostic keys are byte-identical.
+    for key in ("health", "health_basis", "dependency_root_causes", "remediation_plan", "modules"):
+        assert json.dumps(scrub(a.get(key)), sort_keys=True) == json.dumps(scrub(b.get(key)), sort_keys=True)

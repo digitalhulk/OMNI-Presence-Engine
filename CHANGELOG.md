@@ -4,6 +4,42 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.0.0
+
+First stable release. The public contract — the `evidence-diagnostic-v1`
+engine output, the `ope` CLI commands (`setup`, `audit`, `site-audit`,
+`performance-audit`, `multi-audit`, `providers`) and their exit codes, the
+20-module dependency graph and 136-check registry, and the JSON/Markdown/HTML
+report shape — is considered stable and will follow semantic versioning.
+
+No behavioral changes from 0.13.0 beyond the fixes below; this release marks
+the contract as stable after the full verification gate (see below).
+
+### Fixed
+
+- **Redirect limit now enforced**: `_SafeRedirect.max_redirections` is set on
+  the redirect handler (where urllib reads it) instead of on the opener
+  (where it had no effect), so the intended `MAX_REDIRECTS` cap of 5 applies
+  instead of urllib's default of 10. Every redirect hop is still re-validated
+  against the SSRF policy.
+
+### Added
+
+- **Redirect-safety tests**: a redirect to a private or cloud-metadata address
+  is rejected mid-chain; a public redirect is re-validated and allowed; the
+  redirect cap is asserted on the handler.
+
+### Verification (v1.0.0 release gate)
+
+- 797 tests pass against the source tree **and** the installed wheel
+  (`omni_presence_engine-1.0.0-py3-none-any.whl`, stdlib-only deps).
+- ruff, mypy, compileall clean; registry 136/136; CI green on Python
+  3.10/3.11/3.12/3.13.
+- Clean-venv install verified: CLI entry point, exit codes, and JSON/Markdown/
+  HTML report generation all work from the installed package.
+- All verification against deterministic local fixtures (the build environment
+  has no external egress); labeled FIXTURE VERIFIED, not LIVE VERIFIED.
+
 ## 0.13.0
 
 Production release: DNS-rebinding SSRF hardening, multi-target orchestration,

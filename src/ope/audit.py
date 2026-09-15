@@ -245,6 +245,11 @@ class Finding:
 
 
 class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    # urllib reads max_redirections off the *handler*, so the cap must live
+    # here (setting it on the opener has no effect). Every hop's target is
+    # re-validated, so a redirect to a private/blocked address is rejected.
+    max_redirections = MAX_REDIRECTS
+
     def redirect_request(self, req: urllib.request.Request, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> urllib.request.Request | None:
         safe = validate_url_strict(newurl)
         return super().redirect_request(req, fp, code, msg, headers, safe)
@@ -261,7 +266,6 @@ def _request(url: str, timeout: int = 15) -> Response:
     # Pin the validated resolution for direct connections (closes the
     # DNS-rebinding TOCTOU); delegate to the egress proxy when one applies.
     opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
-    opener.max_redirections = MAX_REDIRECTS  # type: ignore[attr-defined]
     ttfb_start = time.perf_counter()
     with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
         ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)

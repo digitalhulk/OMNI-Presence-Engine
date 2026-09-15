@@ -440,8 +440,10 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.13.0`  
-**Stage:** Production release — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning, diagnostics in JSON/Markdown/HTML, DNS-rebinding-hardened SSRF, multi-target orchestration, provider capability discovery  
+**Version:** `1.0.0`  
+**Stage:** Stable release — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
 **Contract:** `evidence-diagnostic-v1`
+
+Capabilities: 136/136 checks bound · validated dependency graph · evidence firewall · root-cause traversal · explainable scoring · dependency-ordered remediation planning · diagnostics in JSON/Markdown/HTML · DNS-rebinding-hardened SSRF · multi-target orchestration · provider capability discovery · run history/regression.
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**
