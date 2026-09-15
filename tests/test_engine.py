@@ -124,7 +124,7 @@ class TestNormalizePerformanceResult:
         assert f["id"] == "perf-001"
         assert f["severity"] == "high"
         assert f["status"] == "OBSERVED"
-        assert f["priority"] == 0.8
+        assert f["priority"] == 80.0  # canonical 0-100 scale (HIGH)
         assert "confidence" in f
 
     def test_checks_are_executed(self) -> None:

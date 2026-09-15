@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
@@ -87,10 +86,12 @@ def analyze_robots(text: str, path: str = "/") -> dict[str, Any]:
 
 
 def fetch_robots(page_url: str, timeout: int = 10) -> dict[str, Any]:
+    from .net import open_url
     target = robots_url(page_url)
-    request = urllib.request.Request(target, headers={"User-Agent": USER_AGENT}, method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=max(1, min(timeout, 30))) as response:
+        # SSRF-safe: validates the target, re-validates every redirect hop, and
+        # pins the validated resolution for direct connections.
+        with open_url(target, timeout=max(1, min(timeout, 30)), headers={"User-Agent": USER_AGENT}) as response:
             body = response.read(MAX_ROBOTS_BYTES + 1)
             if len(body) > MAX_ROBOTS_BYTES:
                 raise ValueError(f"robots.txt exceeds OPE safety limit of {MAX_ROBOTS_BYTES} bytes")

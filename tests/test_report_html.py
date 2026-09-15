@@ -124,6 +124,27 @@ def test_html_report_escapes_plan_content():
     assert "&lt;b&gt;down&lt;/b&gt;" in out
 
 
+def test_html_report_escapes_malicious_content_in_every_field():
+    payload = '"><script>alert(1)</script><img src=x onerror=alert(2)>'
+    result = _diagnosed_result(
+        target=payload,
+        findings=[{
+            "id": payload, "module": payload, "symptom": payload, "severity": "high",
+            "priority": 72.0, "status": "OBSERVED", "confidence": payload,
+            "root_cause": payload, "remediation": [payload], "validation": [payload],
+            "evidence": [{"source": payload, "target": payload, "value": {"x": payload}}],
+        }],
+    )
+    out = html_report(result)
+    # No raw tag from the payload may appear unescaped anywhere in the document
+    # body (the only "<script" tokens are the report's own inline scripts, not
+    # the payload's). The payload's angle brackets must be entity-encoded.
+    assert "<script>alert(1)</script>" not in out
+    assert "<img src=x" not in out       # would be a real injected tag
+    assert '"><script' not in out        # attribute-breakout form neutralised
+    assert "&lt;script&gt;" in out       # escaped form present
+
+
 def test_html_report_no_failures_states_no_remediation():
     healthy = {f"{i:02d}": {"status": "PASS", "findings": [], "score": 100.0} for i in range(1, 21)}
     out = html_report(_diagnosed_result(modules=healthy, dependency_root_causes={},

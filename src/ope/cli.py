@@ -172,6 +172,12 @@ def performance_audit_command(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"OPE performance-audit failed: {exc}", file=sys.stderr)
         return 2
+    # A capability failure (e.g. browser unavailable) must not present as a
+    # clean success. Report it and exit non-zero; the report is still emitted.
+    status = result.get("status")
+    if status not in (None, "COMPLETED"):
+        print(f"OPE performance-audit did not complete: {status} — {result.get('error') or 'capability unavailable'}", file=sys.stderr)
+        return 2
     return 0
 
 

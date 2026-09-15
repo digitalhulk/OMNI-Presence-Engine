@@ -61,6 +61,25 @@ def _decode_content_encoding(body: bytes, encoding: str | None) -> bytes:
         return out
     raise ValueError(f"Malformed {enc} response body") from last_error
 
+
+def _assert_complete_body(body: bytes, content_length: str | None) -> None:
+    """Reject a body shorter than a declared Content-Length (truncated response).
+
+    A server (or MITM) that advertises more bytes than it delivers must not
+    have the partial body silently accepted as complete evidence. Only genuine
+    truncation is flagged — a body deliberately capped at the size limit is
+    handled by the caller's size check. Chunked/unknown-length responses have
+    no Content-Length and are bounded by the size cap instead.
+    """
+    if not content_length:
+        return
+    try:
+        declared = int(content_length)
+    except (TypeError, ValueError):
+        return
+    if 0 <= len(body) < declared and len(body) <= MAX_RESPONSE_BYTES:
+        raise ValueError(f"Incomplete response: received {len(body)} of {declared} declared bytes")
+
 try:
     # Reported in every audit result, so it is read from the installed package
     # rather than restated here where it would drift out of date.
@@ -267,24 +286,47 @@ def _request(url: str, timeout: int = 15) -> Response:
     # DNS-rebinding TOCTOU); delegate to the egress proxy when one applies.
     opener = build_safe_opener(safe_url, _SafeRedirect(), ctx)
     ttfb_start = time.perf_counter()
-    with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
+    try:
+        with opener.open(req, timeout=max(1, min(timeout, 60))) as r:
+            ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
+            content_type = (r.headers.get("Content-Type") or "").lower()
+            if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
+                raise ValueError(f"Unsupported target content type: {content_type}")
+            body = r.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
+            _assert_complete_body(body, r.headers.get("Content-Length"))
+            body = _decode_content_encoding(body, r.headers.get("Content-Encoding"))
+            return Response(
+                final_url=validate_url_strict(r.geturl()),
+                status=r.status,
+                headers={k.lower(): v for k, v in r.headers.items()},
+                # get_all keeps every Set-Cookie; a plain dict would collapse
+                # them to the last one and hide insecure cookies.
+                set_cookies=list(r.headers.get_all("Set-Cookie") or []),
+                body=body,
+                charset=r.headers.get_content_charset() or "utf-8",
+                dns_ms=dns_ms,
+                ttfb_ms=ttfb_ms,
+            )
+    except urllib.error.HTTPError as http_err:
+        # A 4xx/5xx is a real HTTP response with a status, not a transport
+        # failure. Represent it as a Response so status-based checks (e.g.
+        # CODE-HTTP-001) can evaluate it. Redirect hops were already
+        # SSRF-revalidated before this final error status was reached.
         ttfb_ms = round((time.perf_counter() - ttfb_start) * 1000, 1)
-        content_type = (r.headers.get("Content-Type") or "").lower()
-        if content_type and not any(x in content_type for x in ("text/html", "application/xhtml+xml")):
-            raise ValueError(f"Unsupported target content type: {content_type}")
-        body = r.read(MAX_RESPONSE_BYTES + 1)
-        if len(body) > MAX_RESPONSE_BYTES:
-            raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
-        body = _decode_content_encoding(body, r.headers.get("Content-Encoding"))
+        err_body = http_err.read(MAX_RESPONSE_BYTES + 1)[:MAX_RESPONSE_BYTES]
+        try:
+            err_body = _decode_content_encoding(err_body, http_err.headers.get("Content-Encoding"))
+        except ValueError:
+            pass  # a malformed error body must not mask the real status
         return Response(
-            final_url=validate_url_strict(r.geturl()),
-            status=r.status,
-            headers={k.lower(): v for k, v in r.headers.items()},
-            # get_all keeps every Set-Cookie; a plain dict would collapse
-            # them to the last one and hide insecure cookies.
-            set_cookies=list(r.headers.get_all("Set-Cookie") or []),
-            body=body,
-            charset=r.headers.get_content_charset() or "utf-8",
+            final_url=validate_url_strict(http_err.geturl() or safe_url),
+            status=int(http_err.code),
+            headers={k.lower(): v for k, v in http_err.headers.items()},
+            set_cookies=list(http_err.headers.get_all("Set-Cookie") or []),
+            body=err_body,
+            charset=http_err.headers.get_content_charset() or "utf-8",
             dns_ms=dns_ms,
             ttfb_ms=ttfb_ms,
         )
@@ -579,9 +621,13 @@ def _run_browser_pass(
         return {
             "browser": [br.to_dict() for br in browser_results],
             "performance_report": perf_report.to_dict(),
+            "browser_status": "completed",
         }
     except Exception:
-        return {}
+        # Browser capability unavailable/failed: surface it honestly rather
+        # than silently omitting it. Browser-dependent checks stay UNKNOWN
+        # (never fabricated as FAIL) because no browser evidence was injected.
+        return {"browser_status": "unavailable"}
 
 
 def audit(url: str, timeout: int = 15, fetch_subresources: bool = True, browser: bool = False, browser_timeout: int = 30, browser_profiles: list[str] | None = None) -> dict[str, Any]:

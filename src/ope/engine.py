@@ -44,7 +44,11 @@ def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
         item["root_cause"] = HYPOTHESIS_ROOT_CAUSE
         item["status"] = "HYPOTHESIS"
         item["evidence_status"] = "HYPOTHESIS"
-    item["priority"] = round(max(0.0, min(1.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
+    # Priority is canonically 0-100 (the scoring.priority() primitive and
+    # audit._finding both produce that scale). Clamping to 0-1 here previously
+    # collapsed every distinct high priority to 1.0 — a real severity-ordering
+    # collision. Clamp to the canonical 0-100 range instead.
+    item["priority"] = round(max(0.0, min(100.0, _safe_float(item.get("priority", 0.0), 0.0))), 2)
     return item
 
 
@@ -225,8 +229,9 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+# Canonical 0-100 priority scale (matches scoring.priority() and _finding()).
 _PERF_SEVERITY_PRIORITY: dict[str, float] = {
-    "HIGH": 0.8, "MEDIUM": 0.5, "LOW": 0.3, "INFO": 0.1,
+    "HIGH": 80.0, "MEDIUM": 50.0, "LOW": 30.0, "INFO": 10.0,
 }
 
 

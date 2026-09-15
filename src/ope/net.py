@@ -22,8 +22,28 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
+from typing import Any
 
-from .url import resolve_and_validate
+from .url import resolve_and_validate, validate_url_strict
+
+MAX_REDIRECTS = 5
+
+
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Re-validate every redirect hop against the SSRF policy.
+
+    ``max_redirections`` is set here (urllib reads it off the handler), and
+    each hop's target is passed through ``validate_url_strict`` so a
+    ``public -> 302 -> private`` chain is rejected. Shared by every fetch path
+    (main page, robots, sitemap, subresources) so no path can follow a
+    redirect with an unvalidated destination.
+    """
+
+    max_redirections = MAX_REDIRECTS
+
+    def redirect_request(self, req: urllib.request.Request, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> urllib.request.Request | None:
+        safe = validate_url_strict(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, safe)
 
 
 class _PinnedHTTPConnection(http.client.HTTPConnection):
@@ -88,3 +108,18 @@ def build_opener(url: str, redirect_handler: urllib.request.BaseHandler, context
         redirect_handler, _PinnedHTTPHandler(), _PinnedHTTPSHandler(context=context),
     )
     return opener
+
+
+def open_url(url: str, *, timeout: int, headers: dict[str, str] | None = None) -> Any:
+    """Open *url* through the SSRF-safe, redirect-revalidating, IP-pinned opener.
+
+    The single entry point every non-`audit._request` fetch path uses (robots,
+    sitemap, subresources): the initial URL is validated, each redirect hop is
+    re-validated, and direct connections pin the validated resolution. Returns
+    the raw response object (a context manager); the caller reads it (bounded).
+    """
+    safe = validate_url_strict(url)
+    ctx = ssl.create_default_context()
+    opener = build_opener(safe, SafeRedirectHandler(), ctx)
+    request = urllib.request.Request(safe, headers=headers or {}, method="GET")
+    return opener.open(request, timeout=max(1, min(timeout, 60)))

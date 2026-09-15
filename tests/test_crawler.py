@@ -40,20 +40,37 @@ def test_robots_url_rejects_unsafe_target():
         robots_url("http://127.0.0.1/")
 
 
+class _FakeResp:
+    """Context-manager response for mocking ope.net.open_url."""
+    def __init__(self, body=b"", status=200):
+        self._body = body
+        self.status = status
+        self.headers = type("H", (), {"get_content_charset": lambda self: "utf-8"})()
+
+    def read(self, limit=None):
+        return self._body[:limit] if limit is not None else self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+
+def _fake_open_url(monkeypatch, body=b"", status=200, error=None, capture=None):
+    def opener(url, *, timeout=10, headers=None):
+        if capture is not None:
+            capture["url"] = url
+            capture["headers"] = headers or {}
+        if error is not None:
+            raise error
+        return _FakeResp(body, status)
+    import ope.net as net_module
+    monkeypatch.setattr(net_module, "open_url", opener)
+
+
 def test_fetch_robots_returns_structured_result(monkeypatch):
-    monkeypatch.setattr(crawler_module, "validate_url_strict", lambda url: url)
-
-    class _FakeResponse:
-        status = 200
-        def __init__(self): self.headers = _FakeHeaders()
-        def read(self, limit=None): return b"User-agent: *\nDisallow: /private\nSitemap: https://example.com/sitemap.xml\n"
-        def __enter__(self): return self
-        def __exit__(self, *_): return False
-
-    class _FakeHeaders:
-        def get_content_charset(self): return "utf-8"
-
-    monkeypatch.setattr(crawler_module.urllib.request, "urlopen", lambda req, timeout=10: _FakeResponse())
+    _fake_open_url(monkeypatch, body=b"User-agent: *\nDisallow: /private\nSitemap: https://example.com/sitemap.xml\n")
     result = fetch_robots("https://example.com/")
     assert result["status"] == 200
     assert result["error"] is None
@@ -64,8 +81,7 @@ def test_fetch_robots_returns_structured_result(monkeypatch):
 
 
 def test_fetch_robots_handles_network_error(monkeypatch):
-    monkeypatch.setattr(crawler_module, "validate_url_strict", lambda url: url)
-    monkeypatch.setattr(crawler_module.urllib.request, "urlopen", lambda req, timeout=10: (_ for _ in ()).throw(OSError("connection refused")))
+    _fake_open_url(monkeypatch, error=OSError("connection refused"))
     result = fetch_robots("https://example.com/")
     assert result["status"] is None
     assert "connection refused" in result["error"]
@@ -73,41 +89,18 @@ def test_fetch_robots_handles_network_error(monkeypatch):
 
 
 def test_fetch_robots_enforces_size_limit(monkeypatch):
-    monkeypatch.setattr(crawler_module, "validate_url_strict", lambda url: url)
-
-    class _OversizedResponse:
-        status = 200
-        def __init__(self): self.headers = type("H", (), {"get_content_charset": lambda self: "utf-8"})()
-        def read(self, limit=None): return b"x" * (crawler_module.MAX_ROBOTS_BYTES + 1)
-        def __enter__(self): return self
-        def __exit__(self, *_): return False
-
-    monkeypatch.setattr(crawler_module.urllib.request, "urlopen", lambda req, timeout=10: _OversizedResponse())
+    _fake_open_url(monkeypatch, body=b"x" * (crawler_module.MAX_ROBOTS_BYTES + 1))
     result = fetch_robots("https://example.com/")
     assert result["error"] is not None
     assert "safety limit" in result["error"]
 
 
 def test_fetch_robots_uses_dynamic_user_agent(monkeypatch):
-    monkeypatch.setattr(crawler_module, "validate_url_strict", lambda url: url)
-    captured = {}
-
-    class _Resp:
-        status = 200
-        def __init__(self): self.headers = type("H", (), {"get_content_charset": lambda self: "utf-8"})()
-        def read(self, limit=None): return b""
-        def __enter__(self): return self
-        def __exit__(self, *_): return False
-
-    def fake_open(req, timeout=10):
-        captured["ua"] = req.get_header("User-agent")
-        return _Resp()
-
-    monkeypatch.setattr(crawler_module.urllib.request, "urlopen", fake_open)
+    capture = {}
+    _fake_open_url(monkeypatch, body=b"", capture=capture)
     fetch_robots("https://example.com/")
-    assert captured["ua"] == crawler_module.USER_AGENT
-    # The UA is derived dynamically from the package version, not the old
-    # hardcoded "OPE-Audit/0.1". Guard against that exact stale value rather
-    # than a naive "0.1" substring, which collides with versions like 0.11.0.
-    assert captured["ua"] != "OPE-Audit/0.1"
-    assert captured["ua"].startswith("OPE-Audit/")
+    ua = capture["headers"].get("User-Agent")
+    assert ua == crawler_module.USER_AGENT
+    # Derived from the package version, never the stale hardcoded "OPE-Audit/0.1".
+    assert ua != "OPE-Audit/0.1"
+    assert ua.startswith("OPE-Audit/")

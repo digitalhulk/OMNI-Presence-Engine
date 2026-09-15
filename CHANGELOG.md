@@ -4,6 +4,49 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.1.1
+
+Adversarial release-acceptance hardening. Reconciliation of an independent QA
+pass against real current code + real transport (local HTTP servers, not mocks)
+found several issues still present; all are fixed with regression tests.
+
+### Fixed
+
+- **Redirect-hop SSRF in robots & sitemap** (P1): `crawler.fetch_robots` and
+  `sitemap._fetch_sitemap_bytes` used plain `urlopen`, so a `public → 302 →
+  private/loopback/metadata` redirect was followed without revalidation. Both
+  now use the shared `net.open_url` (validated target + per-hop redirect
+  revalidation via `net.SafeRedirectHandler` + IP pinning), matching the main
+  page and subresource paths. Proven end-to-end with a local redirect server.
+- **4xx/5xx were unreachable in real transport** (P2): `_request` let urllib's
+  `HTTPError` propagate, so a real 404/500/503 crashed the audit and
+  `CODE-HTTP-001` never fired. `HTTPError` is now caught and represented as a
+  `Response` with its status (bounded error body). Verified against a real
+  local server.
+- **Priority scale collision** (P1): `normalize_finding` clamped priority to
+  `0–1` while `_finding`/`scoring.priority` produce `0–100`, collapsing every
+  distinct high priority to `1.0`. Priority is now canonically `0–100`
+  everywhere (clamp fixed; performance producer constants rescaled).
+- **Truncated Content-Length** (P2): a body shorter than a declared
+  `Content-Length` is now rejected as incomplete instead of being silently
+  accepted as evidence.
+- **Unbounded PageSpeed read** (P2): the provider response is now bounded to
+  the engine's size limit, like every other fetch path.
+- **Browser-capability honesty** (P2): a missing/failed headless browser is
+  surfaced (`browser_status: "unavailable"`; browser-dependent checks stay
+  `UNKNOWN`, never fabricated `FAIL`), and `ope performance-audit` now exits
+  non-zero with a clear message on a non-`COMPLETED` run instead of presenting
+  a capability failure as a clean success.
+
+### Added
+
+- **Real-transport tests** (`test_transport.py`): 4xx/5xx status handling,
+  redirect-to-private blocking end-to-end, truncated Content-Length, and the
+  `SafeRedirectHandler` restricted-target matrix — all against a live local
+  HTTP server rather than mocked `_request`.
+- Comprehensive multi-field HTML-escaping regression (id/module/symptom/root
+  cause/evidence/confidence) confirming no attribute-breakout or raw tag.
+
 ## 1.1.0
 
 OMNI Command Center — a local dashboard over the canonical engine.
