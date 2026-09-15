@@ -50,6 +50,21 @@ ope multi-audit https://a.com https://b.com --max-workers 4 --json
 ope providers            # which optional providers are configured + what they upgrade
 ```
 
+### OMNI Command Center (local dashboard)
+
+```bash
+ope dashboard                       # serves http://127.0.0.1:8787/ (local only)
+ope dashboard --port 9000           # choose a port
+```
+
+Open the printed URL, enter a website, and click **Run audit**. The dashboard executes the **real** OPE pipeline (no dummy data, no second engine) and renders health, the 20-module grid, findings (filter/sort), root causes, the dependency-ordered remediation roadmap, an interactive dependency-graph coloured by module status, provider status, and history. Export the exact run as JSON, Markdown, Text, standalone offline HTML, or a complete ZIP bundle. PDF/PNG export is optional and needs the headless-browser extra:
+
+```bash
+pip install 'omni-presence-engine[report]' && playwright install chromium
+```
+
+Without it, PDF/PNG report a clear "unavailable" state instead of producing a fake file. The dashboard binds to localhost by default and preserves every engine security guarantee (SSRF/DNS-rebinding validation, HTML escaping, request-size caps, no credential exposure).
+
 `multi-audit` runs targets with bounded concurrency and per-target isolation — one failing site never destroys the others — and returns a deterministic per-target + aggregate result.
 
 Run history is stored locally at `~/.ope/runs` (override the base directory with `OPE_HOME`) and is what lets the engine detect regressions between runs.
@@ -440,8 +455,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `1.0.0`  
-**Stage:** Stable release — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
+**Version:** `1.1.0`  
+**Stage:** Stable release + OMNI Command Center dashboard — public contract (engine output, CLI commands/exit codes, dependency graph, 136-check registry, report shape) is stable and follows semantic versioning  
 **Contract:** `evidence-diagnostic-v1`
 
 Capabilities: 136/136 checks bound · validated dependency graph · evidence firewall · root-cause traversal · explainable scoring · dependency-ordered remediation planning · diagnostics in JSON/Markdown/HTML · DNS-rebinding-hardened SSRF · multi-target orchestration · provider capability discovery · run history/regression.

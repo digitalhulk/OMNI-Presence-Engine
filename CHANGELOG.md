@@ -4,6 +4,39 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 1.1.0
+
+OMNI Command Center — a local dashboard over the canonical engine.
+
+### Added
+
+- **`ope dashboard`**: a local, framework-free dashboard server (stdlib only,
+  bound to `127.0.0.1` by default). Enter a URL, run the **real** OPE audit,
+  and see live status plus health, the 20-module grid, findings (filter/sort),
+  root causes, the dependency-ordered remediation roadmap, an interactive
+  dependency-graph SVG coloured by module status, provider capability
+  discovery, and history.
+- **`dashboard_service.py`**: the audit-service boundary. It performs no
+  scoring/dependency/root-cause/remediation/evidence logic of its own — every
+  value comes straight from `audit()`→`normalize_result()`,
+  `orchestrator.audit_targets()`, `history.load_runs()`, `provider_status()`,
+  and the canonical report renderers. One source of diagnostic truth.
+- **Export center**: JSON (canonical), Markdown, Text, standalone offline HTML,
+  and a ZIP **bundle** (`report.{json,md,txt,html}` + `manifest.json`) — all
+  rendered from the exact same run. Optional **PDF/PNG** via a headless browser
+  (`omni-presence-engine[report]`); when the browser backend is absent the
+  export reports a clean "unavailable" state rather than producing a fake file.
+- **Dashboard tests** (`test_dashboard.py`): engine↔dashboard parity, no-dummy-data,
+  export consistency across formats, localhost bind, SSRF rejection, request-size
+  cap, HTML-escaping of audited content, no-secret-in-manifest, and determinism.
+
+### Security
+
+- Dashboard binds to localhost by default; request bodies are size-capped; target
+  URLs go through the engine's SSRF + DNS-rebinding guard; exported HTML reuses the
+  canonical escaping renderer; no user input is used as a filesystem path; provider
+  credentials never appear in output (only a configured yes/no flag).
+
 ## 1.0.0
 
 First stable release. The public contract — the `evidence-diagnostic-v1`

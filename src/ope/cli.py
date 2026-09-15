@@ -247,6 +247,15 @@ def multi_audit_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def dashboard_command(args: argparse.Namespace) -> int:
+    from .dashboard import serve
+    try:
+        return serve(host=args.host, port=args.port)
+    except OSError as exc:
+        print(f"OPE dashboard failed to start: {exc}", file=sys.stderr)
+        return 2
+
+
 def providers_command(args: argparse.Namespace) -> int:
     from .providers import provider_status, providers_markdown
     if getattr(args, "as_json", False):
@@ -307,12 +316,16 @@ def build_parser() -> argparse.ArgumentParser:
     pr = sub.add_parser("providers", help="list optional external providers and whether they are configured")
     pr.add_argument("--json", action="store_true", dest="as_json", help="output JSON instead of markdown")
     pr.set_defaults(handler=providers_command)
+    db = sub.add_parser("dashboard", help="launch the OMNI Command Center local dashboard")
+    db.add_argument("--host", default="127.0.0.1", help="bind host (default 127.0.0.1 — local only)")
+    db.add_argument("--port", type=int, default=8787, help="bind port (default 8787)")
+    db.set_defaults(handler=dashboard_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "dashboard", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)

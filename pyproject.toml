@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omni-presence-engine"
-version = "1.0.0"
+version = "1.1.0"
 description = "Evidence-driven digital presence audit and root-cause engine"
 requires-python = ">=3.10"
 dependencies = []
@@ -12,6 +12,10 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest>=8,<9"]
 lint = ["ruff>=0.8", "mypy>=1.13"]
+# Optional: headless-browser rendering for PDF/PNG dashboard exports.
+# The core engine and dashboard work without it (PDF/PNG report a clean
+# "unavailable" state rather than producing a fake file).
+report = ["playwright>=1.40"]
 
 [project.scripts]
 ope = "ope.cli:main"
