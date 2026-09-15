@@ -223,6 +223,30 @@ def performance_audit_markdown_report(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def multi_audit_command(args: argparse.Namespace) -> int:
+    from .orchestrator import audit_targets, multi_audit_markdown
+    try:
+        report = audit_targets(
+            list(args.urls),
+            timeout=args.timeout,
+            fetch_subresources=not args.no_subresources,
+            max_workers=args.max_workers,
+            record_history=not args.no_history,
+        )
+        if args.markdown:
+            print(multi_audit_markdown(report))
+        else:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+    except Exception as exc:
+        print(f"OPE multi-audit failed: {exc}", file=sys.stderr)
+        return 2
+    # A batch where every target failed is itself a failure; otherwise success
+    # (individual target failures are reported per-target in the output).
+    if report["summary"]["target_count"] and report["summary"]["succeeded"] == 0:
+        return 2
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ope", description="OPE evidence-first digital presence engine")
     sub = parser.add_subparsers(dest="command")
@@ -263,12 +287,20 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--markdown", action="store_true", help="output a markdown summary instead of JSON")
     pa.add_argument("--html", metavar="PATH", help="write a RawBlock-branded standalone HTML performance-audit report")
     pa.set_defaults(handler=performance_audit_command)
+    ma = sub.add_parser("multi-audit", help="audit multiple targets with bounded concurrency")
+    ma.add_argument("urls", nargs="+", help="one or more target URLs")
+    ma.add_argument("--markdown", action="store_true", help="output an aggregate markdown summary instead of JSON")
+    ma.add_argument("--timeout", type=int, default=15)
+    ma.add_argument("--no-subresources", action="store_true", help="skip fetching linked CSS/JS")
+    ma.add_argument("--max-workers", type=int, default=4, help="max concurrent target audits (default 4)")
+    ma.add_argument("--no-history", action="store_true", help="do not read or write local run history")
+    ma.set_defaults(handler=multi_audit_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
