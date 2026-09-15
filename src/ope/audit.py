@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -22,7 +23,42 @@ from .scoring import priority as compute_priority
 from .url import ALLOWED_SCHEMES, validate_url_strict
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_DECOMPRESSED_BYTES = 8 * 1024 * 1024
 MAX_REDIRECTS = 5
+
+
+def _decode_content_encoding(body: bytes, encoding: str | None) -> bytes:
+    """Decompress a response body per Content-Encoding, bounded against zip bombs.
+
+    Handles servers that gzip/deflate even though OPE does not request it.
+    Unknown encodings and malformed compressed data raise ValueError rather
+    than yielding garbage that would be silently parsed as HTML.  The
+    decompressed output is capped so a small compressed body cannot expand
+    without limit.
+    """
+    enc = (encoding or "").strip().lower()
+    if not enc or enc == "identity":
+        return body
+    if enc not in ("gzip", "x-gzip", "deflate"):
+        raise ValueError(f"Unsupported content encoding: {enc}")
+    # deflate is served either zlib-wrapped (RFC 1950, wbits 15) or raw
+    # (RFC 1951, wbits -15); gzip is wbits 31. Try the plausible framings.
+    wbits_options = (31,) if enc in ("gzip", "x-gzip") else (15, -15)
+    last_error: Exception | None = None
+    for wbits in wbits_options:
+        decompressor = zlib.decompressobj(wbits)
+        try:
+            out = decompressor.decompress(body, MAX_DECOMPRESSED_BYTES + 1)
+        except zlib.error as exc:
+            last_error = exc
+            continue
+        if len(out) > MAX_DECOMPRESSED_BYTES or decompressor.unconsumed_tail:
+            raise ValueError(
+                f"Decompressed response exceeds OPE safety limit of {MAX_DECOMPRESSED_BYTES} bytes"
+            )
+        out += decompressor.flush()
+        return out
+    raise ValueError(f"Malformed {enc} response body") from last_error
 
 try:
     # Reported in every audit result, so it is read from the installed package
@@ -232,6 +268,7 @@ def _request(url: str, timeout: int = 15) -> Response:
         body = r.read(MAX_RESPONSE_BYTES + 1)
         if len(body) > MAX_RESPONSE_BYTES:
             raise ValueError(f"Response exceeds OPE safety limit of {MAX_RESPONSE_BYTES} bytes")
+        body = _decode_content_encoding(body, r.headers.get("Content-Encoding"))
         return Response(
             final_url=validate_url_strict(r.geturl()),
             status=r.status,

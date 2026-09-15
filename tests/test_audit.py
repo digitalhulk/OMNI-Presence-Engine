@@ -1,5 +1,52 @@
+import gzip
+import zlib
+
+import pytest
+
 import ope.audit as audit_module
-from ope.audit import PageParser, _finding, _json_ld_summary, _link_locality, audit, markdown_report
+from ope.audit import (
+    MAX_DECOMPRESSED_BYTES,
+    PageParser,
+    _decode_content_encoding,
+    _finding,
+    _json_ld_summary,
+    _link_locality,
+    audit,
+    markdown_report,
+)
+
+
+class TestContentEncoding:
+    def test_identity_and_empty_pass_through(self):
+        assert _decode_content_encoding(b"<html>", None) == b"<html>"
+        assert _decode_content_encoding(b"<html>", "identity") == b"<html>"
+
+    def test_gzip_is_decoded(self):
+        raw = b"<html><body>hi</body></html>"
+        assert _decode_content_encoding(gzip.compress(raw), "gzip") == raw
+
+    def test_zlib_deflate_is_decoded(self):
+        raw = b"<html>deflate</html>"
+        assert _decode_content_encoding(zlib.compress(raw), "deflate") == raw
+
+    def test_raw_deflate_is_decoded(self):
+        raw = b"<html>raw-deflate</html>"
+        compressor = zlib.compressobj(wbits=-15)
+        packed = compressor.compress(raw) + compressor.flush()
+        assert _decode_content_encoding(packed, "deflate") == raw
+
+    def test_unknown_encoding_rejected(self):
+        with pytest.raises(ValueError, match="Unsupported content encoding"):
+            _decode_content_encoding(b"...", "br")
+
+    def test_malformed_body_rejected(self):
+        with pytest.raises(ValueError, match="Malformed"):
+            _decode_content_encoding(b"not-actually-gzip", "gzip")
+
+    def test_zip_bomb_is_bounded(self):
+        bomb = gzip.compress(b"A" * (MAX_DECOMPRESSED_BYTES + 1024))
+        with pytest.raises(ValueError, match="exceeds OPE safety limit"):
+            _decode_content_encoding(bomb, "gzip")
 
 
 def test_parser_extracts_core_signals():

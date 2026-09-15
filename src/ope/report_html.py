@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .planner import build_remediation_plan
+
 _SEVERITY_CHIP = {
     "critical": "rb-chip--error",
     "high": "rb-chip--error",
@@ -115,14 +117,81 @@ def _module_grid(modules: dict[str, Any]) -> str:
         entry = modules[key]
         status = str(entry.get("status", "UNKNOWN"))
         count = len(entry.get("findings", []))
+        score = entry.get("score")
+        score_text = "—" if score is None else _e(score)
         cells.append(
             '<div style="border:var(--rb-border-thick);padding:8px;">'
             f'<div class="rb-mono rb-tiny rb-uppercase" style="margin-bottom:6px;">MODULE {_e(key)}</div>'
             f'{_status_chip(status)} '
-            f'<span class="rb-mono rb-tiny">{count} FINDING{"S" if count != 1 else ""}</span>'
+            f'<span class="rb-mono rb-tiny">score {score_text} · {count} FINDING{"S" if count != 1 else ""}</span>'
             "</div>"
         )
     return '<div class="rb-grid rb-grid-4 rb-grid-6" style="margin-bottom:var(--rb-sp-5);">' + "".join(cells) + "</div>"
+
+
+def _plan_step_html(step: dict[str, Any]) -> str:
+    unblocks = step.get("unblocks", [])
+    impact = (
+        f' — unblocks {len(unblocks)} module(s): {_e(", ".join(str(u) for u in unblocks))}'
+        if unblocks else ""
+    )
+    findings = step.get("findings", [])
+    if findings:
+        items = []
+        for finding in findings:
+            sev = _e(str(finding.get("severity", "")).upper())
+            remediation = "".join(
+                f"<li>{_e(step_text)}</li>" for step_text in finding.get("remediation", [])
+            )
+            rem_html = f"<ul class='rb-small'>{remediation}</ul>" if remediation else ""
+            items.append(
+                f'<li><span class="rb-mono rb-tiny">{_e(finding.get("id", ""))} [{sev}]</span> '
+                f'{_e(finding.get("symptom", ""))} '
+                f'<span class="rb-tiny">(priority {_e(finding.get("priority", 0))})</span>{rem_html}</li>'
+            )
+        body = f"<ul>{''.join(items)}</ul>"
+    else:
+        body = '<p class="rb-small">No finding record attached; module status derived from failing checks.</p>'
+    return (
+        f'<div class="rb-card" style="margin-bottom:var(--rb-sp-3);">'
+        f'<h3 class="rb-card__title">MODULE {_e(step.get("module", ""))} '
+        f'{_status_chip(str(step.get("status", "UNKNOWN")))}{impact}</h3>{body}</div>'
+    )
+
+
+def _diagnosis_section(result: dict[str, Any]) -> str:
+    health = result.get("health")
+    health_text = "N/A (insufficient evidence)" if health is None else _e(health)
+    plan = result.get("remediation_plan")
+    if not isinstance(plan, dict):
+        plan = build_remediation_plan(result)
+
+    blocks = [f'<p class="rb-mono"><strong>GLOBAL HEALTH:</strong> {health_text}</p>']
+
+    root_causes = plan.get("root_causes", [])
+    direct_failures = plan.get("direct_failures", [])
+    blocked = plan.get("blocked", [])
+
+    if not root_causes and not direct_failures:
+        blocks.append('<p>No failing modules were diagnosed; no remediation is required.</p>')
+        return "".join(blocks)
+
+    if root_causes:
+        blocks.append('<h3 class="rb-uppercase">FIX FIRST — ROOT CAUSES (BY DOWNSTREAM IMPACT)</h3>')
+        blocks += [_plan_step_html(step) for step in root_causes]
+    if direct_failures:
+        blocks.append('<h3 class="rb-uppercase">THEN — INDEPENDENT FAILURES</h3>')
+        blocks += [_plan_step_html(step) for step in direct_failures]
+    if blocked:
+        waiting = "".join(
+            f'<li>MODULE {_e(entry.get("module", ""))} — waiting on '
+            f'{_e(", ".join(str(w) for w in entry.get("waiting_on", [])) or "upstream failure")}</li>'
+            for entry in blocked
+        )
+        blocks.append(
+            f'<h3 class="rb-uppercase">WAITING (BLOCKED, NOT YET ACTIONABLE)</h3><ul>{waiting}</ul>'
+        )
+    return "".join(blocks)
 
 
 def _finding_card(finding: dict[str, Any]) -> str:
@@ -244,6 +313,9 @@ def html_report(result: dict[str, Any]) -> str:
 
   <h2>SUMMARY</h2>
   {_summary_cards(summary)}
+
+  <h2>DIAGNOSIS &amp; PLAN</h2>
+  <div style="margin-bottom:var(--rb-sp-5);">{_diagnosis_section(result)}</div>
 
   <h2>MODULES (20-LAYER DEPENDENCY GRAPH)</h2>
   {_module_grid(modules)}

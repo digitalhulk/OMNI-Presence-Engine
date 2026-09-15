@@ -75,3 +75,58 @@ def test_write_html_report_persists_file(tmp_path: Path):
     text = target.read_text(encoding="utf-8")
     assert text.startswith("<!doctype html>")
     assert "OMNI-PRESENCE ENGINE" in text
+
+
+def _diagnosed_result(**overrides):
+    modules = {f"{i:02d}": {"status": "BLOCKED", "findings": [], "score": None} for i in range(3, 21)}
+    modules["01"] = {"status": "PASS", "findings": [], "score": 100.0}
+    modules["02"] = {"status": "FAIL", "findings": ["X-1"], "score": 0.0}
+    base = {
+        "target": "https://example.com",
+        "started_at": 1726190400,
+        "inventory": {"status": 503},
+        "summary": {"finding_count": 1, "critical": 0, "high": 1, "medium": 0, "low": 0, "info": 0},
+        "modules": modules,
+        "health": 9.52,
+        "dependency_root_causes": {f"{i:02d}": ["02"] for i in range(3, 21)},
+        "findings": [{
+            "id": "X-1", "module": "02-infrastructure",
+            "symptom": "Origin returns 503 <b>down</b>", "severity": "high", "priority": 72.0,
+            "root_cause": "Origin down", "remediation": ["Restore origin"], "validation": ["Re-audit"],
+            "evidence": [{"source": "http", "target": "https://example.com", "value": {}}],
+        }],
+    }
+    base.update(overrides)
+    return base
+
+
+def test_html_report_surfaces_health_and_plan():
+    out = html_report(_diagnosed_result())
+    assert "GLOBAL HEALTH" in out
+    assert "9.52" in out
+    assert "DIAGNOSIS" in out
+    assert "ROOT CAUSES" in out
+    assert "MODULE 02" in out
+    assert "unblocks" in out
+    assert "Restore origin" in out
+    assert "WAITING" in out  # blocked modules listed
+
+
+def test_html_report_module_grid_shows_scores():
+    out = html_report(_diagnosed_result())
+    assert "score 0.0" in out   # module 02 FAIL
+    assert "score 100.0" in out  # module 01 PASS
+
+
+def test_html_report_escapes_plan_content():
+    out = html_report(_diagnosed_result())
+    assert "<b>down</b>" not in out
+    assert "&lt;b&gt;down&lt;/b&gt;" in out
+
+
+def test_html_report_no_failures_states_no_remediation():
+    healthy = {f"{i:02d}": {"status": "PASS", "findings": [], "score": 100.0} for i in range(1, 21)}
+    out = html_report(_diagnosed_result(modules=healthy, dependency_root_causes={},
+                                        findings=[], health=100.0,
+                                        summary={"finding_count": 0}))
+    assert "no remediation is required" in out.lower()
