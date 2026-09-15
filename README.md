@@ -103,6 +103,8 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **Graph-based scoring** — `global_health()` traverses the dependency graph in topological order so parallel branches (Content/Media, Search/AI, Authority/Local, UX tier) do not penalize each other. BLOCKED modules return `None` scores.
 - **Score explainability** — every module carries a `score_basis` (derivation method, check tallies, evidence-weighted pass/total, and `blocked_by` root causes for BLOCKED modules) and the output carries a `health_basis` (the per-module topological rollup with upstream confidence). Scores are never opaque numbers — the number and its provenance come from a single computation and can never disagree.
 - **Dependency-ordered remediation plan** — `planner.build_remediation_plan()` turns the diagnosis into an actionable, deterministic plan (the executable `PLAN` stage): root-cause modules ordered by how many downstream modules each would unblock, each with its evidence-backed findings; direct failures and blocked-and-waiting modules listed separately. It orders existing evidence only — inventing no remediation — and every report now surfaces a "Diagnosis & Plan" section. `IMPLEMENT` stays human-owned.
+- **Diagnostics in every report** — JSON, Markdown, and the RawBlock HTML report all expose the same diagnostic chain: global health, per-module status and score, dependency root causes, blocked modules, and the remediation plan. All rendered content is HTML-escaped (no XSS).
+- **Real-response robustness** — the live fetch path validates the target against SSRF (loopback, private, link-local, cloud-metadata, IPv6 forms — all resolved-address-checked), revalidates every redirect hop, bounds the response and error bodies, and decompresses gzip/deflate responses under a decompression-bomb cap. Network failures produce a clean CLI error and a non-zero exit code, never a partial or fabricated result.
 - **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
@@ -425,8 +427,8 @@ Build a durable engineering system that turns digital properties from **unknown 
 
 ## 📌 CURRENT RELEASE
 
-**Version:** `0.11.0`  
-**Stage:** Evidence-driven executable foundation — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning  
+**Version:** `0.12.0`  
+**Stage:** Evidence-driven executable foundation — 136/136 checks bound, validated dependency graph, explainable scoring, dependency-ordered remediation planning, diagnostics surfaced in JSON/Markdown/HTML  
 **Contract:** `evidence-diagnostic-v1`
 
 The repository is intentionally being built in verified increments. **If a capability is not executable and validated on `main`, it is documented as a target—not as completed engineering.**

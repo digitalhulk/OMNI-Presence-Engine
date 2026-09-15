@@ -4,6 +4,43 @@ All notable changes to OPE are recorded here. The project follows the release
 flow documented in `docs/20-continuous-optimization/update-pipeline-v1.md`:
 version bump → changelog → validation → release.
 
+## 0.12.0
+
+Live-site finalization: real-response robustness, full diagnostic surfacing
+in every report format, and an end-to-end acceptance layer.
+
+### Added
+
+- **Response decompression** (`audit._decode_content_encoding`): bounded
+  gzip/deflate handling for servers that compress a response OPE did not
+  ask to be compressed. Output is capped (8 MiB) against decompression
+  bombs; unknown or malformed encodings raise rather than feeding garbage
+  to the HTML parser.
+- **HTML report diagnostics**: the canonical `report_html.py` renderer now
+  shows global health, per-module scores, dependency root causes, and the
+  dependency-ordered remediation plan (root causes by unblock impact,
+  independent failures, blocked-and-waiting) — all through the existing
+  `_e()` escaping. The module grid shows each module's score. JSON,
+  Markdown, and HTML now expose the same diagnostic chain the engine
+  computes.
+- **`test_acceptance.py`** (19 tests): drives the real `audit()` pipeline
+  against controlled fixtures with the network mocked — healthy site,
+  broken infrastructure, redirect, malformed HTML, robots restrictions,
+  missing metadata/canonical/alt, performance-evidence present vs. absent,
+  end-to-end cascade + root-cause invariants (evidence firewall: a module
+  with its own FAIL is never masked to BLOCKED), and JSON/Markdown/HTML
+  report generation across HTTP status codes without crashes.
+- **SSRF regression tests**: cloud-metadata IP, IPv4-mapped IPv6 loopback,
+  and mixed public/private resolution are all confirmed blocked.
+
+### Notes
+
+- The one known SSRF limitation remains DNS-rebinding via TOCTOU (the
+  resolved address is validated, then reconnected): closing it requires
+  pinning the validated IP through the opener/TLS/redirect path and is
+  tracked as separate hardening. All static and resolved-address SSRF
+  vectors (loopback, private, link-local, metadata, IPv6 forms) are blocked.
+
 ## 0.11.0
 
 Executable remediation planning (the `PLAN` stage) and diagnostic surfacing.

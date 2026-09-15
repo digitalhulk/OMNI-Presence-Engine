@@ -72,6 +72,8 @@ Scores are explainable: `scoring.module_score_basis()` and `scoring.health_basis
 
 Remediation is planned: `planner.build_remediation_plan()` turns the diagnosis into a dependency-ordered plan attached to the output as `remediation_plan`. Root-cause modules are ordered by how many downstream modules each would unblock (from the dependency graph), then module number; each carries its evidence-backed findings ordered by priority. Direct failures (blocking nothing) and blocked modules (waiting on their root causes) are listed separately. The planner orders existing evidence only — it invents no remediation — and `IMPLEMENT` stays human-owned. `planner.diagnosis_markdown()` renders the health, module status, and plan into the markdown reports so the diagnostic chain is visible, not just computed.
 
+Reporting surfaces the full diagnosis in all three formats: JSON carries every key (`health`, `health_basis`, per-module `score`/`score_basis`/`status`, `dependency_root_causes`, `remediation_plan`, `checks`); the Markdown reports (single-page, site, performance) and the RawBlock HTML report all render a "Diagnosis & Plan" section via the shared renderers, with all content HTML-escaped. The live fetch path is hardened for real responses: SSRF-validated targets (resolved-address checks against loopback/private/link-local/metadata/IPv6 forms), per-hop redirect revalidation, bounded response and error bodies, and bounded gzip/deflate decompression for servers that compress unsolicited.
+
 ## Explicit non-goals
 
 - No synthetic evidence.
