@@ -87,3 +87,28 @@ def test_attach_baseline_survives_corrupt_history(tmp_path, monkeypatch):
     result = {"target": "https://example.com", "inventory": {"ttfb_ms": 10.0}, "findings": []}
     out = history.attach_baseline(result, tmp_path)  # must not raise
     assert "history" in out["inventory"]
+
+
+def test_scopes_do_not_share_a_keyspace(tmp_path):
+    # Same target URL, different scopes → isolated histories.
+    page = _result(run_id="page-1")
+    site = _result(run_id="site-1"); site["engine_scope"] = "site"
+    perf = _result(run_id="perf-1"); perf["engine_scope"] = "performance"
+    history.save_run(page, tmp_path)
+    history.save_run(site, tmp_path)
+    history.save_run(perf, tmp_path)
+    assert [r["run_id"] for r in history.load_runs("https://example.com", tmp_path)] == ["page-1"]
+    assert [r["run_id"] for r in history.load_runs("https://example.com", tmp_path, scope="site")] == ["site-1"]
+    assert [r["run_id"] for r in history.load_runs("https://example.com", tmp_path, scope="performance")] == ["perf-1"]
+
+
+def test_attach_baseline_uses_the_result_scope(tmp_path):
+    first = _result(run_id="site-1", ttfb=100.0); first["engine_scope"] = "site"
+    history.save_run(first, tmp_path)
+    second = _result(run_id="site-2", ttfb=100.0); second["engine_scope"] = "site"
+    out = history.attach_baseline(second, tmp_path)
+    assert out["inventory"]["history"]["baseline_run_id"] == "site-1"
+    # A page-scoped run of the same URL sees no site baseline.
+    page = _result(run_id="page-1")
+    out2 = history.attach_baseline(page, tmp_path)
+    assert out2["inventory"]["history"]["baseline_run_id"] is None

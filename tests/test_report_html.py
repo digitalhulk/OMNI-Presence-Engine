@@ -151,3 +151,42 @@ def test_html_report_no_failures_states_no_remediation():
                                         findings=[], health=100.0,
                                         summary={"finding_count": 0}))
     assert "no remediation is required" in out.lower()
+
+
+def test_html_report_omits_reasoning_when_absent():
+    out = html_report(_result())
+    assert "AI REASONING" not in out
+
+
+def test_html_report_renders_available_reasoning():
+    result = _result()
+    result["reasoning"] = {
+        "provider": "openrouter", "available": True, "advisory": True, "model": "test/model",
+        "result": {"root_cause_hypotheses": ["origin down"], "priorities": ["fix origin"],
+                   "recommendations": [], "content_opportunities": [], "validation_plan": ["re-audit"]},
+    }
+    out = html_report(result)
+    assert "AI REASONING (ADVISORY)" in out
+    assert "Advisory only" in out
+    assert "origin down" in out
+    assert "Root-cause hypotheses" in out
+
+
+def test_html_report_renders_unavailable_reasoning():
+    result = _result()
+    result["reasoning"] = {"provider": "openrouter", "available": False,
+                           "reason": "OPENROUTER_API_KEY is not configured", "result": None}
+    out = html_report(result)
+    assert "AI REASONING (ADVISORY)" in out
+    assert "unavailable" in out.lower()
+    assert "OPENROUTER_API_KEY is not configured" in out
+
+
+def test_html_report_escapes_reasoning_content():
+    payload = "<script>alert('r')</script>"
+    result = _result()
+    result["reasoning"] = {"provider": "openrouter", "available": True, "model": payload,
+                           "result": {"recommendations": [payload]}}
+    out = html_report(result)
+    assert "<script>alert('r')</script>" not in out
+    assert "&lt;script&gt;" in out

@@ -1,22 +1,33 @@
 name: ope.audit.finding
 version: 1
+# Reconciled to the finding shape emitted by ope.engine.normalize_finding
+# (engine_contract: evidence-diagnostic-v1). The implementation is the source of
+# truth; tests/test_schema_contract.py asserts that every normalized finding
+# carries the required fields and that its statuses are within these enums.
 required:
   - id
   - module
   - symptom
-  - evidence
-  - evidence_status
+  - severity
+  - status
   - execution_status
+  - evidence_status
   - priority
+  - confidence
+  - root_cause
+  - evidence
   - remediation
   - validation
+# Evidence lifecycle labels the engine actually emits. OBSERVED (direct
+# observation) and HYPOTHESIS (no established root cause) are produced by the
+# core engine; FACT/ESTIMATE are reserved for evidence that carries a stronger
+# or provider-estimated provenance. (EXPERIMENT/DEPRECATED were specified in an
+# earlier draft but never emitted, so they are not part of this contract.)
 evidence_status_enum:
-  - FACT
   - OBSERVED
-  - ESTIMATE
   - HYPOTHESIS
-  - EXPERIMENT
-  - DEPRECATED
+  - FACT
+  - ESTIMATE
 execution_status_enum:
   - PASS
   - FAIL
@@ -31,32 +42,33 @@ severity_enum:
   - info
 fields:
   id: string
-  entity: string
-  module: string
-  subsystem: string
-  asset: string
+  module: string                 # "NN-name", e.g. "02-infrastructure"
+  affected_layer: string         # module the finding is attributed to
+  dependency: string             # upstream dependency note (may be empty)
   symptom: string
-  root_cause: string
+  root_cause: string             # HYPOTHESIS placeholder when not yet established
   evidence: list[evidence]
   evidence_status: evidence_status_enum
   execution_status: execution_status_enum
+  status: string                 # display status: OBSERVED or HYPOTHESIS
   severity: severity_enum
-  priority: number(0..100)
-  impact: object
-  remediation: list[string]
-  validation: list[string]
+  priority: number(0..100)       # scoring.priority() scale
+  confidence: number(0..1)       # min evidence confidence, bounded
+  impact: string                 # narrative impact (string, not an object)
+  remediation: list[string]      # the priority-v1 "recommended_action" output
+  validation: list[string]       # the priority-v1 "validation_requirements" output
   regression_guard: list[string]
 evidence:
   required: [source, observed_at]
   fields:
     source: string
-    url: string
+    target: string
     observed_at: datetime
     value: any
     confidence: number(0..1)
-
+    provenance: string
 rules:
   - UNKNOWN is not PASS.
   - Missing evidence cannot produce PASS.
-  - A hypothesis must not be presented as a fact.
-  - Provider estimates retain estimate status.
+  - A hypothesis must not be presented as a fact (status/evidence_status = HYPOTHESIS).
+  - Provider estimates retain ESTIMATE status.

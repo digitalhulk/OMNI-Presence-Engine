@@ -74,7 +74,15 @@ Optional external evidence — set the environment variable and the matching che
 | Variable | Unlocks |
 | --- | --- |
 | `OPE_PAGESPEED_API_KEY` | Core Web Vitals (LCP, FCP, CLS, TBT, INP) from Google PageSpeed Insights |
-| `OPENROUTER_API_KEY` | Optional advisory reasoning layer over deterministic evidence |
+| `OPE_SEARCH_CONSOLE_KEY` | Query visibility from Google Search Console (`09-search.query_visibility`) |
+| `OPE_BACKLINK_API_KEY` | Off-site authority links from a backlink index, Ahrefs v3 by default (`11-authority.backlinks`) |
+| `OPENROUTER_API_KEY` | Optional advisory reasoning layer — surface it with `ope audit … --reason` |
+
+Add an optional advisory AI reasoning layer over the deterministic evidence (needs `OPENROUTER_API_KEY`; without it the layer reports a clean "unavailable" state and the deterministic audit is unaffected):
+
+```bash
+ope audit https://example.com --reason --markdown
+```
 
 Legacy `ope-audit` remains supported.
 
@@ -133,14 +141,14 @@ RUN RECORDED FOR THE NEXT COMPARISON
 - **DNS-rebinding hardening** — for direct connections the fetch pins the validated DNS resolution: the address that is SSRF-validated is exactly the one connected to, closing the resolve→validate→connect TOCTOU window. TLS SNI/cert validation still use the hostname. When an egress proxy is configured it resolves and enforces policy, so pinning is skipped and proxy semantics are preserved.
 - **Multi-target orchestration** — `ope multi-audit URL...` audits many targets with bounded concurrency and strict per-target isolation (one failure never destroys the others), deterministic input-order aggregation, and a per-target + aggregate summary in JSON or Markdown.
 - **Optional-provider capability discovery** — `ope providers` lists each optional provider (PageSpeed, Search Console, backlink index, OpenRouter), whether its credential is configured, and which checks it would upgrade. Absent credentials keep the affected checks `UNKNOWN` with a specific reason — never fabricated.
-- **Evidence-backed check bindings** — all 136 registry checks are bound; 115 execute deterministically against observations, 3 are finding-record checks, and 18 return `UNKNOWN` with a specific reason naming the missing external API or service.
+- **Evidence-backed check bindings** — all 136 registry checks are bound; 118 execute against direct observations or an optional configured provider (PageSpeed, Search Console, backlink index, OSV dependency scan), 3 are finding-record checks, and 15 return `UNKNOWN` with a specific reason naming the missing external API or service.
 - **Deterministic observation surface** — HTTP/TLS handshake, robots.txt and AI-crawler access, JSON-LD entity graph, HTML structure and accessibility signals, linked CSS/JS measurement, DNS/TTFB timing, content citability.
 - **Local run history** — regression and anomaly comparison between runs of the same target.
-- **Optional external evidence** — PageSpeed Insights (Core Web Vitals) and an advisory OpenRouter reasoning layer, both credential-gated.
+- **Optional external evidence** — PageSpeed Insights (Core Web Vitals), Google Search Console (query visibility), a backlink index (off-site authority), and an advisory OpenRouter reasoning layer (surfaced by `ope audit … --reason` and the dashboard's AI Reasoning panel) — all credential-gated and honestly unavailable when unset.
 
 ### Check coverage by module
 
-Bound checks per module — **136 of 136 total** (18 require external APIs and return `UNKNOWN` with a reason):
+Bound checks per module — **136 of 136 total** (15 require external APIs with no adapter yet and return `UNKNOWN` with a reason):
 
 | Module | Bound | Module | Bound |
 | --- | --- | --- | --- |
@@ -165,7 +173,7 @@ python3 -c "from ope.registry import CHECKS; from ope.audit_pipeline import AUDI
 
 The following are architectural targets and are **not represented as active implementation on `main` until verified there**:
 
-- provider adapters for the remaining external data sources (16 checks are bound but return `UNKNOWN` until an evidence source exists for them; `ope providers` lists what each configured provider upgrades). PageSpeed, Search Console, and the backlink index have real, credential-gated adapters (`ope providers` shows them as *active*); the remaining external checks — brand mentions, reputation, dependency CVEs, translation quality, server logs, and similar — have no adapter yet and stay `UNKNOWN` with a specific reason rather than a fabricated value.
+- provider adapters for the remaining external data sources (15 checks are bound but return `UNKNOWN` until an evidence source exists for them; `ope providers` lists what each configured provider upgrades). PageSpeed, Search Console, the backlink index, and the OSV dependency-CVE scan have real, credential-gated adapters (`ope providers` shows them as *active*); the remaining external checks — brand mentions, reputation, factual accuracy, translation quality, colour contrast, analytics/server logs/CRM, and similar — have no adapter yet and stay `UNKNOWN` with a specific reason rather than a fabricated value. These are deliberately not built because each needs either a paid/OAuth API whose contract cannot be verified in this environment, or a data source that would require inventing a metric from fuzzy inputs (e.g. deriving "reputation" from web search), or an evidence type with no matching check in the fixed 136-check registry (e.g. keyword-rank data). Building any of them from a guessed contract would violate the project's no-fabrication rule.
 - a standalone scheduler daemon. Multi-target orchestration (`ope multi-audit`) and per-target run history are implemented as the reusable primitives; an external scheduler (cron, CI, a queue) supplies the target list and cadence and calls the engine. The engine deliberately owns *how* to audit and aggregate, not *when* to run.
 
 This distinction is intentional: **documentation must never claim code that is not actually present.**

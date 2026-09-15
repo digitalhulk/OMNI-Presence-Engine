@@ -90,3 +90,11 @@ def test_provider_env_vars_match_check_reasons():
                 # only assert for the ones declared external.
                 if check_id in _EXTERNAL_EVIDENCE_CHECKS:
                     assert entry["env_var"] in reasons
+
+
+def test_osv_dependency_provider_is_registered_and_implemented():
+    status = {p["provider"]: p for p in provider_status({})}
+    assert "osv_dependencies" in status
+    assert status["osv_dependencies"]["implemented"] is True
+    assert status["osv_dependencies"]["env_var"] == "OPE_DEPENDENCY_SCAN"
+    assert "16-security.dependencies" in status["osv_dependencies"]["upgrades_checks"]

@@ -114,6 +114,8 @@ def _make_handler(state: _State) -> type[http.server.BaseHTTPRequestHandler]:
                     self._handle_audit(body)
                 elif route == "/api/multi-audit":
                     self._handle_multi(body)
+                elif route == "/api/reason":
+                    self._handle_reason(body)
                 elif route == "/api/export":
                     self._handle_export(body)
                 else:
@@ -152,6 +154,17 @@ def _make_handler(state: _State) -> type[http.server.BaseHTTPRequestHandler]:
                 if entry.get("ok") and isinstance(entry.get("result"), dict):
                     state.store(entry["result"])
             self._json(200, report)
+
+        def _handle_reason(self, body: dict[str, Any]) -> None:
+            # Resolve the exact cached run (preferred) or a posted result, like export.
+            run_id = str(body.get("run_id") or "")
+            result = state.get(run_id) if run_id else None
+            if result is None:
+                result = body.get("result")
+            if not isinstance(result, dict):
+                self._json(400, {"error": "no run available to reason over (missing run_id/result)"})
+                return
+            self._json(200, {"reasoning": service.get_reasoning(result)})
 
         def _handle_export(self, body: dict[str, Any]) -> None:
             fmt = str(body.get("format") or "json")

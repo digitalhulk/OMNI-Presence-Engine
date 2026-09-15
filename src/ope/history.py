@@ -26,9 +26,15 @@ def history_dir(directory: str | Path | None = None) -> Path:
     return Path(os.getenv("OPE_HOME") or (Path.home() / ".ope")) / "runs"
 
 
-def _target_key(target: str) -> str:
-    """Stable, filesystem-safe directory name for an audited target."""
-    return hashlib.sha256(target.encode("utf-8")).hexdigest()[:16]
+def _target_key(target: str, scope: str = "page") -> str:
+    """Stable, filesystem-safe directory name for an audited target.
+
+    Keyed by (scope, target) so different audit scopes of the same URL never
+    share a history keyspace: a page audit, a site audit, and a performance
+    audit of the same target carry different findings and metrics, and mixing
+    them would produce misleading regression comparisons.
+    """
+    return hashlib.sha256(f"{scope}:{target}".encode("utf-8")).hexdigest()[:16]
 
 
 def _metrics(inventory: dict[str, Any]) -> dict[str, float]:
@@ -59,7 +65,8 @@ def snapshot(result: dict[str, Any]) -> dict[str, Any]:
 def save_run(result: dict[str, Any], directory: str | Path | None = None) -> Path | None:
     """Persist one run, returning None when the store is not writable."""
     try:
-        target_dir = history_dir(directory) / _target_key(str(result.get("target") or ""))
+        scope = str(result.get("engine_scope") or "page")
+        target_dir = history_dir(directory) / _target_key(str(result.get("target") or ""), scope)
         target_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
         path = target_dir / f"{stamp}.json"
@@ -71,9 +78,9 @@ def save_run(result: dict[str, Any], directory: str | Path | None = None) -> Pat
         return None
 
 
-def load_runs(target: str, directory: str | Path | None = None, limit: int = MAX_RUNS_PER_TARGET) -> list[dict[str, Any]]:
-    """Load stored runs for one target, newest first."""
-    target_dir = history_dir(directory) / _target_key(str(target or ""))
+def load_runs(target: str, directory: str | Path | None = None, limit: int = MAX_RUNS_PER_TARGET, scope: str = "page") -> list[dict[str, Any]]:
+    """Load stored runs for one target and scope, newest first."""
+    target_dir = history_dir(directory) / _target_key(str(target or ""), scope)
     if not target_dir.is_dir():
         return []
     runs = []
@@ -128,7 +135,8 @@ def attach_baseline(result: dict[str, Any], directory: str | Path | None = None)
     if not isinstance(inventory, dict):
         return result
     target = str(result.get("target") or "")
-    runs = load_runs(target, directory)
+    scope = str(result.get("engine_scope") or "page")
+    runs = load_runs(target, directory, scope=scope)
     store = history_dir(directory)
     try:
         store.mkdir(parents=True, exist_ok=True)

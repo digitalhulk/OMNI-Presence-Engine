@@ -153,7 +153,7 @@ class TestServer:
 
     def test_providers_and_graph_endpoints(self, live_server):
         _, prov = _get(live_server, "/api/providers")
-        assert len(prov["providers"]) == 4
+        assert len(prov["providers"]) == 5
         _, g = _get(live_server, "/api/dependency-graph")
         assert len(g["nodes"]) == 20
 
@@ -237,3 +237,28 @@ class TestDeterminism:
         a = svc.run_single_audit("http://acme.example/", record_history=False)
         b = svc.run_single_audit("http://acme.example/", record_history=False)
         assert json.dumps(_scrub(a), sort_keys=True) == json.dumps(_scrub(b), sort_keys=True)
+
+
+class TestReasoning:
+    def test_reason_endpoint_honest_unavailable_without_key(self, live_server, monkeypatch):
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        # Run a real audit first so the server caches the run.
+        status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
+        assert status == 200
+        run = json.loads(body)
+        status, rbody, _ = _post(live_server, "/api/reason", {"run_id": run["run_id"], "result": run})
+        assert status == 200
+        reasoning = json.loads(rbody)["reasoning"]
+        assert reasoning["available"] is False
+        assert "OPENROUTER_API_KEY" in reasoning["reason"]
+        assert reasoning["result"] is None
+
+    def test_reason_endpoint_requires_a_run(self, live_server):
+        status, rbody, _ = _post(live_server, "/api/reason", {})
+        assert status == 400
+
+    def test_reasoning_never_persisted_to_history(self, live_server, monkeypatch):
+        # The advisory reasoning must not enter the deterministic run record.
+        status, body, _ = _post(live_server, "/api/audit", {"url": "http://acme.example/"})
+        run = json.loads(body)
+        assert "reasoning" not in run

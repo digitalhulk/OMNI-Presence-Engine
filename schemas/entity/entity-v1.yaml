@@ -1,19 +1,49 @@
 name: ope.entity
 version: 1
 purpose: Canonical representation of the thing whose online presence is being engineered.
-required: [id, type, canonical_name, canonical_url]
-entity_types: [person, organization, brand, product, service, location, application, website]
-fields:
-  id: string
-  type: entity_type
-  canonical_name: string
-  canonical_url: string
-  aliases: list[string]
-  identifiers: map
-  descriptions: list[localized_text]
-  relationships: list[relationship]
-  official_sources: list[source]
-  properties: map
-localized_text: {language: string, text: string}
-relationship: {predicate: string, target_entity_id: string}
-source: {name: string, url: string, authority: primary|secondary|community}
+
+# TWO LAYERS, clearly separated so the schema never claims code that is not
+# present:
+#
+# 1) observed_record — MATERIALIZED. ope.engine emits `entity` on every
+#    normalized result, built purely from the JSON-LD signals already extracted
+#    into inventory (the same signals the 01-entity module evaluates). No signal
+#    is inferred; absent ones are null/empty. This is the executable contract.
+#
+# 2) canonical_record — NOT MATERIALIZED from a single-page audit. A fully
+#    resolved identity graph (stable id, aliases, localized descriptions,
+#    predicate/target relationship edges, graded official sources) requires an
+#    entity-resolution data source that the engine does not have; it is retained
+#    as a forward-looking schema, not emitted, and no code depends on it.
+
+observed_record:                 # emitted as result["entity"] — see engine._attach_entity
+  fields:
+    types: list[string]          # schema.org types published on the page
+    has_entity_type: boolean     # a recognised entity type is present
+    canonical_url: string        # declared canonical, else the final/target URL
+    identifiers_present: boolean|null   # sameAs/identifier/vatID/taxID/duns/leiCode observed
+    relationships_present: boolean|null # parentOrganization/memberOf/brand/... observed
+    name_matches_title: boolean|null    # JSON-LD name aligns with the document title
+    is_local_business: boolean
+    has_nap: boolean|null        # name/address/phone consistency for a local business
+    ownership_verification: list[string]  # verification meta tags observed
+    evidence_status: [OBSERVED, UNKNOWN]
+    source: string               # always "json-ld"
+
+canonical_record:                # forward-looking; NOT emitted
+  required: [id, type, canonical_name, canonical_url]
+  entity_types: [person, organization, brand, product, service, location, application, website]
+  fields:
+    id: string
+    type: entity_type
+    canonical_name: string
+    canonical_url: string
+    aliases: list[string]
+    identifiers: map
+    descriptions: list[localized_text]
+    relationships: list[relationship]
+    official_sources: list[source]
+    properties: map
+  localized_text: {language: string, text: string}
+  relationship: {predicate: string, target_entity_id: string}
+  source: {name: string, url: string, authority: primary|secondary|community}

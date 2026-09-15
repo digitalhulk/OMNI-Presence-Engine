@@ -69,8 +69,28 @@ def _reconcile_module_status(existing: Any, check_statuses: list[str]) -> str:
     return ExecutionStatus.UNKNOWN.value
 
 
-def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str, float | None]:
+_SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+
+
+def _max_fail_severity(module: dict[str, Any], severity_by_id: dict[str, str]) -> str | None:
+    """Highest severity among the module's own findings (drives the score cap)."""
+    worst: str | None = None
+    worst_rank = -1
+    for fid in module.get("findings", []) or []:
+        sev = str(severity_by_id.get(str(fid), "")).lower()
+        rank = _SEVERITY_RANK.get(sev, -1)
+        if rank > worst_rank:
+            worst_rank, worst = rank, sev
+    return worst
+
+
+def _compute_scores(modules: dict[str, Any], checks: dict[str, Any], findings: list[dict[str, Any]] | None = None) -> dict[str, float | None]:
     """Compute per-module scores and attach score + score_basis to each module."""
+    severity_by_id = {
+        str(f.get("id")): str(f.get("severity", ""))
+        for f in (findings or [])
+        if isinstance(f, dict) and f.get("id") is not None
+    }
     scores: dict[str, float | None] = {}
     for module_number, module in modules.items():
         if not isinstance(module, dict):
@@ -80,7 +100,11 @@ def _compute_scores(modules: dict[str, Any], checks: dict[str, Any]) -> dict[str
         for check_id, check_data in checks.items():
             if isinstance(check_data, dict) and str(check_data.get("module", "")).startswith(module_code + "-"):
                 module_checks[check_id] = check_data
-        basis = module_score_basis(module, module_checks=module_checks or None)
+        basis = module_score_basis(
+            module,
+            module_checks=module_checks or None,
+            max_fail_severity=_max_fail_severity(module, severity_by_id),
+        )
         module["score"] = basis["score"]
         module["score_basis"] = basis
         scores[module_number] = basis["score"]
@@ -134,7 +158,7 @@ def _reconcile_and_score(output: dict[str, Any], modules: dict[str, Any]) -> Non
     if root_cause_map:
         output["dependency_root_causes"] = root_cause_map
 
-    scores = _compute_scores(modules, checks)
+    scores = _compute_scores(modules, checks, output.get("findings"))
     basis = health_basis(scores)
     output["health"] = basis["health"]
     output["health_basis"] = basis
@@ -153,6 +177,30 @@ def _init_modules_from_findings(findings: list[dict[str, Any]]) -> dict[str, dic
     return modules
 
 
+def _attach_entity(output: dict[str, Any]) -> None:
+    """Materialize a structured entity record from the JSON-LD signals already
+    extracted into inventory. This is a summary of observed signals (the same
+    ones the 01-entity module evaluates), never a fabricated identity graph:
+    every field is read from inventory, and absent signals stay None/empty.
+    """
+    inv = output.get("inventory")
+    inv = inv if isinstance(inv, dict) else {}
+    types = inv.get("entity_types")
+    output["entity"] = {
+        "types": list(types) if isinstance(types, list) else [],
+        "has_entity_type": bool(inv.get("has_entity_type")),
+        "canonical_url": inv.get("canonical") or output.get("final_url") or output.get("target"),
+        "identifiers_present": inv.get("has_identifiers"),
+        "relationships_present": inv.get("has_relationships"),
+        "name_matches_title": inv.get("name_matches_title"),
+        "is_local_business": bool(inv.get("is_local_business")),
+        "has_nap": inv.get("has_nap"),
+        "ownership_verification": list(inv.get("verification_tags") or []),
+        "evidence_status": "OBSERVED" if inv.get("has_entity_type") else "UNKNOWN",
+        "source": "json-ld",
+    }
+
+
 def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
     """Attach the stable evidence/diagnostic contract to an audit result."""
     output = deepcopy(result) if isinstance(result, dict) else {}
@@ -168,6 +216,7 @@ def normalize_result(result: dict[str, Any]) -> dict[str, Any]:
         output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 
@@ -198,6 +247,7 @@ def normalize_site_result(site_result: dict[str, Any]) -> dict[str, Any]:
     output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 
@@ -226,6 +276,7 @@ def normalize_performance_result(perf_result: dict[str, Any]) -> dict[str, Any]:
     output["modules"] = modules
 
     _reconcile_and_score(output, modules)
+    _attach_entity(output)
     return output
 
 

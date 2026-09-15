@@ -343,3 +343,51 @@ class TestEvidenceFirewall:
         ten = next(s for s in plan["root_causes"] if s["module"] == "10")
         assert two["unblock_count"] > ten["unblock_count"]
         assert plan["summary"]["blocked_count"] >= 1
+
+
+class TestEntityRecord:
+    def _result_with_entity_signals(self):
+        return {
+            "target": "https://example.com",
+            "final_url": "https://example.com/",
+            "modules": {f"{i:02d}": {"status": "UNKNOWN", "findings": []} for i in range(1, 21)},
+            "findings": [],
+            "inventory": {
+                "canonical": "https://example.com/",
+                "entity_types": ["Organization"],
+                "has_entity_type": True,
+                "has_identifiers": True,
+                "has_relationships": False,
+                "name_matches_title": True,
+                "is_local_business": False,
+                "has_nap": None,
+                "verification_tags": ["google-site-verification"],
+            },
+        }
+
+    def test_entity_materialized_from_signals(self, monkeypatch):
+        monkeypatch.setattr(engine, "execute_audit_checks", lambda _: {"checks": {}})
+        out = engine.normalize_result(self._result_with_entity_signals())
+        ent = out["entity"]
+        assert ent["types"] == ["Organization"]
+        assert ent["has_entity_type"] is True
+        assert ent["canonical_url"] == "https://example.com/"
+        assert ent["identifiers_present"] is True
+        assert ent["relationships_present"] is False
+        assert ent["ownership_verification"] == ["google-site-verification"]
+        assert ent["evidence_status"] == "OBSERVED"
+        assert ent["source"] == "json-ld"
+
+    def test_entity_unknown_without_signals(self, monkeypatch):
+        monkeypatch.setattr(engine, "execute_audit_checks", lambda _: {"checks": {}})
+        out = engine.normalize_result({"target": "https://x", "modules": {}, "findings": [], "inventory": {}})
+        assert out["entity"]["has_entity_type"] is False
+        assert out["entity"]["evidence_status"] == "UNKNOWN"
+        assert out["entity"]["types"] == []
+
+    def test_entity_never_fabricates(self, monkeypatch):
+        # A field with no supporting signal stays null/empty — never invented.
+        monkeypatch.setattr(engine, "execute_audit_checks", lambda _: {"checks": {}})
+        out = engine.normalize_result({"target": "https://x", "modules": {}, "findings": [], "inventory": {}})
+        assert out["entity"]["name_matches_title"] is None
+        assert out["entity"]["ownership_verification"] == []
