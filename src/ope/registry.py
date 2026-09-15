@@ -16,7 +16,9 @@ class RegisteredCheck:
     depends_on: tuple[str, ...] = ()
 
 
-# The YAML module registry remains the source of truth for weights and evidence.
+# The YAML module registry documents module evidence requirements and
+# illustrative weights; scoring does not consume those weights (see
+# schemas/scoring-v1.md — evidence-weighted coverage + graph topology).
 # Executable IDs are namespaced by module so repeated check names (for example
 # forms, reviews, captions, dns, and consistency) cannot collide globally.
 _CHECK_DEFINITIONS: tuple[tuple[str, str], ...] = (

@@ -1,10 +1,17 @@
 name: ope.module-registry
 version: 1
-purpose: Machine-readable registry for the 20 OPE master modules, executable checks, evidence requirements, and scoring weights.
+purpose: Machine-readable registry for the 20 OPE master modules, executable checks, and evidence requirements.
 status: FACT
+# NOTE ON WEIGHTS: the per-module `weight` values below are illustrative
+# planning metadata describing relative module importance. They are NOT consumed
+# by the scoring engine. Per schemas/scoring-v1.md, module health is
+# evidence-weighted pass coverage and global health is dependency-graph
+# topological (see ope.scoring.module_score_basis / health_basis), neither of
+# which reads these weights. They are retained as design intent, not as an
+# executable input, so no code path depends on `module_weight_total: 100`.
 scoring:
   formula: priority = clamp(100 * impact * confidence * urgency * fixability, 0, 100)
-  module_weight_total: 100
+  module_weight_total: 100  # illustrative only; not used by the evidence-weighted scorer
 modules:
   - id: 01-entity
     name: Entity
