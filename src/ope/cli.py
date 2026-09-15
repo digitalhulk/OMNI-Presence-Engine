@@ -76,9 +76,88 @@ def audit_command(args: argparse.Namespace) -> int:
         elif not args.html:
             print(json.dumps(result, indent=2, ensure_ascii=False))
     except Exception as exc:
-        print(f"OPE audit failed: {exc}", file=sys.stderr)
+        print(_audit_failure_message(args.url, exc), file=sys.stderr)
         return 2
     return 0
+
+
+def _audit_failure_message(url: str, exc: Exception) -> str:
+    """Actionable one-line failure message, preserving the underlying cause.
+
+    Genuine network/validation failures are classified (proxy/DNS/TLS/timeout/
+    SSRF) so an environment or proxy block is not mistaken for a website fault;
+    anything else keeps the raw message so unrelated bugs are not mislabelled.
+    """
+    from .net_diagnostics import classify_network_error, looks_like_network_error
+    if not looks_like_network_error(exc):
+        return f"OPE audit failed: {exc}"
+    proxied = False
+    try:
+        from .net import uses_proxy
+        from .url import validate_target
+        v = validate_target(url, resolve_dns=False)
+        proxied = uses_proxy(v.normalized or url)
+    except Exception:
+        proxied = False
+    category, message = classify_network_error(exc, proxied=proxied)
+    lines = [f"OPE audit failed [{category}]: {message}"]
+    if category in ("PROXY_BLOCK", "NETWORK_UNREACHABLE") or (category == "DNS_FAILURE" and proxied):
+        lines.append(f"This is an environment/network limit, not a website failure. Run `ope doctor {url}` to confirm, then run OPE from a host with open outbound HTTPS.")
+    return "\n".join(lines)
+
+
+def doctor_command(args: argparse.Namespace) -> int:
+    """Diagnose outbound connectivity to a target and classify any block."""
+    from .net_diagnostics import diagnose
+    report = diagnose(args.url, timeout=args.timeout)
+    if getattr(args, "as_json", False):
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print(doctor_markdown(report))
+    # Exit 0 only when the target is actually reachable; a non-zero code marks a
+    # block, and an environment/SSRF block is distinct from a website problem.
+    return 0 if report.get("verdict") == "REACHABLE" else 2
+
+
+def doctor_markdown(report: dict[str, Any]) -> str:
+    verdict = str(report.get("verdict") or "UNKNOWN")
+    labels = {
+        "REACHABLE": "REACHABLE — the target answered over HTTP",
+        "ENVIRONMENT_BLOCK": "ENVIRONMENT / NETWORK BLOCK — this machine's network or proxy refused egress (NOT a website failure)",
+        "WEBSITE_UNREACHABLE": "WEBSITE UNREACHABLE — the target host did not answer (DNS/refused/timeout/TLS)",
+        "SSRF_BLOCKED": "SSRF BLOCKED — the target resolves to a restricted address and OPE refused to connect",
+        "INVALID_URL": "INVALID URL — rejected before any connection",
+    }
+    lines = [
+        f"# OPE Network Doctor — {report.get('target', '?')}",
+        "",
+        f"**Verdict:** `{verdict}` — {labels.get(verdict, verdict)}  ",
+        f"**Category:** `{report.get('category')}`  ",
+        f"**Detail:** {report.get('detail')}",
+        "",
+        "## Layers",
+    ]
+    layers = report.get("layers", {})
+    val = layers.get("validation", {})
+    lines.append(f"- **URL validation:** `{val.get('status')}`"
+                 + (f" — {val.get('reason')}" if val.get("reason") else "")
+                 + (f" (resolved: {', '.join(val.get('resolved_addresses') or []) or 'none'})"))
+    proxy = layers.get("proxy", {})
+    lines.append(f"- **Proxy:** mode=`{proxy.get('mode')}`, applies={proxy.get('proxy_applies_to_target')}, env set: {', '.join(proxy.get('proxy_env_vars_set') or []) or 'none'} (values never shown)")
+    if "http" in layers:
+        h = layers["http"]
+        if h.get("reachable"):
+            lines.append(f"- **HTTP:** reachable — status `{h.get('status')}`, final `{h.get('final_url')}`"
+                         + (" (redirected)" if h.get("redirected") else ""))
+        else:
+            lines.append(f"- **HTTP:** NOT reachable — `{h.get('category')}` — {h.get('error')}")
+    if "robots" in layers:
+        r = layers["robots"]
+        lines.append("- **robots.txt:** " + (f"status `{r.get('status')}`" if r.get("reachable") else f"unreachable — {r.get('error')}"))
+    if "sitemap" in layers:
+        s = layers["sitemap"]
+        lines.append(f"- **sitemap:** {s.get('url')} — " + (f"status `{s.get('status')}`" if s.get("reachable") else f"unreachable — {s.get('error')}"))
+    return "\n".join(lines)
 
 
 def site_audit_command(args: argparse.Namespace) -> int:
@@ -349,12 +428,17 @@ def build_parser() -> argparse.ArgumentParser:
     db.add_argument("--host", default="127.0.0.1", help="bind host (default 127.0.0.1 — local only)")
     db.add_argument("--port", type=int, default=8787, help="bind port (default 8787)")
     db.set_defaults(handler=dashboard_command)
+    doc = sub.add_parser("doctor", help="diagnose outbound network connectivity to a target (environment vs website)")
+    doc.add_argument("url")
+    doc.add_argument("--json", action="store_true", dest="as_json", help="output JSON instead of markdown")
+    doc.add_argument("--timeout", type=int, default=15)
+    doc.set_defaults(handler=doctor_command)
     return parser
 
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "dashboard", "-h", "--help"}:
+    if argv and argv[0] not in {"setup", "audit", "site-audit", "performance-audit", "multi-audit", "providers", "dashboard", "doctor", "-h", "--help"}:
         argv = ["audit", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)

@@ -146,6 +146,103 @@ request bodies, and never exposes credentials.
 
 ---
 
+## 🌍 RUN A LIVE AUDIT (production networking)
+
+OPE audits **live public websites over real HTTPS**. It needs one thing from the
+host it runs on: **open outbound HTTPS (port 443)** to the target. The engine is
+a standard, secure network client — it validates every target against the
+SSRF/DNS-rebinding guard, verifies TLS certificates, re-validates every redirect
+hop, and honours the machine's proxy configuration. It does **not** bypass
+firewalls or proxies; if the host blocks egress, OPE reports that honestly rather
+than faking a result.
+
+### Check connectivity first — `ope doctor`
+
+Before (or instead of) a full audit, diagnose whether a target is reachable from
+*this* machine and, if not, *why*:
+
+```bash
+ope doctor https://www.example.com            # human-readable
+ope doctor https://www.example.com --json     # machine-readable
+```
+
+It probes each layer — URL validation → DNS → proxy applicability → HTTP →
+robots.txt → sitemap — and returns a **verdict** that never conflates causes:
+
+| Verdict | Meaning | Exit |
+| --- | --- | --- |
+| `REACHABLE` | the target answered over HTTP (any status) | `0` |
+| `ENVIRONMENT_BLOCK` | this machine's network/proxy refused egress (e.g. a proxy `403` CONNECT) — **not** a website fault | `2` |
+| `WEBSITE_UNREACHABLE` | the target host did not answer (DNS / refused / timeout / TLS) | `2` |
+| `SSRF_BLOCKED` | the target resolves to a restricted address; OPE refused to connect | `2` |
+| `INVALID_URL` | malformed URL or unsupported scheme | `2` |
+
+Proxy env-var **values are never printed** (they can carry credentials) — only
+which variables are set and whether a proxy applies to the target.
+
+### Proxy / NO_PROXY configuration
+
+OPE inherits the standard variables automatically via Python's `urllib`:
+
+```bash
+# Route outbound audits through a corporate egress proxy:
+export HTTPS_PROXY=http://proxy.internal:8080
+export HTTP_PROXY=http://proxy.internal:8080
+# Bypass the proxy for specific hosts (comma-separated suffixes):
+export NO_PROXY=localhost,127.0.0.1,internal.example.com
+```
+
+When a proxy applies, the proxy performs resolution and egress policy and OPE
+tunnels through it unchanged. When no proxy applies, OPE connects directly and
+pins the SSRF-validated DNS resolution (closing the rebinding TOCTOU window).
+Leave these unset for a plain direct-internet machine.
+
+### A — Local machine / VPS
+
+```bash
+python3 -m pip install -e .            # Python ≥ 3.10, stdlib-only runtime
+ope doctor  https://www.example.com    # confirm reachability
+ope audit   https://www.example.com --json  --no-history > audit.json
+ope audit   https://www.example.com --html  audit.html
+ope dashboard --host 127.0.0.1 --port 8787   # operator UI (bind localhost)
+```
+
+### B — Docker / container
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -e .
+# Outbound HTTPS must be permitted by the container network. Secrets are passed
+# at runtime via -e, never baked into the image.
+ENTRYPOINT ["ope"]
+```
+
+```bash
+docker build -t ope .
+docker run --rm ope doctor https://www.example.com
+docker run --rm -e OPE_PAGESPEED_API_KEY=$OPE_PAGESPEED_API_KEY \
+  ope audit https://www.example.com --json --no-history > audit.json
+```
+
+### C — CI runner
+
+```yaml
+- run: pip install -e .
+- run: ope doctor https://www.example.com          # fail fast if egress is blocked
+- run: ope audit  https://www.example.com --json --no-history > audit.json
+  env:
+    OPE_PAGESPEED_API_KEY: ${{ secrets.OPE_PAGESPEED_API_KEY }}
+    OPE_SEARCH_CONSOLE_KEY: ${{ secrets.OPE_SEARCH_CONSOLE_KEY }}
+```
+
+Provide provider credentials only through the runner's secret store — never in
+the repository. A CI runner with restricted egress will (correctly) report
+`ENVIRONMENT_BLOCK`; run OPE from a runner or network that permits outbound 443.
+
+---
+
 # 🧠 ENGINE STATUS — VERIFIED FOUNDATION
 
 The engine executes this pipeline end to end:
